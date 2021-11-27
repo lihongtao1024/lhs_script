@@ -220,8 +220,9 @@ int main()
     lhshash_uninit(vm, &hashtable);
     */
 
-    int aa = 3 * 3 & 1;
-    //int bb = 10 + aa++;
+    int aa = 11;
+    int bb = 10 + ++aa;
+    int cc = !(1 & 2);
 
     LHSVM* vm = lhsvm_create(0);
     lhsparser_dofile(vm, "./test.lhs");

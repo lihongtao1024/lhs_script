@@ -6,9 +6,28 @@
 #include "lhs_frame.h"
 #include "lhs_error.h"
 
-#define G 1
-#define L 0
-#define N -1
+#define G (1)
+#define L (0)
+#define N (-1)
+#define E (2)
+
+#define lhsparser_isexprvalue(lf) \
+((lf)->lexical->token == LHS_TOKENNUMBER  || \
+ (lf)->lexical->token == LHS_TOKENINTEGER || \
+ (lf)->lexical->token == LHS_TOKENSTRING  || \
+ (lf)->lexical->token == LHS_TOKENTRUE    || \
+ (lf)->lexical->token == LHS_TOKENFALSE   || \
+ (lf)->lexical->token == LHS_TOKENIDENTIFY)
+
+#define lhsparser_isexprsymbol(lf) \
+(((lf)->lexical->token <= UCHAR_MAX) ? \
+(lhsloadf_symbols[(lf)->lexical->token] > SYMBOL_BEGIN && \
+ lhsloadf_symbols[(lf)->lexical->token] < SYMBOL_END) : \
+(((lf)->lexical->token & ~UCHAR_MAX) > LHS_TOKENSYMBOLBEGIN && \
+ ((lf)->lexical->token & ~UCHAR_MAX) < LHS_TOKENSYMBOLEND))
+
+#define lhsparser_truncate(t) \
+((t) <= UCHAR_MAX ? lhsloadf_symbols[t] : ((t) & ~UCHAR_MAX))
 
 static const char* tokens[] =
 {
@@ -22,9 +41,9 @@ static const char symbols_priority[][SYMBOL_END] =
 {
      /*N/A,  (, +, -, *, /, ), !, %,  &,  |,  ~,  ^,  <, >,==,!=,>=,<=,+=,-=,*=,/=,
        ++?,--?,&&,||,&=,|=,^=,<<,>>,<<=,>>=, %=,?++,?--*/
-/*N/A*/{ L,  G, G, G, G, G, N, G, G,  G,  G,  G,  G,  G, G, G, G, G, G, G, G, G, G,
+/*N/A*/{ E,  G, G, G, G, G, N, G, G,  G,  G,  G,  G,  G, G, G, G, G, G, G, G, G, G,
          G,  G, G, G, G, G, G, G, G,  G,  G,  G,  G,  G},
-/*(*/  { N,  G, G, G, G, G, L, G, G,  G,  G,  G,  G,  G, G, G, G, G, G, G, G, G, G,
+/*(*/  { N,  G, G, G, G, G, E, G, G,  G,  G,  G,  G,  G, G, G, G, G, G, G, G, G, G,
          G,  G, G, G, G, G, G, G, G,  G,  G,  G,  G,  G},
 /*+*/  { L,  G, L, L, G, G, L, G, G,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
          G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
@@ -34,44 +53,75 @@ static const char symbols_priority[][SYMBOL_END] =
          G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
 /*/*/  { L,  G, L, L, L, L, L, G, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
          G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
-/*)*/  { L,},
-/*!*/  { L,},
-/*%*/  { L,},
-/*&*/  { L,},
-/*|*/  { L,},
-/*~*/  { L,},
-/*^*/  { L,},
-/*<*/  { L,},
-/*>*/  { L,},
-/*==*/ { L,},
-/*!=*/ { L,},
-/*>=*/ { L,},
-/*<=*/ { L,},
-/*+=*/ { L,},
-/*-=*/ { L,},
-/**=*/ { L,},
-/*/=*/ { L,},
-/*++?*/{ L,},
-/*--?*/{ L,},
-/*&&*/ { L,},
-/*||*/ { L,},
-/*&=*/ { L,},
-/*|=*/ { L,},
-/*^=*/ { L,},
-/*<<*/ { L,},
-/*>>*/ { L,},
-/*<<=*/{ L,},
-/*>>=*/{ L,},
-/*%=*/ { L,},
-/*?++*/{ L,},
-/*?--*/{ L,},
+/*)*/  { L,  L, L, L, L, L, L, L, L,  L,  L,  L,  L,  L, L, L, L, L, L, L, L, L, L,
+         L,  L, L, L, N, N, N, L, L,  N,  N,  N,  L,  L},
+/*!*/  { L,  G, L, L, L, L, L, L, L,  L,  L,  L,  L,  L, L, L, L, L, L, L, L, L, L,
+         L,  L, L, L, N, N, N, L, L,  N,  N,  N,  L,  L},
+/*%*/  { L,  G, L, L, L, L, L, G, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*&*/  { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*|*/  { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*~*/  { L,  G, L, L, L, L, L, L, L,  L,  L,  L,  L,  L, L, L, L, L, L, L, L, L, L,
+         L,  L, L, L, N, N, N, L, L,  N,  N,  N,  L,  L},
+/*^*/  { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*<*/  { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*>*/  { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*==*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*!=*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*>=*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*<=*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*+=*/ { L,  G, G, G, G, G, N, G, G,  G,  G,  G,  G,  G, G, G, G, G, G, G, G, G, G,
+         G,  G, G, G, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*-=*/ { L,  G, G, G, G, G, N, G, G,  G,  G,  G,  G,  G, G, G, G, G, G, G, G, G, G,
+         G,  G, G, G, N, N, N, L, L,  N,  N,  N,  G,  G},
+/**=*/ { L,  G, G, G, G, G, N, G, G,  G,  G,  G,  G,  G, G, G, G, G, G, G, G, G, G,
+         G,  G, G, G, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*/=*/ { L,  G, G, G, G, G, N, G, G,  G,  G,  G,  G,  G, G, G, G, G, G, G, G, G, G,
+         G,  G, G, G, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*++?*/{ L,  G, L, L, L, L, L, L, L,  L,  L,  L,  L,  L, L, L, L, L, L, L, L, L, L,
+         L,  L, L, L, N, N, N, L, L,  N,  N,  N,  L,  L},
+/*--?*/{ L,  G, L, L, L, L, L, L, L,  L,  L,  L,  L,  L, L, L, L, L, L, L, L, L, L,
+         L,  L, L, L, N, N, N, L, L,  N,  N,  N,  L,  L},
+/*&&*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*||*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*&=*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*|=*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*^=*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*<<*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*>>*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*<<=*/{ L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*>>=*/{ L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*%=*/ { L,  G, L, L, L, L, L, L, L,  L,  L,  G,  L,  L, L, L, L, L, L, L, L, L, L,
+         G,  G, L, L, N, N, N, L, L,  N,  N,  N,  G,  G},
+/*?++*/{ L,  G, L, L, L, L, L, L, L,  L,  L,  L,  L,  L, L, L, L, L, L, L, L, L, L,
+         L,  L, L, L, N, N, N, L, L,  N,  N,  N,  L,  L},
+/*?--*/{ L,  G, L, L, L, L, L, L, L,  L,  L,  L,  L,  L, L, L, L, L, L, L, L, L, L,
+         L,  L, L, L, N, N, N, L, L,  N,  N,  N,  L,  L},
 };
 
 static int lhsparser_initreserved(LHSVM* vm)
 {
     lhsassert_trueresult(vm, false);
 
-    for (size_t i = 0; i < _countof(tokens); ++i)
+    for (int i = 0; i < _countof(tokens); ++i)
     {
         LHSString* str = lhsvalue_caststring
         (
@@ -110,11 +160,6 @@ static int lhsparser_initmainframe(LHSVM* vm, const char* fname)
     return true;
 }
 
-static int lhsparser_symbolcomp(int token1, int token2)
-{
-
-}
-
 static int lhsparser_enterlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 {
     lhsassert_trueresult(vm && loadf && lex, false);
@@ -133,7 +178,7 @@ static int lhsparser_leavelexical(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsassert_trueresult(vm && loadf && loadf->lexical, false);
 
-    lhsbuf_uninit(vm, &lhsloadf_castlex(loadf)->buf);
+    lhsbuf_uninit(vm, &loadf->lexical->buf);
     loadf->lexical = 0;
     return true;
 }
@@ -362,13 +407,13 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
             if (lhsloadf_isletter(loadf))
             {
                 lhsloadf_saveidentifier(vm, loadf);                
-                if (lhsbuf_isshort(vm, &lhsloadf_castlex(loadf)->buf))
+                if (lhsbuf_isshort(vm, &loadf->lexical->buf))
                 {
                     LHSString* str = lhsvm_findshort
                     (
                         vm,
-                        lhsloadf_castlex(loadf)->buf.data,
-                        lhsloadf_castlex(loadf)->buf.usize
+                        loadf->lexical->buf.data,
+                        loadf->lexical->buf.usize
                     );
                     if (str)
                     {
@@ -401,35 +446,135 @@ static int lhsparser_nexttoken(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsassert_trueresult(vm && loadf && loadf->lexical, false);
 
-    lhsloadf_castlex(loadf)->line = loadf->line;
-    lhsloadf_castlex(loadf)->column = loadf->column;
+    loadf->lexical->line = loadf->line;
+    loadf->lexical->column = loadf->column;
 
-    if (lhsloadf_castlex(loadf)->lookahead != LHS_TOKENEOF)
+    if (loadf->lexical->lookahead != LHS_TOKENEOF)
     {
-        lhsloadf_castlex(loadf)->token = lhsloadf_castlex(loadf)->lookahead;
-        lhsloadf_castlex(loadf)->lookahead = LHS_TOKENEOF;
+        loadf->lexical->token = loadf->lexical->lookahead;
+        loadf->lexical->lookahead = LHS_TOKENEOF;
         return true;
     }
 
-    lhsloadf_castlex(loadf)->token = lhsparser_nextlexical(vm, loadf);
+    loadf->lexical->token = lhsparser_nextlexical(vm, loadf);
     return true;
 }
 
 static int lhsparser_lookaheadtoken(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsassert_trueresult(vm && loadf && loadf->lexical, false);
-    lhsassert_trueresult(lhsloadf_castlex(loadf)->lookahead == LHS_TOKENEOF, false);
+    lhsassert_trueresult(loadf->lexical->lookahead == LHS_TOKENEOF, false);
 
-    lhsloadf_castlex(loadf)->lookahead = lhsparser_nextlexical(vm, loadf);
+    loadf->lexical->lookahead = lhsparser_nextlexical(vm, loadf);
     return true;
+}
+
+static int lhsparser_expressionproc(LHSVM* vm, LHSSTRBUF* symbols, char next)
+{
+    lhsassert_trueresult(vm && symbols, false);
+
+    char prev;
+    lhsbuf_topchar(vm, symbols, &prev);
+
+    int result = true;
+    switch (symbols_priority[prev][next])
+    {
+    case G:
+    {
+        lhsbuf_pushchar(vm, symbols, next);
+        break;
+    }
+    case L:
+    {
+
+        break;
+    }
+    case E:
+    {
+        lhsbuf_popchar(vm, symbols, &prev);
+        break;
+    }
+    default:
+    {
+        result = false;
+        break;
+    }
+    }
+
+    return result;
 }
 
 static int lhsparser_expressionstate(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsassert_trueresult(vm && loadf, false);
+    
+    LHSSTRBUF symbols;
+    lhsbuf_init(vm, &symbols);
+    lhsbuf_pushchar(vm, &symbols, SYMBOL_NONE);
 
-    lhsparser_nexttoken(vm, loadf);
+    for (; ; )
+    {
+        lhsparser_nexttoken(vm, loadf);
+        if (loadf->lexical->token == LHS_TOKENINTEGER)
+        {
+            lhsvm_pushinteger(vm, atoll(loadf->lexical->buf.data));
+        }
+        else if (loadf->lexical->token == LHS_TOKENNUMBER)
+        {
+            lhsvm_pushnumber(vm, atof(loadf->lexical->buf.data));
+        }
+        else if (loadf->lexical->token == LHS_TOKENSTRING)
+        {
+            lhsvm_pushlstring(vm, loadf->lexical->buf.data,
+                loadf->lexical->buf.usize);
+        }
+        else if (loadf->lexical->token == LHS_TOKENIDENTIFY)
+        {
+            lhsvm_pushlstring(vm, loadf->lexical->buf.data,
+                loadf->lexical->buf.usize);
+            lhsframe_getvariable(vm, lhsframe_castcurframe(vm));
+        }
+        else if (loadf->lexical->token == LHS_TOKENTRUE ||
+                 loadf->lexical->token == LHS_TOKENFALSE)
+        {
+            lhsvm_pushboolean(vm, loadf->lexical->token == LHS_TOKENTRUE ? 1 : 0);
+        }
+        else if (lhsparser_isexprsymbol(loadf))
+        {
+            if (!lhsparser_expressionproc(vm, &symbols, 
+                lhsparser_truncate(loadf->lexical->token)))
+            {
+                lhsbuf_uninit(vm, &symbols);
+                lhsexecute_symbolerr
+                (
+                    vm,
+                    "illegal expression declare.",
+                    lhsframe_name(vm, lhsframe_castmainframe(vm)),
+                    loadf->line,
+                    loadf->column
+                );
+            }
+        }
+        else
+        {
+            if (!lhsparser_expressionproc(vm, &symbols, SYMBOL_NONE) ||
+                !lhsbuf_isempty(vm, &symbols))
+            {
+                lhsbuf_uninit(vm, &symbols);
+                lhsexecute_symbolerr
+                (
+                    vm,
+                    "illegal expression declare.",
+                    lhsframe_name(vm, lhsframe_castmainframe(vm)),
+                    loadf->line,
+                    loadf->column
+                );
+            }
+            break;
+        }
+    }
 
+    lhsbuf_uninit(vm, &symbols);
     return true;
 }
 
@@ -438,7 +583,7 @@ static int lhsparser_movestate(LHSVM* vm, LHSLoadF* loadf)
     lhsassert_trueresult(vm && loadf, false);
 
     lhsparser_nexttoken(vm, loadf);
-    if (lhsloadf_castlex(loadf)->token != LHS_TOKENIDENTIFY)
+    if (loadf->lexical->token != LHS_TOKENIDENTIFY)
     {
         lhsexecute_symbolerr
         (
@@ -447,7 +592,7 @@ static int lhsparser_movestate(LHSVM* vm, LHSLoadF* loadf)
             lhsframe_name(vm, lhsframe_castmainframe(vm)),
             loadf->line,
             loadf->column,
-            lhsloadf_castlex(loadf)->buf.data
+            loadf->lexical->buf.data
         );
         return false;
     }
@@ -455,12 +600,12 @@ static int lhsparser_movestate(LHSVM* vm, LHSLoadF* loadf)
     lhsvm_pushlstring
     (
         vm, 
-        lhsloadf_castlex(loadf)->buf.data, 
-        lhsloadf_castlex(loadf)->buf.usize
+        loadf->lexical->buf.data, 
+        loadf->lexical->buf.usize
     );
 
     lhsparser_lookaheadtoken(vm, loadf);
-    if (lhsloadf_castlex(loadf)->lookahead != '=')
+    if (loadf->lexical->lookahead != '=')
     {
         lhsvm_pushnil(vm);
         return lhsframe_insertvariable
@@ -480,9 +625,9 @@ static int lhsparser_procstate(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsassert_trueresult(vm && loadf, false);
 
-    while (lhsloadf_castlex(loadf)->token != LHS_TOKENEOF)
+    while (loadf->lexical->token != LHS_TOKENEOF)
     {
-        switch (lhsloadf_castlex(loadf)->token)
+        switch (loadf->lexical->token)
         {
         case LHS_TOKENGLOBAL:
         case LHS_TOKENLOCAL:
@@ -492,12 +637,10 @@ static int lhsparser_procstate(LHSVM* vm, LHSLoadF* loadf)
         }
         default:
         {
-            lhsassert_true(false && lhsloadf_castlex(loadf)->token);
+            lhsparser_nexttoken(vm, loadf);
             break;
         }
         }
-
-        lhsparser_nexttoken(vm, loadf);
     }
 
     return true;

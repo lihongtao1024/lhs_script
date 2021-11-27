@@ -4,9 +4,9 @@
 #include "lhs_hash.h"
 #include "lhs_gc.h"
 
-#define LHS_MARKNONE            0
-#define LHS_MARKLOCAL           1
-#define LHS_MARKGLOBAL          2
+#define LHS_MARKNONE            (0)
+#define LHS_MARKLOCAL           (1)
+#define LHS_MARKGLOBAL          (2)
 #define lhsvariable_castvar(ud) ((LHSVariable*)(ud))
 
 typedef struct LHSVariable

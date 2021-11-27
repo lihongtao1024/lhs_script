@@ -44,7 +44,7 @@ int lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame,
     lhsassert_trueresult(value, false);
     memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
 
-    variable->index = lhsvector_length(vm, &frame->values) - 1;
+    variable->index = (int)lhsvector_length(vm, &frame->values) - 1;
     variable->marked = LHS_MARKLOCAL;
     variable->name = lhsvalue_caststring(lhsvm_getvalue(vm, -2)->gc);
 
@@ -57,6 +57,7 @@ int lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame,
 int lhsframe_getvariable(LHSVM* vm, LHSFrame* frame)
 {
     lhsassert_trueresult(vm && frame && lhsvm_gettop(vm) >= 1, false);
+
 
     return true;
 }

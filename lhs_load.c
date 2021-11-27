@@ -1,7 +1,6 @@
 #include "lhs_load.h"
 #include "lhs_assert.h"
 #include "lhs_frame.h"
-#include "lhs_parser.h"
 #include "lhs_execute.h"
 #include "lhs_error.h"
 
@@ -112,14 +111,14 @@ int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf)
 int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsassert_trueresult(vm && loadf, false);
-    lhsbuf_reset(vm, &lhsloadf_castlex(loadf)->buf);
+    lhsbuf_reset(vm, &loadf->lexical->buf);
 
     do
     {
         lhsbuf_pushchar
         (
             vm, 
-            &lhsloadf_castlex(loadf)->buf, 
+            &loadf->lexical->buf, 
             (char)loadf->current
         );
         lhsloadf_getc(loadf);
@@ -130,7 +129,7 @@ int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
 int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
 {
     lhsassert_trueresult(vm && loadf, false);
-    lhsbuf_reset(vm, &lhsloadf_castlex(loadf)->buf);
+    lhsbuf_reset(vm, &loadf->lexical->buf);
 
     int dot = 0;
     *is_double = 0;
@@ -139,7 +138,7 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
         lhsbuf_pushchar
         (
             vm,
-            &lhsloadf_castlex(loadf)->buf,
+            &loadf->lexical->buf,
             (char)loadf->current
         );
 
@@ -174,7 +173,7 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
 int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsassert_trueresult(vm && loadf, false);
-    lhsbuf_reset(vm, &lhsloadf_castlex(loadf)->buf);
+    lhsbuf_reset(vm, &loadf->lexical->buf);
     lhsloadf_getc(loadf);
 
     do
@@ -182,11 +181,12 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
         lhsbuf_pushchar
         (
             vm, 
-            &lhsloadf_castlex(loadf)->buf, 
+            &loadf->lexical->buf, 
             (char)loadf->current
         );
         lhsloadf_getc(loadf);
     } while (!lhsloadf_isquote(loadf));
+    lhsloadf_getc(loadf);
     return true;
 }
 

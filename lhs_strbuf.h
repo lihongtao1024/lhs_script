@@ -16,6 +16,12 @@ int lhsbuf_reset(LHSVM* vm, LHSSTRBUF* buf);
 
 int lhsbuf_pushchar(LHSVM* vm, LHSSTRBUF* buf, char c);
 
+int lhsbuf_topchar(LHSVM* vm, LHSSTRBUF* buf, char* c);
+
+int lhsbuf_popchar(LHSVM* vm, LHSSTRBUF* buf, char *c);
+
 int lhsbuf_isshort(LHSVM* vm, LHSSTRBUF* buf);
+
+int lhsbuf_isempty(LHSVM* vm, LHSSTRBUF* buf);
 
 void lhsbuf_uninit(LHSVM* vm, LHSSTRBUF* buf);

@@ -52,11 +52,44 @@ int lhsbuf_pushchar(LHSVM* vm, LHSSTRBUF* buf, char c)
     return true;
 }
 
+int lhsbuf_topchar(LHSVM* vm, LHSSTRBUF* buf, char* c)
+{
+    lhsassert_trueresult(vm && buf && c, false);
+
+    if (buf->usize <= 0)
+    {
+        return false;
+    }
+
+    *c = buf->data[buf->usize - 1];
+    return true;
+}
+
+int lhsbuf_popchar(LHSVM* vm, LHSSTRBUF* buf, char* c)
+{
+    lhsassert_trueresult(vm && buf && c, false);
+
+    if (buf->usize <= 0)
+    {
+        return false;
+    }
+
+    *c = buf->data[--buf->usize];
+    return true;
+}
+
 int lhsbuf_isshort(LHSVM* vm, LHSSTRBUF* buf)
 {
     lhsassert_trueresult(vm && buf, false);
 
     return buf->usize < LHS_SHORTSTRLEN;
+}
+
+int lhsbuf_isempty(LHSVM* vm, LHSSTRBUF* buf)
+{
+    lhsassert_trueresult(vm && buf, false);
+
+    return !buf->usize;
 }
 
 void lhsbuf_uninit(LHSVM* vm, LHSSTRBUF* buf)

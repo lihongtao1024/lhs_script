@@ -57,6 +57,9 @@
     <ClCompile Include="lhs_variable.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="lhs_code.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lhs_assert.h">
@@ -108,6 +111,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="lhs_debug.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="lhs_code.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

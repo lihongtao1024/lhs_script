@@ -2,6 +2,9 @@
 #include "lhs_config.h"
 #include "lhs_vm.h"
 
+#define lhsbuf_pushstr(vm, b, s) \
+lhsbuf_pushlstr(vm, b, s, strlen(s))
+
 typedef struct LHSSTRBUF
 {
     size_t usize;
@@ -15,6 +18,8 @@ int lhsbuf_init(LHSVM* vm, LHSSTRBUF* buf);
 int lhsbuf_reset(LHSVM* vm, LHSSTRBUF* buf);
 
 int lhsbuf_pushchar(LHSVM* vm, LHSSTRBUF* buf, char c);
+
+int lhsbuf_pushlstr(LHSVM* vm, LHSSTRBUF* buf, const char* str, size_t l);
 
 int lhsbuf_topchar(LHSVM* vm, LHSSTRBUF* buf, char* c);
 

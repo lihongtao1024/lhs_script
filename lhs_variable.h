@@ -4,16 +4,23 @@
 #include "lhs_hash.h"
 #include "lhs_gc.h"
 
-#define LHS_MARKNONE            (0)
-#define LHS_MARKLOCAL           (1)
-#define LHS_MARKGLOBAL          (2)
-#define lhsvariable_castvar(ud) ((LHSVariable*)(ud))
+#define LHS_MARKNONE              (0)
+#define LHS_MARKLOCAL             (1)
+#define LHS_MARKGLOBAL            (2)
+#define LHS_MARKINTEGER           (3)
+#define LHS_MARKNUMBER            (4)
+#define LHS_MARKBOOLEAN           (5)
+#define LHS_MARKSTRING            (6)
+#define LHS_MARKSTACK             (7)
+#define LHS_MARKMAX               (8)
+
+#define lhsvariable_castvar(ud)   ((LHSVariable*)(ud))
 
 typedef struct LHSVariable
 {
     LHSGCObject gc;
     int index;
-    int marked;    
+    int mark;
     LHSString *name;
 } LHSVariable;
 

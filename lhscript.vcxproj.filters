@@ -62,9 +62,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="lhs_assert.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="lhs_alloc.h">
       <Filter>头文件</Filter>
     </ClInclude>

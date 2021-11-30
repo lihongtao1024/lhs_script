@@ -5,6 +5,7 @@
 #include "lhs_value.h"
 #include "lhs_hash.h"
 #include "lhs_vector.h"
+#include "lhs_variable.h"
 #include "lhs_execute.h"
 
 #define lhsvm_castvm(vm)        ((LHSVM*)(vm))
@@ -12,18 +13,17 @@
 
 typedef struct LHSVM
 {
-    LHSGCObject gc;         /*garbage collect handle*/
-    long long rax;          /*rax register simulating for win64*/
-    long long rip;          /*rip register simulating for win64*/    
-    long long rbp;          /*rbp register simulating for win64*/
-    long long rsp;          /*rsp register simulating for win64*/
-    lhsmem_new falloc;      /*memory handler*/
-    void* mainframe;        /*main function frame*/
-    void* currentframe;     /*current function frame*/
-    LHSGCObject* allgc;     /*all garbage collection*/
-    LHSJmp* errorjmp;       /*error jump handler*/
-    LHSHashTable conststr;  /*constant table for string*/
-    LHSVector stack;        /*execute stack*/
+    LHSGCObject gc;             /*garbage collect handle*/
+    lhsmem_new falloc;          /*memory handler*/
+    void* mainframe;            /*main function frame*/
+    void* currentframe;         /*current function frame*/
+    LHSGCObject* allgc;         /*all garbage collection*/
+    LHSJmp* errorjmp;           /*error jump handler*/
+    LHSHashTable shortstrhash;  /*hast table for short string*/
+    LHSVariables conststrhash;  /*hash table for constant string*/
+    LHSVector conststrvalue;    /*constant strings*/
+    LHSVector stack;            /*execute stack*/
+    LHSValue rax;               /*result register*/
 } LHSVM;
 
 LHSVM* lhsvm_create(lhsmem_new fn);
@@ -32,7 +32,7 @@ int lhsvm_pushnil(LHSVM* vm);
 
 int lhsvm_pushboolean(LHSVM* vm, char b);
 
-int lhsvm_pushvalue(LHSVM* vm, LHSValue* value);
+int lhsvm_pushvalue(LHSVM* vm, int index);
 
 int lhsvm_pushlstring(LHSVM* vm, const char* str, size_t l);
 
@@ -52,6 +52,6 @@ size_t lhsvm_gettop(LHSVM* vm);
 
 int lhsvm_pop(LHSVM* vm, size_t n);
 
-int lhsvm_insertvariable(LHSVM* vm);
+LHSVariable* lhsvm_insertconstant(LHSVM* vm);
 
 void lhsvm_destroy(LHSVM* vm);

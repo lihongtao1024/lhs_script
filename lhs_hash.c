@@ -1,5 +1,4 @@
 #include "lhs_hash.h"
-#include "lhs_assert.h"
 #include "lhs_vm.h"
 
 #define hashsize            64
@@ -8,8 +7,6 @@
 
 static int lhshash_rehash(LHSHashNode** nodes, size_t osize, size_t nsize)
 {
-    lhsassert_trueresult(nodes, false);
-
     for (size_t i = osize; i < nsize; ++i)
     {
         nodes[i] = 0;
@@ -34,8 +31,6 @@ static int lhshash_rehash(LHSHashNode** nodes, size_t osize, size_t nsize)
 
 static int lhshash_grow(void* vm, LHSHashTable* hash, size_t nsize)
 {
-    lhsassert_trueresult(vm && hash, false);
-
     if (hash->size == nsize)
     {
         return true;
@@ -50,7 +45,6 @@ static int lhshash_grow(void* vm, LHSHashTable* hash, size_t nsize)
             sizeof(LHSHashNode*) * hash->size, 
             sizeof(LHSHashNode*) * nsize
         );
-        lhsassert_trueresult(hash->nodes, false);
         lhshash_rehash(hash->nodes, hash->size, nsize);
     }
     else
@@ -63,7 +57,6 @@ static int lhshash_grow(void* vm, LHSHashTable* hash, size_t nsize)
             sizeof(LHSHashNode*) * hash->size, 
             sizeof(LHSHashNode*) * nsize
         );
-        lhsassert_trueresult(hash->nodes, false);
     }
 
     hash->size = nsize;
@@ -73,8 +66,6 @@ static int lhshash_grow(void* vm, LHSHashTable* hash, size_t nsize)
 static LHSHashNode* lhshash_search(LHSHashTable* hash, void *userdata, 
     long long h, LHSHashNode*** output)
 {
-    lhsassert_trueresult(hash && hash->equal && userdata, 0);
-
     LHSHashNode** list = &hash->nodes[lhshash_mod(h, hash->size)];
     for (LHSHashNode* node = *list; node; node = node->next)
     {
@@ -94,8 +85,6 @@ static LHSHashNode* lhshash_search(LHSHashTable* hash, void *userdata,
 int lhshash_init(void* vm, LHSHashTable* hash, lhshash_calc calc, 
     lhshash_equal comp)
 {
-    lhsassert_trueresult(vm && hash && calc && comp, false);
-
     hash->calc = calc;
     hash->equal = comp;
     hash->usize = 0;
@@ -107,12 +96,6 @@ int lhshash_init(void* vm, LHSHashTable* hash, lhshash_calc calc,
 int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata, 
     long long* ohash)
 {
-    lhsassert_trueresult
-    (
-        vm && hash && hash->calc && hash->equal && userdata, 
-        false
-    );
-
     long long h = hash->calc(userdata);
     LHSHashNode** list = 0, * node = 0;
     node = lhshash_search(hash, userdata, h, &list);
@@ -137,8 +120,6 @@ int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata,
     }
 
     node = lhsmem_newobject(lhsvm_castvm(vm), sizeof(LHSHashNode));
-    lhsassert_trueresult(node, false);
-
     node->hash = h;
     node->data = userdata;
 
@@ -156,12 +137,6 @@ int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata,
 
 void* lhshash_find(void* vm, LHSHashTable* hash, void* userdata)
 {
-    lhsassert_trueresult
-    (
-        vm && hash && hash->calc && userdata, 
-        0
-    );
-
     long long h = hash->calc(userdata);
     LHSHashNode** list = 0, * node = 0;
     node = lhshash_search(hash, userdata, h, &list);
@@ -175,11 +150,6 @@ void* lhshash_find(void* vm, LHSHashTable* hash, void* userdata)
 
 void lhshash_remove(void* vm, LHSHashTable* hash, void* userdata)
 {
-    lhsassert_truereturn
-    (
-        vm && hash && hash->calc && userdata
-    );
-
     long long h = hash->calc(userdata);
     LHSHashNode** current = &hash->nodes[lhshash_mod(h, hash->size)];
     for (; *current; )
@@ -201,8 +171,6 @@ void lhshash_remove(void* vm, LHSHashTable* hash, void* userdata)
 
 void lhshash_uninit(void* vm, LHSHashTable* hash)
 {
-    lhsassert_truereturn(vm && hash);
-
     for (size_t i = 0; i < hash->size; ++i)
     {
         LHSHashNode* node = hash->nodes[i];

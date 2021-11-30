@@ -1,34 +1,29 @@
 #include "lhs_frame.h"
-#include "lhs_assert.h"
 #include "lhs_link.h"
 
 static void lhsframe_uninitnext(LHSFrame* maimframe, LHSFrame* frame)
 {
-    lhsassert_truereturn(maimframe && frame);
     lhsframe_uninit(maimframe->vm, frame);
 }
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame, size_t level)
 {
-    lhsassert_trueresult(vm && frame, false);
-
     frame->vm = vm;
     frame->level = level;
     frame->base = lhsvector_length(vm, &vm->stack);
     frame->ret = 0;
-    lhshash_init(vm, &frame->variables, lhsvariable_hashvar, lhsvariable_equalvar);
-    lhsvector_init(vm, &frame->values, sizeof(LHSVariable));
+    lhshash_init(vm, &frame->localvars, lhsvariable_hashvar, lhsvariable_equalvar);
+    lhsvector_init(vm, &frame->localvalues, sizeof(LHSVariable));
     lhsvector_init(vm, &frame->codes, sizeof(long long));
     lhsdebug_init(vm, &frame->debug);
     lhsslink_init(frame, next);
     return true;
 }
 
-int lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
+LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
     long long line, long long column)
-{
-    lhsassert_trueresult(vm && frame && lhsvm_gettop(vm) >= 2, false);
-
+{    
+    LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVariable* variable = lhsvariable_castvar
     (
         lhsmem_newgcobject
@@ -38,46 +33,45 @@ int lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame,
             LHS_TGCFULLDATA
         )
     );
-    lhsassert_trueresult(variable, false);
 
-    LHSValue* value = lhsvector_increment(vm, &frame->values);
-    lhsassert_trueresult(value, false);
-    memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
+    LHSValue* local = lhsvector_increment(vm, &frame->localvalues);
+    local->type = LHS_TNONE;
 
-    variable->index = (int)lhsvector_length(vm, &frame->values) - 1;
-    variable->marked = LHS_MARKLOCAL;
-    variable->name = lhsvalue_caststring(lhsvm_getvalue(vm, -2)->gc);
+    variable->index = (int)lhsvector_length(vm, &frame->localvalues) - 1;
+    variable->mark = LHS_MARKLOCAL;
+    variable->name = lhsvalue_caststring(key->gc);
 
-    lhshash_insert(vm, &frame->variables, variable, 0);
+    lhshash_insert(vm, &frame->localvars, variable, 0);
     lhsdebug_insert(vm, &frame->debug, variable->name, line, column);
-    lhsvm_pop(vm, 2);
-    return true;
+    lhsvm_pop(vm, 1);
+    return variable;
 }
 
-int lhsframe_getvariable(LHSVM* vm, LHSFrame* frame)
+LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame)
 {
-    lhsassert_trueresult(vm && frame && lhsvm_gettop(vm) >= 1, false);
+    LHSValue* key = lhsvm_getvalue(vm, -1);
+    LHSVariable* nvariable = lhsvariable_castvar
+    (
+        lhsmem_newobject(vm, sizeof(LHSVariable))
+    );
+    nvariable->name = lhsvalue_caststring(key->gc);
 
-
-    return true;
+    LHSVariable* ovariable = lhshash_find(vm, &frame->localvars, nvariable);
+    lhsmem_freeobject(vm, nvariable, sizeof(LHSVariable));
+    lhsvm_pop(vm, 1);
+    return ovariable;
 }
 
 const char* lhsframe_name(LHSVM* vm, LHSFrame* frame)
 {
-    lhsassert_trueresult(vm && frame, 0);
-
     LHSSymbol* symbol = lhsdebug_at(vm, &frame->debug, LHS_FRAMENAME);
-    lhsassert_trueresult(symbol && symbol->identifier, 0);
-
     return symbol->identifier->data;
 }
 
 void lhsframe_uninit(LHSVM* vm, LHSFrame* frame)
 {
-    lhsassert_truereturn(vm && frame);
-
-    lhshash_uninit(vm, &frame->variables);
-    lhsvector_uninit(vm, &frame->values);
+    lhshash_uninit(vm, &frame->localvars);
+    lhsvector_uninit(vm, &frame->localvalues);
     lhsvector_uninit(vm, &frame->codes);
     lhsdebug_uninit(vm, &frame->debug);
     lhsslink_foreach(LHSFrame, frame, next, next, lhsframe_uninitnext);

@@ -15,8 +15,8 @@ typedef struct LHSFrame
 {
     LHSGCObject gc;         /*garbage collection handle*/
     size_t level;           /*valid scope*/
-    LHSVariables variables; /*hash table for variables*/     
-    LHSVector values;       /*values for variables*/
+    LHSVariables localvars; /*hash table for local variables*/     
+    LHSVector localvalues;  /*values for local variables*/
     LHSVector codes;        /*execute codes*/
     LHSDebug debug;         /*debug info for frame*/
     LHSVM* vm;              /*virtual machine*/
@@ -27,10 +27,10 @@ typedef struct LHSFrame
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame, size_t level);
 
-int lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
+LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
     long long line, long long column);
 
-int lhsframe_getvariable(LHSVM* vm, LHSFrame* frame);
+LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame);
 
 const char* lhsframe_name(LHSVM* vm, LHSFrame* frame);
 

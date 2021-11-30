@@ -1,12 +1,9 @@
 #include "lhs_execute.h"
-#include "lhs_assert.h"
 #include "lhs_alloc.h"
 #include "lhs_vm.h"
 
 int lhsexecute_protectedrun(void* vm, protectedf fn, void* userdata)
 {
-    lhsassert_trueresult(vm && fn, -1);
-
     LHSJmp jmp;
     jmp.prev = lhsvm_castvm(vm)->errorjmp;
     lhsvm_castvm(vm)->errorjmp = &jmp;
@@ -26,11 +23,9 @@ int lhsexecute_protectedrun(void* vm, protectedf fn, void* userdata)
 
 int lhsexecute_protectederr(void* vm, const char* fmt, ...)
 {
-    lhsassert_trueresult(vm && fmt, false);
-
     va_list args;
     va_start(args, fmt);
-    size_t l = _vscprintf(fmt, args) + 1;
+    size_t l = (size_t)_vscprintf(fmt, args) + 1;
     char* buf = lhsmem_newobject(lhsvm_castvm(vm), l);
     vsprintf(buf, fmt, args);
     lhsvm_pushlstring(lhsvm_castvm(vm), buf, l);

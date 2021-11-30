@@ -170,7 +170,6 @@
     <ClInclude Include="lhs_frame.h" />
     <ClInclude Include="lhs_link.h" />
     <ClInclude Include="lhs_alloc.h" />
-    <ClInclude Include="lhs_assert.h" />
     <ClInclude Include="lhs_config.h" />
     <ClInclude Include="lhs_gc.h" />
     <ClInclude Include="lhs_hash.h" />

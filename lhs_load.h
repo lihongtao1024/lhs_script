@@ -5,47 +5,33 @@
 
 #define SYMBOL_NONE                 (0)           //N/A
 #define SYMBOL_BEGIN                SYMBOL_NONE   //N/A
-#define SYMBOL_LBRACKET             (1)           //(
-#define SYMBOL_ADD                  (2)           //+
-#define SYMBOL_SUB                  (3)           //-
-#define SYMBOL_MUL                  (4)           //*
-#define SYMBOL_DIV                  (5)           ///
-#define SYMBOL_RBRACKET             (6)           //)
-#define SYMBOL_NOT                  (7)           //!
-#define SYMBOL_MOD                  (8)           //%
-#define SYMBOL_BAND                 (9)           //&
-#define SYMBOL_BOR                  (10)          //|
-#define SYMBOL_BNOT                 (11)          //~
-#define SYMBOL_BXOR                 (12)          //^
-#define SYMBOL_LESS                 (13)          //<
-#define SYMBOL_GREAT                (14)          //>
-#define SYMBOL_EQUAL                (15)          //==
-#define SYMBOL_NOTEQUAL             (16)          //!=
-#define SYMBOL_GREATEQUAL           (17)          //>=
-#define SYMBOL_LESSEQUAL            (18)          //<=
-#define SYMBOL_ADDEQUAL             (19)          //+=
-#define SYMBOL_SUBEQUAL             (20)          //-=
-#define SYMBOL_MULEQUAL             (21)          //*=
-#define SYMBOL_DIVEQUAL             (22)          ///=
-#define SYMBOL_LINCREMENT           (23)          //++?
-#define SYMBOL_LDECREMENT           (24)          //--?
-#define SYMBOL_LOGICAND             (25)          //&&
-#define SYMBOL_LOGICOR              (26)          //||
-#define SYMBOL_BITANDEQUAL          (27)          //&=
-#define SYMBOL_BITOREQUAL           (28)          //|=
-#define SYMBOL_BITXOREQUAL          (29)          //^=
-#define SYMBOL_BITLEFTSHIFT         (30)          //<<
-#define SYMBOL_BITRIGHTSHIFT        (31)          //>>
-#define SYMBOL_BITLEFTSHIFTEQUAL    (32)          //<<=
-#define SYMBOL_BITRIGHTSHIFTEQUAL   (33)          //>>=
-#define SYMBOL_MODEQUAL             (34)          //%=
-#define SYMBOL_RINCREMENT           (35)          //?++
-#define SYMBOL_RDECREMENT           (36)          //?--
-#define SYMBOL_END                  (37)          //N/A
-#define SYMBOL_DIGIT                (38)          //<number>
-#define SYMBOL_LETTER               (39)          //<string>
+#define SYMBOL_ADD                  (1)           //+
+#define SYMBOL_SUB                  (2)           //-
+#define SYMBOL_MUL                  (3)           //*
+#define SYMBOL_DIV                  (4)           ///
+#define SYMBOL_MOD                  (5)           //%
+#define SYMBOL_BAND                 (6)           //&
+#define SYMBOL_BOR                  (7)           //|
+#define SYMBOL_BXOR                 (8)           //^
+#define SYMBOL_LESS                 (9)           //<
+#define SYMBOL_GREAT                (10)          //>
+#define SYMBOL_EQUAL                (11)          //==
+#define SYMBOL_NOTEQUAL             (12)          //!=
+#define SYMBOL_GREATEQUAL           (13)          //>=
+#define SYMBOL_LESSEQUAL            (14)          //<=
+#define SYMBOL_LOGICAND             (15)          //&&
+#define SYMBOL_LOGICOR              (16)          //||
+#define SYMBOL_BLSHIFT              (17)          //<<
+#define SYMBOL_BRSHIFT              (18)          //>>
+#define SYMBOL_NOT                  (19)          //!
+#define SYMBOL_BNOT                 (20)          //~
+#define SYMBOL_LBRACKET             (21)          //(
+#define SYMBOL_RBRACKET             (22)          //)
+#define SYMBOL_END                  (23)          //N/A
+#define SYMBOL_DIGIT                (24)          //<number>
+#define SYMBOL_LETTER               (25)          //<string>
 
-#define lhsloadf_getc(lf)         (lf)->current = getc((lf)->file);++(lf)->column;printf("%c", (lf)->current)
+#define lhsloadf_getc(lf)         (lf)->current = getc((lf)->file);++(lf)->column
 #define lhsloadf_isnewline(lf)    ((lf)->current == '\r' || (lf)->current == '\n')
 #define lhsloadf_iseof(lf)        ((lf)->current == LHS_TOKENEOF)
 #define lhsloadf_newline(lf)      ++(lf)->line; (lf)->column = 0

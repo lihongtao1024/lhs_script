@@ -1,5 +1,4 @@
 #include "lhs_vector.h"
-#include "lhs_assert.h"
 #include "lhs_vm.h"
 
 #define vectorsize  64
@@ -9,8 +8,6 @@
 static int lhsvector_grow(void* vm, LHSVector* vector, 
     size_t osize, size_t nsize)
 {
-    lhsassert_trueresult(vm && vector, false);
-
     if (nsize < vectorsize)
     {
         return true;
@@ -24,14 +21,11 @@ static int lhsvector_grow(void* vm, LHSVector* vector,
         nsize * vector->esize
     );
     vector->size = nsize;
-    lhsassert_trueresult(vector->nodes, false);
     return true;
 }
 
 int lhsvector_init(void* vm, LHSVector* vector, size_t esize)
 {
-    lhsassert_trueresult(vm && vector, false);
-
     vector->esize = esize;
     vector->nodes = 0;
     vector->size = 0;
@@ -42,8 +36,6 @@ int lhsvector_init(void* vm, LHSVector* vector, size_t esize)
 int lhsvector_push(void* vm, LHSVector* vector, void* data, 
     size_t* index)
 {
-    lhsassert_trueresult(vm && vector, false);
-
     if (vector->usize >= vector->size &&
         !lhsvector_grow(vm, vector, vector->size, vector->size << 1))
     {
@@ -51,14 +43,18 @@ int lhsvector_push(void* vm, LHSVector* vector, void* data,
     }
 
     memcpy(lhsvector_castat(vector, vector->usize), data, vector->esize);
-    *index = vector->usize++;
+    
+    if (index)
+    {
+        *index = vector->usize;
+    }
+    
+    ++vector->usize;
     return true;
 }
 
 void lhsvector_pop(void* vm, LHSVector* vector, size_t n)
 {
-    lhsassert_truereturn(vm && vector && n > 0 && n <= vector->usize);
-
     vector->usize -= n;
 
     if (vector->usize <= vector->size >> 2)
@@ -69,8 +65,6 @@ void lhsvector_pop(void* vm, LHSVector* vector, size_t n)
 
 void lhsvector_remove(void* vm, LHSVector* vector, size_t index)
 {
-    lhsassert_truereturn(vm && vector);
-
     if (index >= vector->usize)
     {
         return;
@@ -91,8 +85,6 @@ void lhsvector_remove(void* vm, LHSVector* vector, size_t index)
 
 void* lhsvector_at(void* vm, LHSVector* vector, size_t index)
 {
-    lhsassert_trueresult(vm && vector, 0);
-
     if (index >= vector->usize)
     {
         return 0;
@@ -103,8 +95,6 @@ void* lhsvector_at(void* vm, LHSVector* vector, size_t index)
 
 void* lhsvector_increment(void* vm, LHSVector* vector)
 {
-    lhsassert_trueresult(vm && vector, 0);
-
     if (vector->usize >= vector->size)
     {
         lhsvector_grow(vm, vector, vector->size, vector->size << 1);
@@ -118,8 +108,6 @@ void* lhsvector_increment(void* vm, LHSVector* vector)
 
 void* lhsvector_back(void* vm, LHSVector* vector)
 {
-    lhsassert_trueresult(vm && vector, 0);
-
     if (vector->usize <= 0)
     {
         return 0;
@@ -130,15 +118,11 @@ void* lhsvector_back(void* vm, LHSVector* vector)
 
 size_t lhsvector_length(void* vm, LHSVector* vector)
 {
-    lhsassert_trueresult(vm && vector, 0);
-
     return vector->usize;
 }
 
 void lhsvector_uninit(void* vm, LHSVector* vector)
-{
-    lhsassert_truereturn(vm && vector);
-    
+{    
     if (vector->size)
     {
         lhsmem_freeobject

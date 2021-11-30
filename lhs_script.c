@@ -220,14 +220,16 @@ int main()
     lhshash_uninit(vm, &hashtable);
     */
 
+    int global0 = 1, global1 = 3, global2 = 5, global3 = 1, global4 = 6;
+    int global5 = global1 + (global3 - global1) * global2 - global4 / global3 + ULONG_MAX;
     int aa = 11;
     int bb = 10 + ++aa;
     int cc = !(1 & 2);
+    double n = 1.5 + 3 - (5 - 1) * 6 + 2 / 2 - 1;
 
     LHSVM* vm = lhsvm_create(0);
     lhsparser_dofile(vm, "./test.lhs");
     lhsvm_destroy(vm);
-
 
     return 0;
 }

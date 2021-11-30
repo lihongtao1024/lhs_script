@@ -1,5 +1,4 @@
 #include "lhs_load.h"
-#include "lhs_assert.h"
 #include "lhs_frame.h"
 #include "lhs_execute.h"
 #include "lhs_error.h"
@@ -62,8 +61,6 @@ char lhsloadf_symbols[] =
 
 int lhsloadf_skipline(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsassert_trueresult(vm && loadf, false);
-
     do
     {
         lhsloadf_getc(loadf);
@@ -73,8 +70,6 @@ int lhsloadf_skipline(LHSVM* vm, LHSLoadF* loadf)
 
 int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsassert_trueresult(vm && loadf, false);
-
     for (; ; )
     {
         lhsloadf_getc(loadf);
@@ -110,7 +105,6 @@ int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf)
 
 int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsassert_trueresult(vm && loadf, false);
     lhsbuf_reset(vm, &loadf->lexical->buf);
 
     do
@@ -128,7 +122,6 @@ int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
 
 int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
 {
-    lhsassert_trueresult(vm && loadf, false);
     lhsbuf_reset(vm, &loadf->lexical->buf);
 
     int dot = 0;
@@ -172,7 +165,6 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
 
 int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsassert_trueresult(vm && loadf, false);
     lhsbuf_reset(vm, &loadf->lexical->buf);
     lhsloadf_getc(loadf);
 
@@ -192,8 +184,6 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
 
 int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname)
 {
-    lhsassert_trueresult(loadf && fname, false);
-
     loadf->file = fopen(fname, "rb");
     if (!loadf->file)
     {
@@ -210,7 +200,6 @@ int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname)
 
 void lhsloadf_uninit(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsassert_truereturn(loadf);
     unused(vm);
 
     if (loadf->file)

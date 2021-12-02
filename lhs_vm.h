@@ -6,7 +6,7 @@
 #include "lhs_hash.h"
 #include "lhs_vector.h"
 #include "lhs_variable.h"
-#include "lhs_execute.h"
+#include "lhs_error.h"
 
 #define lhsvm_castvm(vm)        ((LHSVM*)(vm))
 #define lhsvm_pushstring(vm, s) lhsvm_pushlstring(vm, s, strlen(s))
@@ -16,14 +16,14 @@ typedef struct LHSVM
     LHSGCObject gc;             /*garbage collect handle*/
     lhsmem_new falloc;          /*memory handler*/
     void* mainframe;            /*main function frame*/
-    void* currentframe;         /*current function frame*/
-    LHSGCObject* allgc;         /*all garbage collection*/
+    void* currentframe;         /*current function frame*/    
     LHSJmp* errorjmp;           /*error jump handler*/
     LHSHashTable shortstrhash;  /*hast table for short string*/
     LHSVariables conststrhash;  /*hash table for constant string*/
     LHSVector conststrvalue;    /*constant strings*/
     LHSVector stack;            /*execute stack*/
-    LHSValue rax;               /*result register*/
+    LHSGCObject* allgc;         /*all garbage collection*/
+    size_t nalloc;              /*allocated memory size*/
 } LHSVM;
 
 LHSVM* lhsvm_create(lhsmem_new fn);

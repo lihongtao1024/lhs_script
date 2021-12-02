@@ -13,11 +13,18 @@ long long lhsvariable_hashvar(void* data)
 
 int lhsvariable_equalvar(void* data1, void* data2)
 {
-    LHSString* s1 = ((LHSVariable*)data1)->name,
-        * s2 = ((LHSVariable*)data2)->name;
+    LHSVariable* variable1 = (LHSVariable*)data1,
+        * variable2 = (LHSVariable*)data2;
+    if (variable1->chunk != variable2->chunk)
+    {
+        return LHS_FALSE;
+    }
+
+    LHSString* s1 = variable1->name,
+        * s2 = variable2->name;
     if (s1->length != s2->length)
     {
-        return false;
+        return LHS_FALSE;
     }
 
     return !memcmp(s1->data, s2->data, s1->length);

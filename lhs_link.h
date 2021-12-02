@@ -66,13 +66,14 @@
     }\
 }
 
-#define lhsslink_foreach(t, s, m, n, c) \
+#define lhsslink_foreach(t, s, m, n, c, u) \
 {\
     t* l = s->m;\
     for (; l; )\
     {\
         t* e = l->n;\
-        (c)((s), l);\
+        (c)((s), l, (u));\
         l = e;\
     }\
 }
+

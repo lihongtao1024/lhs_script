@@ -22,12 +22,15 @@
 #define OP_LOGICOR              (16)          //||
 #define OP_BLSHIFT              (17)          //<<
 #define OP_BRSHIFT              (18)          //>>
-#define OP_NOT                  (19)          //!
-#define OP_BNOT                 (20)          //~
-#define OP_PUSH                 (21)
-#define OP_POP                  (22)
-#define OP_MOVE                 (23)          //=
-#define OP_MAX                  (24)
+#define OP_NEG                  (19)          //-
+#define OP_NOT                  (20)          //!
+#define OP_BNOT                 (21)          //~
+#define OP_PUSH                 (22)
+#define OP_POP                  (23)
+#define OP_MOVE                 (24)          //=
+#define OP_PUSHC                (25)
+#define OP_POPC                 (26)
+#define OP_MAX                  (27)
 
 typedef struct LHSCode
 {

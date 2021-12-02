@@ -2,16 +2,14 @@
 #include "lhs_config.h"
 #include "lhs_gc.h"
 
-#define LHS_TNONE        (0)
-#define LHS_TINTEGER     (1)
-#define LHS_TNUMBER      (2)
-#define LHS_TBOOLEAN     (3)
-#define LHS_TGC          (4)
-#define LHS_SHORTSTRLEN  (64)
-
+#define LHS_TNONE               (0)
+#define LHS_TINTEGER            (1)
+#define LHS_TNUMBER             (2)
+#define LHS_TBOOLEAN            (3)
+#define LHS_TGC                 (4)
+#define LHS_SHORTSTRLEN         (64)
 #define lhsvalue_castvalue(ud)  ((LHSValue*)(ud))
 #define lhsvalue_caststring(ud) ((LHSString*)lhsgc_castgc((ud)))
-#define lhsvalue_caststack(ud)  ((LHSStack)(ud))
 #define lhsvalue_isshortstr(s)  ((s)->length < LHS_SHORTSTRLEN)
 
 typedef struct LHSString

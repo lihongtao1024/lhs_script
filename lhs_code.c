@@ -6,7 +6,7 @@
 
 static const char* markname[LHS_MARKMAX] =
 {
-	0, "L", "G", 0, 0, 0, "C", "S"
+	0, "local", "global", 0, 0, 0, "const", "stack",
 };
 
 static const char* opname[OP_MAX] =
@@ -14,8 +14,9 @@ static const char* opname[OP_MAX] =
 	"nop", "add", "sub", "mul", "div",
 	"mod", "band", "bor", "bxor", "less",
 	"great", "eq", "ne", "ge", "le",
-	"and", "or", "lsht", "rsht", "not", 
-	"bnot", "push", "pop", "mov",
+	"and", "or", "lsht", "rsht", "neg",
+	"not", "bnot", "push", "pop", "mov",
+	"pushc", "popc"
 };
 
 static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
@@ -28,7 +29,7 @@ static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
 		int l = sprintf(temp, "%lld", code->code.i);
 		if (l == -1)
 		{ 
-			return false;
+			return LHS_FALSE;
 		}
 		lhsbuf_pushlstr(vm, buf, temp, l);
 		break;
@@ -38,7 +39,7 @@ static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
 		int l = sprintf(temp, "%lf", code->code.n);
 		if (l == -1)
 		{ 
-			return false;
+			return LHS_FALSE;
 		}
 		lhsbuf_pushlstr(vm, buf, temp, l);
 		break;
@@ -57,7 +58,7 @@ static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
 	}
 	}
 
-	return true;
+	return LHS_TRUE;
 }
 
 static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
@@ -67,22 +68,29 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 
 	switch (instruction->op)
 	{
+	case OP_NEG:
 	case OP_NOT:
 	case OP_BNOT:
 	case OP_PUSH:
 	case OP_POP:
+	case OP_PUSHC:
 	{
 		lhsbuf_pushstr(vm, &buf, opname[instruction->op]);
-		lhsbuf_pushchar(vm, &buf, ' ');
+		lhsbuf_pushchar(vm, &buf, '\t');
 		lhscode_dumpcode(vm, &instruction->body.unary.code, &buf);
+		break;
+	}
+	case OP_POPC:
+	{
+		lhsbuf_pushstr(vm, &buf, opname[instruction->op]);
 		break;
 	}
 	default:
 	{
 		lhsbuf_pushstr(vm, &buf, opname[instruction->op]);
-		lhsbuf_pushchar(vm, &buf, ' ');
+		lhsbuf_pushchar(vm, &buf, '\t');
 		lhscode_dumpcode(vm, &instruction->body.binary.code1, &buf);
-		lhsbuf_pushstr(vm, &buf, ", ");
+		lhsbuf_pushstr(vm, &buf, ",\t");
 		lhscode_dumpcode(vm, &instruction->body.binary.code2, &buf);
 		break;
 	}
@@ -90,17 +98,20 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 
 	printf("%s\n", buf.data);
 	lhsbuf_uninit(vm, &buf);
-	return true;
+	return LHS_TRUE;
 }
 
 int lhscode_unaryexpr(LHSVM* vm, char symbol, LHSCode* code)
 {
 	LHSInstruction instruction;
 	instruction.op = lhscode_castop(symbol);
-	memcpy(&instruction.body.unary.code, code, sizeof(LHSCode));
+	if (code)
+	{
+		memcpy(&instruction.body.unary.code, code, sizeof(LHSCode));
+	}
 
 	lhscode_dumpinstruction(vm, &instruction);
-	return true;
+	return LHS_TRUE;
 }
 
 int lhscode_binaryexpr(LHSVM* vm, char symbol, LHSCode* code1,
@@ -112,5 +123,5 @@ int lhscode_binaryexpr(LHSVM* vm, char symbol, LHSCode* code1,
 	memcpy(&instruction.body.binary.code2, code2, sizeof(LHSCode));
 
 	lhscode_dumpinstruction(vm, &instruction);
-	return true;
+	return LHS_TRUE;
 }

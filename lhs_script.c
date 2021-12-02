@@ -227,6 +227,11 @@ int main()
     int cc = !(1 & 2);
     double n = 1.5 + 3 - (5 - 1) * 6 + 2 / 2 - 1;
 
+    int ee = 3 & -!2;
+    int ff = 3 & (!2);
+
+    int aaa = (275 & ~UCHAR_MAX) ? 275 & UCHAR_MAX : -1;
+
     LHSVM* vm = lhsvm_create(0);
     lhsparser_dofile(vm, "./test.lhs");
     lhsvm_destroy(vm);

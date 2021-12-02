@@ -23,25 +23,46 @@
 #define SYMBOL_LOGICOR              (16)          //||
 #define SYMBOL_BLSHIFT              (17)          //<<
 #define SYMBOL_BRSHIFT              (18)          //>>
-#define SYMBOL_NOT                  (19)          //!
-#define SYMBOL_BNOT                 (20)          //~
-#define SYMBOL_LBRACKET             (21)          //(
-#define SYMBOL_RBRACKET             (22)          //)
-#define SYMBOL_END                  (23)          //N/A
-#define SYMBOL_DIGIT                (24)          //<number>
-#define SYMBOL_LETTER               (25)          //<string>
+#define SYMBOL_MINUS                (19)          //-
+#define SYMBOL_NOT                  (20)          //!
+#define SYMBOL_BNOT                 (21)          //~
+#define SYMBOL_LBRACKET             (22)          //(
+#define SYMBOL_RBRACKET             (23)          //)
+#define SYMBOL_END                  (24)          //N/A
+#define SYMBOL_DIGIT                (25)          //<number>
+#define SYMBOL_LETTER               (26)          //<string>
 
-#define lhsloadf_getc(lf)         (lf)->current = getc((lf)->file);++(lf)->column
-#define lhsloadf_isnewline(lf)    ((lf)->current == '\r' || (lf)->current == '\n')
-#define lhsloadf_iseof(lf)        ((lf)->current == LHS_TOKENEOF)
-#define lhsloadf_newline(lf)      ++(lf)->line; (lf)->column = 0
-#define lhsloadf_isletter(lf)     (lhsloadf_symbols[(unsigned char)((lf)->current)] == SYMBOL_LETTER)
-#define lhsloadf_isdigit(lf)      (lhsloadf_symbols[(unsigned char)((lf)->current)] == SYMBOL_DIGIT)
-#define lhsloadf_isidentifier(lf) (lhsloadf_isletter(lf) || lhsloadf_isdigit(lf))
-#define lhsloadf_isquote(lf)      ((lf)->current == '"')
-#define lhsloadf_isright(lf)      ((lf)->lexical->token == LHS_TOKENIDENTIFY)
+#define lhsloadf_getc(lf)                           \
+(lf)->current = getc((lf)->file);++(lf)->column
 
-extern char lhsloadf_symbols[];
+#define lhsloadf_isnewline(lf)                      \
+((lf)->current == '\r' || (lf)->current == '\n')
+
+#define lhsloadf_iseof(lf)                          \
+((lf)->current == LHS_TOKENEOF)
+
+#define lhsloadf_newline(lf)                        \
+++(lf)->line; (lf)->column = 0
+
+#define lhsloadf_isletter(lf)                       \
+(lhsloadf_symbolid[(unsigned char)                  \
+((lf)->current)] == SYMBOL_LETTER)
+
+#define lhsloadf_isdigit(lf)                        \
+(lhsloadf_symbolid[(unsigned char)                  \
+((lf)->current)] == SYMBOL_DIGIT)
+
+#define lhsloadf_isidentifier(lf)                   \
+(lhsloadf_isletter(lf) || lhsloadf_isdigit(lf))
+
+#define lhsloadf_isquote(lf)                        \
+((lf)->current == '"')
+
+#define lhsloadf_isright(lf)                        \
+((lf)->lexical->token == LHS_TOKENIDENTIFIER)
+
+extern char lhsloadf_symbolid[];
+extern const char* lhsloadf_symbolname[];
 
 typedef struct LHSLoadF
 {

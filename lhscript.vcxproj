@@ -147,6 +147,7 @@
   <ItemGroup>
     <ClCompile Include="lhs_code.c" />
     <ClCompile Include="lhs_debug.c" />
+    <ClCompile Include="lhs_error.c" />
     <ClCompile Include="lhs_strbuf.c" />
     <ClCompile Include="lhs_script.c" />
     <ClCompile Include="lhs_alloc.c" />

@@ -1,16 +1,16 @@
 #include "lhs_vector.h"
 #include "lhs_vm.h"
 
-#define vectorsize  64
+#define LHS_VECTORSIZE           64
 #define lhsvector_castsize(v, x) ((x) * (v)->esize)
 #define lhsvector_castat(v, x)   ((char*)((v)->nodes) + lhsvector_castsize(v, x))
 
 static int lhsvector_grow(void* vm, LHSVector* vector, 
     size_t osize, size_t nsize)
 {
-    if (nsize < vectorsize)
+    if (nsize < LHS_VECTORSIZE)
     {
-        return true;
+        return LHS_TRUE;
     }
 
     vector->nodes = lhsmem_renewobject
@@ -21,7 +21,7 @@ static int lhsvector_grow(void* vm, LHSVector* vector,
         nsize * vector->esize
     );
     vector->size = nsize;
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsvector_init(void* vm, LHSVector* vector, size_t esize)
@@ -30,7 +30,7 @@ int lhsvector_init(void* vm, LHSVector* vector, size_t esize)
     vector->nodes = 0;
     vector->size = 0;
     vector->usize = 0;
-    return lhsvector_grow(vm, vector, 0, vectorsize);
+    return lhsvector_grow(vm, vector, 0, LHS_VECTORSIZE);
 }
 
 int lhsvector_push(void* vm, LHSVector* vector, void* data, 
@@ -39,7 +39,7 @@ int lhsvector_push(void* vm, LHSVector* vector, void* data,
     if (vector->usize >= vector->size &&
         !lhsvector_grow(vm, vector, vector->size, vector->size << 1))
     {
-        return false;
+        return LHS_FALSE;
     }
 
     memcpy(lhsvector_castat(vector, vector->usize), data, vector->esize);
@@ -50,7 +50,7 @@ int lhsvector_push(void* vm, LHSVector* vector, void* data,
     }
     
     ++vector->usize;
-    return true;
+    return LHS_TRUE;
 }
 
 void lhsvector_pop(void* vm, LHSVector* vector, size_t n)

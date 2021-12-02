@@ -28,7 +28,7 @@ int lhsvalue_equalstring(void* data1, void* data2)
         * s2 = lhsvalue_caststring(data2);
     if (s1->length != s2->length)
     {
-        return false;
+        return LHS_FALSE;
     }
 
     return !memcmp(s1->data, s2->data, s1->length);

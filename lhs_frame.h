@@ -7,28 +7,35 @@
 #include "lhs_gc.h"
 #include "lhs_vm.h"
 
-#define LHS_FRAMENAME 0
+#define LHS_FRAMENAME               0
 #define lhsframe_castmainframe(vm)  ((LHSFrame*)(vm)->mainframe)
 #define lhsframe_castcurframe(vm)   ((LHSFrame*)(vm)->currentframe)
+
+typedef struct LHSChunk
+{
+    int index;              /*chunk index*/
+    struct LHSChunk* parent;
+} LHSChunk;
 
 typedef struct LHSFrame
 {
     LHSGCObject gc;         /*garbage collection handle*/
-    size_t level;           /*valid scope*/
-    LHSVariables localvars; /*hash table for local variables*/     
-    LHSVector localvalues;  /*values for local variables*/
-    LHSVector codes;        /*execute codes*/
-    LHSDebug debug;         /*debug info for frame*/
-    LHSVM* vm;              /*virtual machine*/
-    size_t base;            /*base of frame stack*/
-    size_t ret;             /*return of frame stack*/
+    LHSVector chunks;       /*logic chunks*/
+    LHSChunk* curchunk;     /*current chunk*/
     struct LHSFrame* next;  /*sub frames*/
+    LHSVariables variables; /*hash table for variables*/     
+    LHSVector values;       /*values for variables*/
+    LHSDebug debug;         /*debug info for frame*/
 } LHSFrame;
 
-int lhsframe_init(LHSVM* vm, LHSFrame* frame, size_t level);
+int lhsframe_init(LHSVM* vm, LHSFrame* frame);
+
+int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame);
+
+int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame);
 
 LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
-    long long line, long long column);
+    long long line, long long column, int global);
 
 LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame);
 

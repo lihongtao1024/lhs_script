@@ -3,7 +3,7 @@
 int lhsdebug_init(void* vm, LHSDebug* debugs)
 {
     lhsvector_init(vm, &debugs->symbols, sizeof(LHSSymbol));
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsdebug_insert(void* vm, LHSDebug* debugs,
@@ -13,7 +13,7 @@ int lhsdebug_insert(void* vm, LHSDebug* debugs,
     symbol->line = line;
     symbol->column = column;
     symbol->identifier = identifier;
-    return true;
+    return LHS_TRUE;
 }
 
 void* lhsdebug_at(void* vm, LHSDebug* debugs, size_t index)

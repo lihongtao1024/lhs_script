@@ -2,7 +2,7 @@
 #include "lhs_config.h"
 #include "lhs_vm.h"
 
-#define lhsbuf_pushstr(vm, b, s) \
+#define lhsbuf_pushstr(vm, b, s)                                        \
 lhsbuf_pushlstr(vm, b, s, strlen(s))
 
 typedef struct LHSSTRBUF

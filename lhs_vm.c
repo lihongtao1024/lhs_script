@@ -17,20 +17,32 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
     lhsvector_init(vm, &vm->stack, sizeof(LHSValue));
 }
 
-static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o)
+static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
 {
-    lhsmem_freeobject(vm, o, sizeof(LHSVM));
+    lhs_unused(ud);
+
+    if ((void*)vm == (void*)o)
+    {
+        printf
+        (
+            "memory leak, remain:%llu\n", 
+            vm->nalloc - o->size
+        );
+    }
+    lhsmem_freeobject(vm, o, o->size);
 }
 
 LHSVM* lhsvm_create(lhsmem_new fn)
 {
     if (!fn)
     {
-        fn = lhsmem_realloc;
+        fn = lhsmem_default;
     }
 
-    LHSVM* vm = (LHSVM *)fn(0, 0, 0, sizeof(LHSVM));
-    lhsmem_initgc(lhsgc_castgc(vm), LHS_TGCVM);
+    size_t size = sizeof(LHSVM);
+    LHSVM* vm = (LHSVM *)fn(0, 0, 0, size);
+    vm->nalloc = size;
+    lhsmem_initgc(lhsgc_castgc(vm), LHS_TGCVM, size);
 
     lhsvm_init(vm, fn);
     return vm;
@@ -40,7 +52,7 @@ int lhsvm_pushnil(LHSVM* vm)
 {
     LHSValue* top = lhsvalue_castvalue(lhsvector_increment(vm, &vm->stack));
     top->type = LHS_TNONE;
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsvm_pushboolean(LHSVM* vm, char b)
@@ -48,7 +60,7 @@ int lhsvm_pushboolean(LHSVM* vm, char b)
     LHSValue* top = lhsvalue_castvalue(lhsvector_increment(vm, &vm->stack));
     top->type = LHS_TBOOLEAN;
     top->b = (b ? 1 : 0);
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsvm_pushvalue(LHSVM* vm, int index)
@@ -56,7 +68,7 @@ int lhsvm_pushvalue(LHSVM* vm, int index)
     LHSValue* value = lhsvm_getvalue(vm, index);
     LHSValue* top = lhsvalue_castvalue(lhsvector_increment(vm, &vm->stack));
     memcpy(top, value, sizeof(LHSValue));
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsvm_pushlstring(LHSVM* vm, const char* str, size_t l)
@@ -82,7 +94,7 @@ int lhsvm_pushlstring(LHSVM* vm, const char* str, size_t l)
     LHSValue* top = lhsvalue_castvalue(lhsvector_increment(vm, &vm->stack));
     top->type = LHS_TGC;
     top->gc = lhsgc_castgc(string);
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsvm_pushnumber(LHSVM* vm, double number)
@@ -91,7 +103,7 @@ int lhsvm_pushnumber(LHSVM* vm, double number)
     top->type = LHS_TNUMBER;
     top->n = number;
 
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsvm_pushinteger(LHSVM* vm, long long integer)
@@ -100,7 +112,7 @@ int lhsvm_pushinteger(LHSVM* vm, long long integer)
     top->type = LHS_TINTEGER;
     top->i = integer;
 
-    return true;
+    return LHS_TRUE;
 }
 
 LHSValue* lhsvm_getvalue(LHSVM* vm, int index)
@@ -126,7 +138,7 @@ LHSValue* lhsvm_getvalue(LHSVM* vm, int index)
 int lhsvm_insertvariable(LHSVM* vm)
 {
     LHSValue* value = lhsvm_top(vm);
-    return true;
+    return LHS_TRUE;
 }
 
 const char* lhsvm_tostring(LHSVM* vm, int index)
@@ -187,7 +199,7 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
         }
         case LHS_TGCFULLDATA:
         {
-            l = sprintf(buf, "fdata:%p", value->gc);
+            l = sprintf(buf, "fulldata:%p", value->gc);
             lhsvm_pushlstring(vm, buf, l);
             str = lhsvalue_caststring(lhsvm_top(vm)->gc)->data;
             break;
@@ -227,52 +239,54 @@ LHSValue* lhsvm_top(LHSVM* vm)
 
 size_t lhsvm_gettop(LHSVM* vm)
 {
-    return lhsvector_length(vm, &vm->stack) - lhsframe_castcurframe(vm)->base;
+    return lhsvector_length(vm, &vm->stack);
 }
 
 int lhsvm_pop(LHSVM* vm, size_t n)
 {
     lhsvector_pop(vm, &vm->stack, n);
-    return true;
+    return LHS_TRUE;
 }
 
 LHSVariable* lhsvm_insertconstant(LHSVM* vm)
 {
     LHSValue* key = lhsvm_getvalue(vm, -1);
-    LHSVariable* nvar = lhsmem_newobject
-    (
-        vm, 
-        sizeof(LHSVariable)
-    );
-    nvar->name = lhsvalue_caststring(key->gc);
 
-    LHSVariable* ovar = lhshash_find(vm, &vm->conststrhash, nvar);
-    if (ovar)
+    size_t size = sizeof(LHSVariable);
+    LHSVariable* nvariable = lhsmem_newobject(vm, size);
+    nvariable->name = lhsvalue_caststring(key->gc);
+
+    LHSVariable* ovariable = lhshash_find(vm, &vm->conststrhash, nvariable);
+    if (ovariable)
     {
-        lhsmem_freeobject(vm, nvar, sizeof(LHSVariable));
+        lhsmem_freeobject(vm, nvariable, sizeof(LHSVariable));
         lhsvm_pop(vm, 1);
-        return ovar;
+        return ovariable;
     }
 
-    lhsmem_initgc(lhsgc_castgc(&nvar->gc), LHS_TGCFULLDATA);
-    lhsslink_push(lhsvm_castvm(vm), allgc, lhsgc_castgc(&nvar->gc), next);
-    lhshash_insert(vm, &vm->conststrhash, nvar, 0);
+    lhsmem_initgc(lhsgc_castgc(&nvariable->gc), LHS_TGCFULLDATA, size);
+    lhsslink_push(lhsvm_castvm(vm), allgc, lhsgc_castgc(&nvariable->gc), next);
+    lhshash_insert(vm, &vm->conststrhash, nvariable, 0);
 
     LHSValue* value = lhsvector_increment(vm, &vm->conststrvalue);
-    memcpy(value, key, sizeof(LHSValue));
+    memcpy(value, key, size);
 
-    nvar->index = (int)lhsvector_length(vm, &vm->conststrvalue) - 1;
-    nvar->mark = LHS_MARKSTRING;
+    nvariable->index = (int)lhsvector_length(vm, &vm->conststrvalue) - 1;
+    nvariable->mark = LHS_MARKSTRING;
     
     lhsvm_pop(vm, 1);
-    return nvar;
+    return nvariable;
 }
 
 void lhsvm_destroy(LHSVM* vm)
 {
+    if (vm->mainframe)
+    {
+        lhsframe_uninit(vm, vm->mainframe);
+    }
     lhshash_uninit(vm, &vm->conststrhash);
     lhshash_uninit(vm, &vm->shortstrhash);
     lhsvector_uninit(vm, &vm->conststrvalue);
     lhsvector_uninit(vm, &vm->stack);
-    lhsslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree);
+    lhsslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree, 0);
 }

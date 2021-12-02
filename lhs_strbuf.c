@@ -12,7 +12,7 @@ static int lhsbuf_grow(LHSVM* vm, LHSSTRBUF* buf, size_t nsize)
         buf->data = lhsmem_renewobject(vm, buf->data, buf->size, nsize);
     }
     buf->size = nsize;
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsbuf_init(LHSVM* vm, LHSSTRBUF* buf)
@@ -20,13 +20,13 @@ int lhsbuf_init(LHSVM* vm, LHSSTRBUF* buf)
     buf->usize = 0;
     buf->size = sizeof(buf->buf);
     buf->data = buf->buf;
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsbuf_reset(LHSVM* vm, LHSSTRBUF* buf)
 {
     buf->usize = 0;
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsbuf_pushchar(LHSVM* vm, LHSSTRBUF* buf, char c)
@@ -38,7 +38,7 @@ int lhsbuf_pushchar(LHSVM* vm, LHSSTRBUF* buf, char c)
 
     buf->data[buf->usize++] = c;
     buf->data[buf->usize] = 0;
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsbuf_pushlstr(LHSVM* vm, LHSSTRBUF* buf, const char* str, size_t l)
@@ -57,29 +57,29 @@ int lhsbuf_pushlstr(LHSVM* vm, LHSSTRBUF* buf, const char* str, size_t l)
 
     buf->usize += l;
     buf->data[buf->usize] = 0;
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsbuf_topchar(LHSVM* vm, LHSSTRBUF* buf, char* c)
 {
     if (buf->usize <= 0)
     {
-        return false;
+        return LHS_FALSE;
     }
 
     *c = buf->data[buf->usize - 1];
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsbuf_popchar(LHSVM* vm, LHSSTRBUF* buf, char* c)
 {
     if (buf->usize <= 0)
     {
-        return false;
+        return LHS_FALSE;
     }
 
     *c = buf->data[--buf->usize];
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsbuf_isshort(LHSVM* vm, LHSSTRBUF* buf)

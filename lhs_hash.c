@@ -1,9 +1,10 @@
 #include "lhs_hash.h"
 #include "lhs_vm.h"
 
-#define hashsize            64
-#define lhshash_mod(h, l)   ((h) & ((l) - 1))
-#define lhshash_castdata(o) *(void**)(((char *)(o)) + offsetof(LHSHashNode, data))
+#define LHS_HASHSIZE            64
+#define lhshash_mod(h, l)       ((h) & ((l) - 1))
+#define lhshash_castdata(o)                                             \
+*(void**)(((char *)(o)) + offsetof(LHSHashNode, data))
 
 static int lhshash_rehash(LHSHashNode** nodes, size_t osize, size_t nsize)
 {
@@ -26,14 +27,14 @@ static int lhshash_rehash(LHSHashNode** nodes, size_t osize, size_t nsize)
             node = next;
         }
     }
-    return true;
+    return LHS_TRUE;
 }
 
 static int lhshash_grow(void* vm, LHSHashTable* hash, size_t nsize)
 {
     if (hash->size == nsize)
     {
-        return true;
+        return LHS_TRUE;
     }
 
     if (hash->size < nsize)
@@ -60,7 +61,7 @@ static int lhshash_grow(void* vm, LHSHashTable* hash, size_t nsize)
     }
 
     hash->size = nsize;
-    return true;
+    return LHS_TRUE;
 }
 
 static LHSHashNode* lhshash_search(LHSHashTable* hash, void *userdata, 
@@ -90,7 +91,7 @@ int lhshash_init(void* vm, LHSHashTable* hash, lhshash_calc calc,
     hash->usize = 0;
     hash->size = 0;
     hash->nodes = 0;
-    return lhshash_grow(vm, hash, hashsize);
+    return lhshash_grow(vm, hash, LHS_HASHSIZE);
 }
 
 int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata, 
@@ -106,14 +107,14 @@ int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata,
         {
             *ohash = h;
         }
-        return true;
+        return LHS_TRUE;
     }
 
     if (hash->usize >= (hash->size >> 1))
     {
         if (!lhshash_grow(vm, hash, hash->size << 1))
         {
-            return false;
+            return LHS_FALSE;
         }
 
         list = &hash->nodes[lhshash_mod(h, hash->size)];
@@ -132,7 +133,7 @@ int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata,
     *list = node;
 
     ++hash->usize;
-    return true;
+    return LHS_TRUE;
 }
 
 void* lhshash_find(void* vm, LHSHashTable* hash, void* userdata)
@@ -185,7 +186,8 @@ void lhshash_uninit(void* vm, LHSHashTable* hash)
     lhsmem_freeobject
     (
         lhsvm_castvm(vm), 
-        hash->nodes, sizeof(LHSHashNode*)* hash->size
+        hash->nodes, 
+        sizeof(LHSHashNode*) * hash->size
     );
 
     hash->size = 0;

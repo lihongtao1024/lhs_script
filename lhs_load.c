@@ -3,7 +3,7 @@
 #include "lhs_execute.h"
 #include "lhs_error.h"
 
-char lhsloadf_symbols[] =
+char lhsloadf_symbolid[] =
 {  
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
@@ -11,7 +11,7 @@ char lhsloadf_symbols[] =
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
-    SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NOT,     SYMBOL_NONE,    SYMBOL_NONE,
+    SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NOT,     SYMBOL_NONE,
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_MOD,     SYMBOL_BAND,    SYMBOL_NONE,
     SYMBOL_LBRACKET, SYMBOL_RBRACKET, SYMBOL_MUL,     SYMBOL_ADD,     SYMBOL_NONE,
     SYMBOL_SUB,      SYMBOL_DIGIT,    SYMBOL_DIV,     SYMBOL_DIGIT,   SYMBOL_DIGIT,
@@ -59,13 +59,21 @@ char lhsloadf_symbols[] =
     SYMBOL_NONE
 };
 
+const char* lhsloadf_symbolname[] =
+{
+    0, "+", "-", "*", "/", "%", "&", "|", "^", 
+    "<", ">", "==", "!=", ">=", "<=", "&&", 
+    "||", "<<", ">>", "-", "!", "~", "(", ")"
+};
+
 int lhsloadf_skipline(LHSVM* vm, LHSLoadF* loadf)
 {
     do
     {
         lhsloadf_getc(loadf);
-    } while (!lhsloadf_isnewline(loadf));
-    return true;
+    } while (!lhsloadf_isnewline(loadf) && 
+             !lhsloadf_iseof(loadf));
+    return LHS_TRUE;
 }
 
 int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf)
@@ -88,19 +96,16 @@ int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf)
         }
         else if (loadf->current == LHS_TOKENEOF)
         {
-            lhsexecute_symbolerr
+            lhserr_syntaxerr
             (
                 vm, 
-                "<EOF> illegal end of file.",
-                lhsframe_name(vm, lhsframe_castmainframe(vm)),
-                loadf->line,
-                loadf->column
+                loadf,
+                "<comment> unexpected end of file."
             );
-            break;
         }
     }
 
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
@@ -117,7 +122,7 @@ int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
         );
         lhsloadf_getc(loadf);
     } while (lhsloadf_isidentifier(loadf));
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
@@ -146,13 +151,12 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
     {
         if (dot > 1)
         {
-            lhsexecute_symbolerr
+            lhserr_syntaxerr
             (
                 vm, 
-                "illegal decimal.",
-                lhsframe_name(vm, lhsframe_castmainframe(vm)),
-                loadf->line,
-                loadf->column
+                loadf,
+                "solving decimal '%s'.",
+                loadf->lexical->buf.data
             );
         }
         else
@@ -160,7 +164,7 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
             *is_double = 1;
         }
     }
-    return true;
+    return LHS_TRUE;
 };
 
 int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
@@ -177,9 +181,18 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
             (char)loadf->current
         );
         lhsloadf_getc(loadf);
+        if (lhsloadf_iseof(loadf))
+        {
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf, 
+                "<string> unexpected end of file."
+            );
+        }
     } while (!lhsloadf_isquote(loadf));
     lhsloadf_getc(loadf);
-    return true;
+    return LHS_TRUE;
 }
 
 int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname)
@@ -187,20 +200,20 @@ int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname)
     loadf->file = fopen(fname, "rb");
     if (!loadf->file)
     {
-        lhs_errno("load file %s fail", fname);
-        return false;
+        lhserr_no("load file %s fail", fname);
+        return LHS_FALSE;
     }
 
     loadf->current = 0;
     loadf->column = 0;
     loadf->line = 1;
     loadf->lexical = 0;
-    return true;
+    return LHS_TRUE;
 }
 
 void lhsloadf_uninit(LHSVM* vm, LHSLoadF* loadf)
 {
-    unused(vm);
+    lhs_unused(vm);
 
     if (loadf->file)
     {

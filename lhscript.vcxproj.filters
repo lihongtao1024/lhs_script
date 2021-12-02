@@ -60,6 +60,9 @@
     <ClCompile Include="lhs_code.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="lhs_error.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lhs_alloc.h">

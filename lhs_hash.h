@@ -2,7 +2,6 @@
 #include "lhs_config.h"
 
 typedef int (*lhshash_equal)(void*, void*);
-
 typedef long long (*lhshash_calc)(void*);
 
 typedef struct LHSHashNode

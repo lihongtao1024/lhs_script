@@ -13,7 +13,6 @@
 #define LHS_MARKSTRING            (6)
 #define LHS_MARKSTACK             (7)
 #define LHS_MARKMAX               (8)
-
 #define lhsvariable_castvar(ud)   ((LHSVariable*)(ud))
 
 typedef struct LHSVariable
@@ -21,6 +20,7 @@ typedef struct LHSVariable
     LHSGCObject gc;
     int index;
     int mark;
+    int chunk;
     LHSString *name;
 } LHSVariable;
 

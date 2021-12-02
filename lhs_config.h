@@ -11,7 +11,6 @@
 #include <limits.h>
 #include <setjmp.h>
 
-#define true        (1)
-#define false       (0)
-#define unused(arg) ((void)arg)
-
+#define LHS_TRUE        (1)
+#define LHS_FALSE       (0)
+#define lhs_unused(arg) ((void)arg)

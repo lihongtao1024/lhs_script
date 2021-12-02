@@ -6,33 +6,51 @@
 #include "lhs_code.h"
 #include "lhs_error.h"
 
-#define G (1)
-#define L (0)
-#define N (-1)
-#define E (2)
+#define G   (1)
+#define L   (0)
+#define N   (-1)
+#define E   (2)
 
-#define lhsparser_isexprvalue(lf) \
-((lf)->lexical->token == LHS_TOKENNUMBER  || \
- (lf)->lexical->token == LHS_TOKENINTEGER || \
- (lf)->lexical->token == LHS_TOKENSTRING  || \
- (lf)->lexical->token == LHS_TOKENTRUE    || \
- (lf)->lexical->token == LHS_TOKENFALSE   || \
- (lf)->lexical->token == LHS_TOKENIDENTIFY)
+#define lhsparser_isexprvalue(t)                                    \
+((t) == LHS_TOKENNUMBER  ||                                         \
+ (t) == LHS_TOKENINTEGER ||                                         \
+ (t) == LHS_TOKENSTRING  ||                                         \
+ (t) == LHS_TOKENTRUE    ||                                         \
+ (t) == LHS_TOKENFALSE   ||                                         \
+ (t) == LHS_TOKENIDENTIFIER)
 
-#define lhsparser_isexprsymbol(lf) \
-(((lf)->lexical->token <= UCHAR_MAX) ? \
-(lhsloadf_symbols[(lf)->lexical->token] > SYMBOL_BEGIN && \
- lhsloadf_symbols[(lf)->lexical->token] < SYMBOL_END) : \
-(((lf)->lexical->token & ~UCHAR_MAX) > LHS_TOKENSYMBOLBEGIN && \
- ((lf)->lexical->token & ~UCHAR_MAX) < LHS_TOKENSYMBOLEND))
+#define lhsparser_isassignment(lf)                                  \
+((lf)->lexical->token == '=')
 
-#define lhsparser_isunarysymbol(s) \
-((s) == SYMBOL_NOT || (s) == SYMBOL_BNOT)
+#define lhsparser_isexprsymbol(t)                                   \
+(((t) & ~UCHAR_MAX) ?                                               \
+ ((t) > LHS_TOKENSYMBOLBEGIN &&                                     \
+  (t) < LHS_TOKENSYMBOLEND) :                                       \
+(lhsloadf_symbolid[(t)] > SYMBOL_BEGIN &&                           \
+ lhsloadf_symbolid[(t)] < SYMBOL_END))
 
-#define lhsparser_truncate(t) \
-((t) <= UCHAR_MAX ? lhsloadf_symbols[t] : ((t) & ~UCHAR_MAX))
+#define lhsparser_iscurexprsymbol(lf)                               \
+lhsparser_isexprsymbol((lf)->lexical->token)
 
-static const char* tokens[] =
+#define lhsparser_isnextexprsymbol(lf)                              \
+lhsparser_isexprsymbol((lf)->lexical->lookahead)
+
+#define lhsparser_isunarysymbol(s)                                  \
+((s) == SYMBOL_NOT || (s) == SYMBOL_BNOT || (s) == SYMBOL_MINUS)
+
+#define lhsparser_truncate(t)                                       \
+(((t) & ~UCHAR_MAX) ?                                               \
+ ((t) & UCHAR_MAX) :                                                \
+ lhsloadf_symbolid[t])
+
+typedef struct LHSExprState
+{
+    int read;
+    LHSLoadF* loadf;
+    LHSSTRBUF symbols;
+} LHSExprState;
+
+static const char* reserveds[] =
 {
     "", "set", "var", "function", "for", "while",
     "if", "else", "switch", "case", "default", 
@@ -40,51 +58,52 @@ static const char* tokens[] =
     "<name>", "<integer>", "<number>", "<string>"
 };
 
-static const char symbols_priority[][SYMBOL_END] =
+static const char lhsparser_prioritytable[][SYMBOL_END] =
 {
-     /*N/A, +, -, *, /, %, &, |, ^, <, >,==,!=,>=,<=,&&,||,<<,>>, !, ~, (, ),*/
-/*N/A*/{ E, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, N,},
-/*+*/  { L, L, L, G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, L,},
-/*-*/  { L, L, L, G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, L,},
-/***/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, L,},
-/*/*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, L,},
-/*%*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, L,},
-/*&*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*|*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*^*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*<*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*>*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*==*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*!=*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*>=*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*<=*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*&&*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*||*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*<<*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*>>*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, L,},
-/*!*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, L,},
-/*~*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, L,},
-/*(*/  { N, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, E,},
-/*)*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L,},
+     /*N/A, +, -, *, /, %, &, |, ^, <, >,==,!=,>=,<=,&&,||,<<,>>, -, !, ~, (, )*/
+/*N/A*/{ E, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, N},
+/*+*/  { L, L, L, G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*-*/  { L, L, L, G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/***/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*/*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*%*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*&*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*|*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*^*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*<*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*>*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*==*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*!=*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*>=*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*<=*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*&&*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*||*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*<<*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*>>*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*-*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L}, 
+/*!*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*~*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, G, L},
+/*(*/  { N, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, E},
+/*)*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, N, N, N, N, N}
 };
 
 static int lhsparser_initreserved(LHSVM* vm)
 {
-    for (int i = 0; i < _countof(tokens); ++i)
+    for (int i = 0; i < _countof(reserveds); ++i)
     {
         LHSString* str = lhsvalue_caststring
         (
             lhsmem_newgcstring
             (
                 vm, 
-                (void*)tokens[i], 
+                (void*)reserveds[i], 
                 i + LHS_TOKENRESERVEDBEGIN
             )
         );
         lhshash_insert(vm, &vm->shortstrhash, str, &str->hash);
     }
 
-    return true;
+    return LHS_TRUE;
 }
 
 static int lhsparser_initmainframe(LHSVM* vm, const char* fname)
@@ -96,7 +115,7 @@ static int lhsparser_initmainframe(LHSVM* vm, const char* fname)
         LHS_TGCFRAME
     );
 
-    lhsframe_init(vm, vm->mainframe, false);
+    lhsframe_init(vm, vm->mainframe);
     vm->currentframe = vm->mainframe;
     
     lhsvm_pushstring(vm, fname);
@@ -105,39 +124,38 @@ static int lhsparser_initmainframe(LHSVM* vm, const char* fname)
         vm, 
         lhsframe_castmainframe(vm), 
         0, 
-        0
+        0,
+        LHS_TRUE
     );
-    LHSValue *value = lhsvalue_castvalue
+    LHSValue* value = lhsvalue_castvalue
     (
         lhsvector_at
         (
             vm, 
-            &lhsframe_castmainframe(vm)->localvalues, 
+            &lhsframe_castmainframe(vm)->values, 
             variable->index
         )
     );
     value->type = LHS_TGC;
     value->gc = lhsgc_castgc(variable->name);
-    return true;
+    return LHS_TRUE;
 }
 
-static int lhsparser_enterlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
+static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 {
     lex->token = LHS_TOKENEOF;
     lex->lookahead = LHS_TOKENEOF;
-    lex->column = loadf->column;
-    lex->line = loadf->line;
     loadf->lexical = lex;
 
     lhsbuf_init(vm, &lex->buf);
-    return true;
+    return LHS_TRUE;
 }
 
-static int lhsparser_leavelexical(LHSVM* vm, LHSLoadF* loadf)
+static int lhsparser_uninitlexical(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsbuf_uninit(vm, &loadf->lexical->buf);
     loadf->lexical = 0;
-    return true;
+    return LHS_TRUE;
 }
 
 static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
@@ -172,7 +190,7 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
         case '8':
         case '9':
         {
-            int is_double = false;
+            int is_double = LHS_FALSE;
             lhsloadf_savedigital(vm, loadf, &is_double);
             return is_double ? LHS_TOKENNUMBER : LHS_TOKENINTEGER;
         }
@@ -251,14 +269,25 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
             }
             return '!';
         }
-        case '+':
         case '-':
+        {
+            lhsloadf_getc(loadf);
+            if (lhsparser_isassignment(loadf) ||
+                lhsparser_iscurexprsymbol(loadf))
+            {
+                return LHS_TOKENMINUS;
+            }
+            return '-';
+        }
+        case '+':
         case '*':
         case '%':
         case '~':
         case '^':
         case '(':
         case ')':
+        case '{':
+        case '}':
         {
             int token = loadf->current;
             lhsloadf_getc(loadf);
@@ -287,7 +316,7 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
                         return str->extra;
                     }
                 }
-                return LHS_TOKENIDENTIFY;
+                return LHS_TOKENIDENTIFIER;
             }
 
             if (loadf->current == LHS_TOKENEOF)
@@ -295,15 +324,13 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
                 return LHS_TOKENEOF;
             }
 
-            lhsexecute_symbolerr
+            lhserr_syntaxerr
             (
                 vm, 
-                "undefined token found.",
-                lhsframe_name(vm, lhsframe_castmainframe(vm)),
-                loadf->line,
-                loadf->column
+                loadf,
+                "undefined token '%s'.",
+                loadf->lexical->buf.data
             );
-            return LHS_TOKENEOF;
         }
         }
     }
@@ -311,234 +338,227 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
 
 static int lhsparser_nexttoken(LHSVM* vm, LHSLoadF* loadf)
 {
-    loadf->lexical->line = loadf->line;
-    loadf->lexical->column = loadf->column;
-
     if (loadf->lexical->lookahead != LHS_TOKENEOF)
     {
         loadf->lexical->token = loadf->lexical->lookahead;
         loadf->lexical->lookahead = LHS_TOKENEOF;
-        return true;
+        return LHS_TRUE;
     }
 
     loadf->lexical->token = lhsparser_nextlexical(vm, loadf);
-    return true;
+    return LHS_TRUE;
 }
 
 static int lhsparser_lookaheadtoken(LHSVM* vm, LHSLoadF* loadf)
 {
     loadf->lexical->lookahead = lhsparser_nextlexical(vm, loadf);
-    return true;
+    return LHS_TRUE;
 }
 
-static int lhsparser_expressionproc(LHSVM* vm, LHSSTRBUF* symbols, 
-    LHSVector* values, char nsymbol)
+static int lhsparser_initexprstate(LHSVM* vm, LHSExprState* state, 
+    LHSLoadF* loadf)
 {
-    int is_continue = false;
-    if (lhsbuf_isempty(vm, symbols))
+    state->read = LHS_TRUE;
+    state->loadf = loadf;
+    lhsbuf_init(vm, &state->symbols);
+    lhsbuf_pushchar(vm, &state->symbols, SYMBOL_NONE);
+    return LHS_TRUE;
+}
+
+static void lhsparser_uninitexprstate(LHSVM* vm, LHSExprState* state)
+{
+    lhsbuf_uninit(vm, &state->symbols);
+}
+
+static int lhsparser_exprrecursive(LHSVM* vm, LHSExprState* state, char nsymbol)
+{
+    int result = LHS_FALSE;
+    if (lhsbuf_isempty(vm, &state->symbols))
     {
-        return is_continue;
+        return result;
     }
 
     char osymbol;
-    lhsbuf_topchar(vm, symbols, &osymbol);
-    switch (symbols_priority[osymbol][nsymbol])
+    lhsbuf_topchar(vm, &state->symbols, &osymbol);
+
+    switch (lhsparser_prioritytable[osymbol][nsymbol])
     {
     case G:
     {
-        lhsbuf_pushchar(vm, symbols, nsymbol);
+        lhsbuf_pushchar(vm, &state->symbols, nsymbol);
         break;
     }
     case L:
     {
-        is_continue = true;
-        if (lhsparser_isunarysymbol(nsymbol))
+        if (lhsparser_isunarysymbol(osymbol))
         {
-            LHSCode* code = (LHSCode*)lhsvector_at
-            (
-                vm,
-                values,
-                lhsvector_length(vm, values) - 1
-            );
-            lhscode_unaryexpr(vm, osymbol, code);
+            LHSCode c1;
+            c1.mark = LHS_MARKSTACK;
+            c1.code.index = -1;
+            lhscode_unaryexpr(vm, osymbol, &c1);
         }
         else
-        {
-            /*LHSCode* code1 = (LHSCode*)lhsvector_at
-            (
-                vm,
-                values,
-                lhsvector_length(vm, values) - 2
-            );
-            if (code1->mark != LHS_MARKNONE)
-            {
-                lhscode_unaryexpr(vm, OP_PUSH, code1);
-            }
-
-            LHSCode* code2 = (LHSCode*)lhsvector_at
-            (
-                vm,
-                values,
-                lhsvector_length(vm, values) - 1
-            );
-            if (code2->mark != LHS_MARKNONE)
-            {
-                lhscode_unaryexpr(vm, OP_PUSH, code2);
-            }*/
-            
-            LHSCode s1;
-            s1.mark = LHS_MARKSTACK;
-            s1.code.index = -2;
-            LHSCode s2;
-            s2.mark = LHS_MARKSTACK;
-            s2.code.index = -1;
-            lhscode_binaryexpr(vm, osymbol, &s1, &s2);
-            lhsvector_pop(vm, values, 2);
-
-            LHSCode s3;
-            s3.mark = LHS_MARKNONE;
-            lhsvector_push(vm, values, &s3, 0);
+        {            
+            LHSCode c1;
+            c1.mark = LHS_MARKSTACK;
+            c1.code.index = -2;
+            LHSCode c2;
+            c2.mark = LHS_MARKSTACK;
+            c2.code.index = -1;
+            lhscode_binaryexpr(vm, osymbol, &c1, &c2);
         }
 
-        lhsbuf_popchar(vm, symbols, &osymbol);
+        lhsbuf_popchar(vm, &state->symbols, &osymbol);
+        result = LHS_TRUE;
         break;
     }
     case E:
     {
-        lhsbuf_popchar(vm, symbols, &osymbol);
+        lhsbuf_popchar(vm, &state->symbols, &osymbol);
         break;
     }
     default:
     {
-        lhsbuf_uninit(vm, symbols);
-        lhsvector_uninit(vm, values);
-        lhsexecute_protectederr(vm, "illegal expression.");
-        break;
-    }
-    }
-
-    return is_continue;
-}
-
-static int lhsparser_expressionstate(LHSVM* vm, LHSLoadF* loadf)
-{    
-    LHSSTRBUF symbols;
-    lhsbuf_init(vm, &symbols);
-    lhsbuf_pushchar(vm, &symbols, SYMBOL_NONE);
-
-    LHSVector values;
-    lhsvector_init(vm, &values, sizeof(LHSCode));
-
-    while (!lhsbuf_isempty(vm, &symbols))
-    {
-        lhsparser_nexttoken(vm, loadf);
-        if (loadf->lexical->token == LHS_TOKENINTEGER)
-        {
-            LHSCode code;
-            code.mark = LHS_MARKINTEGER;
-            code.code.i = atoll(loadf->lexical->buf.data);
-            lhscode_unaryexpr(vm, OP_PUSH, &code);
-            lhsvector_push(vm, &values, &code, 0);
-        }
-        else if (loadf->lexical->token == LHS_TOKENNUMBER)
-        {
-            LHSCode code;
-            code.mark = LHS_MARKNUMBER;
-            code.code.n = atof(loadf->lexical->buf.data);
-            lhscode_unaryexpr(vm, OP_PUSH, &code);
-            lhsvector_push(vm, &values, &code, 0);
-        }
-        else if (loadf->lexical->token == LHS_TOKENSTRING)
-        {
-            lhsvm_pushlstring(vm, loadf->lexical->buf.data,
-                loadf->lexical->buf.usize);
-            LHSVariable* constvar = lhsvm_insertconstant(vm);
-            LHSCode code;
-            code.mark = constvar->mark;
-            code.code.index = constvar->index;
-            lhscode_unaryexpr(vm, OP_PUSH, &code);
-            lhsvector_push(vm, &values, &code, 0);
-        }
-        else if (loadf->lexical->token == LHS_TOKENIDENTIFY)
-        {
-            lhsvm_pushlstring(vm, loadf->lexical->buf.data,
-                loadf->lexical->buf.usize);
-            LHSVariable* var = lhsframe_getvariable
-            (
-                vm, 
-                lhsframe_castcurframe(vm)
-            );
-            LHSCode code;
-            code.mark = var->mark;
-            code.code.index = var->index;
-            lhscode_unaryexpr(vm, OP_PUSH, &code);
-            lhsvector_push(vm, &values, &code, 0);
-        }
-        else if (loadf->lexical->token == LHS_TOKENTRUE ||
-                 loadf->lexical->token == LHS_TOKENFALSE)
-        {
-            LHSCode code;
-            code.mark = LHS_MARKBOOLEAN;
-            code.code.b = loadf->lexical->token == LHS_TOKENTRUE ? 1 : 0;
-            lhscode_unaryexpr(vm, OP_PUSH, &code);
-            lhsvector_push(vm, &values, &code, 0);
-        }
-        else
-        {
-            char symbol = SYMBOL_NONE;
-            if (lhsparser_isexprsymbol(loadf))
-            {
-                symbol = lhsparser_truncate(loadf->lexical->token);
-            }
-
-            while (lhsparser_expressionproc(vm, &symbols, &values, symbol));
-        }
-    }
-
-    lhsbuf_uninit(vm, &symbols);
-    lhsvector_uninit(vm, &values);
-    return true;
-}
-
-static int lhsparser_movstate(LHSVM* vm, LHSLoadF* loadf)
-{
-    lhsparser_nexttoken(vm, loadf);
-    if (loadf->lexical->token != LHS_TOKENIDENTIFY)
-    {
-        lhsexecute_symbolerr
+        lhserr_syntaxerr
         (
             vm, 
-            "illegal variable '%s' declaration.",
-            lhsframe_name(vm, lhsframe_castmainframe(vm)),
-            loadf->line,
-            loadf->column,
-            loadf->lexical->buf.data
+            state->loadf,
+            "solving symbol '%s, %s'.",
+            lhsloadf_symbolname[osymbol],
+            lhsloadf_symbolname[nsymbol]
         );
-        return false;
+    }
     }
 
-    lhsvm_pushlstring
-    (
-        vm, 
-        loadf->lexical->buf.data, 
-        loadf->lexical->buf.usize
-    );
-    LHSVariable *variable = lhsframe_insertvariable
-    (
-        vm, 
-        lhsframe_castcurframe(vm), 
-        loadf->line, 
-        loadf->column
-    );
+    return result;
+}
 
-    lhsparser_lookaheadtoken(vm, loadf);
-    if (loadf->lexical->lookahead != '=')
+static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
+{
+    LHSCode c; int token = LHS_TOKENEOF;
+    while (!lhsbuf_isempty(vm, &state->symbols))
     {
-        return true;
+        if (state->read)
+        {
+            lhsparser_nexttoken(vm, state->loadf);
+            token = state->loadf->lexical->token;
+
+            if (token == LHS_TOKENINTEGER)
+            {
+                c.mark = LHS_MARKINTEGER;
+                c.code.i = atoll(state->loadf->lexical->buf.data);
+                lhscode_unaryexpr(vm, OP_PUSH, &c);
+
+                lhsparser_lookaheadtoken(vm, state->loadf);
+                state->read = lhsparser_isnextexprsymbol(state->loadf);
+                continue;
+            }
+            
+            if (token == LHS_TOKENNUMBER)
+            {
+                c.mark = LHS_MARKNUMBER;
+                c.code.n = atof(state->loadf->lexical->buf.data);
+                lhscode_unaryexpr(vm, OP_PUSH, &c);
+
+                lhsparser_lookaheadtoken(vm, state->loadf);
+                state->read = lhsparser_isnextexprsymbol(state->loadf);
+                continue;
+            }
+
+            if (token == LHS_TOKENSTRING)
+            {
+                lhsvm_pushlstring(vm, state->loadf->lexical->buf.data,
+                    state->loadf->lexical->buf.usize);
+                LHSVariable* constvar = lhsvm_insertconstant(vm);
+                c.mark = constvar->mark;
+                c.code.index = constvar->index;
+                lhscode_unaryexpr(vm, OP_PUSH, &c);
+
+                lhsparser_lookaheadtoken(vm, state->loadf);
+                state->read = lhsparser_isnextexprsymbol(state->loadf);
+                continue;
+            }
+
+            if (token == LHS_TOKENIDENTIFIER)
+            {
+                lhsvm_pushlstring(vm, state->loadf->lexical->buf.data,
+                    state->loadf->lexical->buf.usize);
+                LHSVariable* var = lhsframe_getvariable
+                (
+                    vm, 
+                    lhsframe_castcurframe(vm)
+                );
+                if (!var)
+                {
+                    lhserr_syntaxerr
+                    (
+                        vm, 
+                        state->loadf, 
+                        "undefined variable '%s'.", 
+                        state->loadf->lexical->buf.data
+                    );
+                }
+                c.mark = var->mark;
+                c.code.index = var->index;
+                lhscode_unaryexpr(vm, OP_PUSH, &c);
+
+                lhsparser_lookaheadtoken(vm, state->loadf);
+                state->read = lhsparser_isnextexprsymbol(state->loadf);
+                continue;
+            }
+
+            if (token == LHS_TOKENTRUE ||
+                token == LHS_TOKENFALSE)
+            {
+                c.mark = LHS_MARKBOOLEAN;
+                c.code.b = state->loadf->lexical->token == LHS_TOKENTRUE ? 1 : 0;
+                lhscode_unaryexpr(vm, OP_PUSH, &c);
+
+                lhsparser_lookaheadtoken(vm, state->loadf);
+                state->read = lhsparser_isnextexprsymbol(state->loadf);
+                continue;
+            }
+        }
+
+        char nsymbol = SYMBOL_NONE;
+        if (lhsparser_isexprsymbol(token))
+        {
+            nsymbol = lhsparser_truncate(token);
+        }
+
+        while (lhsparser_exprrecursive(vm, state, nsymbol));
     }
 
+    return LHS_TRUE;
+}
+
+static int lhsparser_exprstate(LHSVM* vm, LHSLoadF* loadf)
+{   
+    LHSExprState exprstate;
+    lhsparser_initexprstate(vm, &exprstate, loadf);
+
+    if (lhserr_protectedcall
+    (
+        vm, 
+        lhsparser_exprsolve,
+        &exprstate
+    ))
+    {
+        lhserr_msg(lhsvm_tostring(vm, -1));
+        lhsvm_pop(vm, 2);
+
+        lhsparser_uninitexprstate(vm, &exprstate);
+        lhserr_throw(vm, "");
+    }
+
+    lhsparser_uninitexprstate(vm, &exprstate);
+    return LHS_TRUE;
+}
+
+static int lhsparser_directmov(LHSVM* vm, LHSLoadF* loadf, LHSVariable* variable)
+{
     lhsparser_nexttoken(vm, loadf);
-    lhsparser_expressionstate(vm, loadf);
+    lhsparser_exprstate(vm, loadf);
     
     LHSCode c1;
     c1.mark = variable->mark;
@@ -548,69 +568,208 @@ static int lhsparser_movstate(LHSVM* vm, LHSLoadF* loadf)
     c2.code.index = -1;
     lhscode_binaryexpr(vm, OP_MOVE, &c1, &c2);
 
-    return true;
+    return LHS_TRUE;
 }
 
-static int lhsparser_procstate(LHSVM* vm, LHSLoadF* loadf)
+static int lhsparser_movstate(LHSVM* vm, LHSLoadF* loadf)
+{
+    lhsvm_pushlstring
+    (
+        vm, 
+        loadf->lexical->buf.data, 
+        loadf->lexical->buf.usize
+    );
+    LHSVariable* variable = lhsframe_getvariable
+    (
+        vm,
+        lhsframe_castcurframe(vm)
+    );
+    if (!variable)
+    {
+        lhserr_syntaxerr
+        (
+            vm, 
+            loadf,
+            "undefined variable '%s'.",
+            loadf->lexical->buf.data
+        );
+    }
+
+    return lhsparser_directmov(vm, loadf, variable);
+}
+
+static int lhsparser_variablestate(LHSVM* vm, LHSLoadF* loadf, int global)
+{
+    lhsparser_nexttoken(vm, loadf);
+    if (loadf->lexical->token != LHS_TOKENIDENTIFIER)
+    {
+        lhserr_syntaxerr
+        (
+            vm, 
+            loadf,
+            "solving variable '%s'.",
+            loadf->lexical->buf.data
+        );
+    }
+
+    lhsvm_pushlstring
+    (
+        vm, 
+        loadf->lexical->buf.data, 
+        loadf->lexical->buf.usize
+    );
+
+    lhsvm_pushvalue(vm, -1);
+    if (lhsframe_getvariable(vm, lhsframe_castcurframe(vm)))
+    {
+        lhsvm_pop(vm, 1);
+        lhserr_syntaxerr
+        (
+            vm, 
+            loadf,
+            "variable duplicate definition '%s'.",
+            loadf->lexical->buf.data
+        );
+    }
+
+    LHSVariable* variable = lhsframe_insertvariable
+    (
+        vm, 
+        lhsframe_castcurframe(vm), 
+        loadf->line, 
+        loadf->column,
+        global
+    );
+
+    lhsparser_lookaheadtoken(vm, loadf);
+    if (loadf->lexical->lookahead != '=')
+    {
+        return LHS_TRUE;
+    }
+
+    return lhsparser_directmov(vm, loadf, variable);
+}
+
+int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf)
+{
+    lhsparser_exprstate(vm, loadf);
+
+    if (loadf->lexical->token != '{')
+    {
+        lhserr_syntaxerr
+        (
+            vm, 
+            loadf,
+            "unexpected if definition '%s'.",
+            loadf->lexical->buf.data
+        );
+    }
+    int a = 10;
+    return LHS_TRUE;
+}
+
+static int lhsparser_preparestate(LHSVM* vm, LHSLoadF* loadf)
 {
     while (loadf->lexical->token != LHS_TOKENEOF)
     {
         switch (loadf->lexical->token)
         {
-        case LHS_TOKENGLOBAL:
         case LHS_TOKENLOCAL:
         {
-            lhsparser_movstate(vm, loadf);
+            lhsparser_variablestate(vm, loadf, LHS_FALSE);
+            lhsparser_nexttoken(vm, loadf);
+            break;
+        }
+        case LHS_TOKENGLOBAL:
+        {
+            lhsparser_variablestate(vm, loadf, LHS_TRUE);
+            lhsparser_nexttoken(vm, loadf);
+            break;
+        }
+        case LHS_TOKENIF:
+        {
+            lhsparser_ifstate(vm, loadf);
+            lhsparser_nexttoken(vm, loadf);
+            break;
+        }
+        case LHS_TOKENIDENTIFIER:
+        {
+            lhsparser_lookaheadtoken(vm, loadf);
+            if (loadf->lexical->lookahead == '=')
+            {
+                lhsparser_movstate(vm, loadf);
+                lhsparser_nexttoken(vm, loadf);
+            }
+            else
+            {
+                lhserr_syntaxerr
+                (
+                    vm, 
+                    loadf,
+                    "illegal identifier '%s'.",
+                    loadf->lexical->buf.data
+                );
+            }
             break;
         }
         default:
         {
-            lhsparser_nexttoken(vm, loadf);
-            break;
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf,
+                "unknown token '%s'.",
+                loadf->lexical->buf.data
+            );
         }
         }
     }
 
-    return true;
+    return LHS_TRUE;
 }
 
 static int lhsparser_initstate(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsloadf_getc(loadf);
     lhsparser_nexttoken(vm, loadf);
-    lhsparser_procstate(vm, loadf);
-    return true;
+    lhsparser_preparestate(vm, loadf);
+    return LHS_TRUE;
 }
 
 int lhsparser_dofile(LHSVM* vm, const char* fname)
 {    
     if (!lhsparser_initreserved(vm))
     {
-        return false;
+        return LHS_FALSE;
     }
 
     LHSLoadF loadf;
     if (!lhsloadf_init(vm, &loadf, fname))
     {
-        return false;
+        return LHS_FALSE;
     }
 
     if (!lhsparser_initmainframe(vm, fname))
     {
         lhsloadf_uninit(vm, &loadf);
-        return false;
+        return LHS_FALSE;
     }
 
     LHSLexical lexical;
-    lhsparser_enterlexical(vm, &loadf, &lexical);
+    lhsparser_initlexical(vm, &loadf, &lexical);
 
-    if (lhsexecute_protectedrun(vm, lhsparser_initstate, &loadf))
+    if (lhserr_protectedcall
+    (
+        vm, 
+        lhsparser_initstate, 
+        &loadf
+    ))
     {
-        lhs_errmsg(lhsvm_tostring(vm, -1));
+        lhserr_msg(lhsvm_tostring(vm, -1));
         lhsvm_pop(vm, 2);
     }
     
-    lhsparser_leavelexical(vm, &loadf);
+    lhsparser_uninitlexical(vm, &loadf);
     lhsloadf_uninit(vm, &loadf);
-    return true;
+    return LHS_TRUE;
 }

@@ -1,6 +1,7 @@
 #include "lhs_strbuf.h"
+#include "lhs_vm.h"
 
-static int lhsbuf_grow(LHSVM* vm, LHSSTRBUF* buf, size_t nsize)
+static int lhsbuf_grow(void* vm, LHSSTRBUF* buf, size_t nsize)
 {
     if (buf->data == buf->buf)
     {
@@ -15,7 +16,7 @@ static int lhsbuf_grow(LHSVM* vm, LHSSTRBUF* buf, size_t nsize)
     return LHS_TRUE;
 }
 
-int lhsbuf_init(LHSVM* vm, LHSSTRBUF* buf)
+int lhsbuf_init(void* vm, LHSSTRBUF* buf)
 {
     buf->usize = 0;
     buf->size = sizeof(buf->buf);
@@ -23,13 +24,13 @@ int lhsbuf_init(LHSVM* vm, LHSSTRBUF* buf)
     return LHS_TRUE;
 }
 
-int lhsbuf_reset(LHSVM* vm, LHSSTRBUF* buf)
+int lhsbuf_reset(void* vm, LHSSTRBUF* buf)
 {
     buf->usize = 0;
     return LHS_TRUE;
 }
 
-int lhsbuf_pushchar(LHSVM* vm, LHSSTRBUF* buf, char c)
+int lhsbuf_pushc(void* vm, LHSSTRBUF* buf, char c)
 {
     if (buf->usize + 1 >= buf->size)
     {
@@ -41,7 +42,22 @@ int lhsbuf_pushchar(LHSVM* vm, LHSSTRBUF* buf, char c)
     return LHS_TRUE;
 }
 
-int lhsbuf_pushlstr(LHSVM* vm, LHSSTRBUF* buf, const char* str, size_t l)
+int lhsbuf_pushi(void* vm, LHSSTRBUF* buf, int i)
+{
+    return lhsbuf_pushls(vm, buf, (const char*)&i, sizeof(i));
+}
+
+int lhsbuf_pushl(void* vm, LHSSTRBUF* buf, long long l)
+{
+    return lhsbuf_pushls(vm, buf, (const char*)&l, sizeof(l));
+}
+
+int lhsbuf_pushf(void* vm, LHSSTRBUF* buf, double n)
+{
+    return lhsbuf_pushls(vm, buf, (const char*)&n, sizeof(n));
+}
+
+int lhsbuf_pushls(void* vm, LHSSTRBUF* buf, const char* str, size_t l)
 {
     if (buf->usize + l + 1 >= buf->size)
     {
@@ -60,7 +76,7 @@ int lhsbuf_pushlstr(LHSVM* vm, LHSSTRBUF* buf, const char* str, size_t l)
     return LHS_TRUE;
 }
 
-int lhsbuf_topchar(LHSVM* vm, LHSSTRBUF* buf, char* c)
+int lhsbuf_topchar(void* vm, LHSSTRBUF* buf, char* c)
 {
     if (buf->usize <= 0)
     {
@@ -71,7 +87,7 @@ int lhsbuf_topchar(LHSVM* vm, LHSSTRBUF* buf, char* c)
     return LHS_TRUE;
 }
 
-int lhsbuf_popchar(LHSVM* vm, LHSSTRBUF* buf, char* c)
+int lhsbuf_popchar(void* vm, LHSSTRBUF* buf, char* c)
 {
     if (buf->usize <= 0)
     {
@@ -82,17 +98,17 @@ int lhsbuf_popchar(LHSVM* vm, LHSSTRBUF* buf, char* c)
     return LHS_TRUE;
 }
 
-int lhsbuf_isshort(LHSVM* vm, LHSSTRBUF* buf)
+int lhsbuf_isshort(void* vm, LHSSTRBUF* buf)
 {
     return buf->usize < LHS_SHORTSTRLEN;
 }
 
-int lhsbuf_isempty(LHSVM* vm, LHSSTRBUF* buf)
+int lhsbuf_isempty(void* vm, LHSSTRBUF* buf)
 {
     return !buf->usize;
 }
 
-void lhsbuf_uninit(LHSVM* vm, LHSSTRBUF* buf)
+void lhsbuf_uninit(void* vm, LHSSTRBUF* buf)
 {
     if (buf->data != buf->buf)
     {

@@ -114,7 +114,7 @@ int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
 
     do
     {
-        lhsbuf_pushchar
+        lhsbuf_pushc
         (
             vm, 
             &loadf->lexical->buf, 
@@ -133,7 +133,7 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
     *is_double = 0;
     do
     {
-        lhsbuf_pushchar
+        lhsbuf_pushc
         (
             vm,
             &loadf->lexical->buf,
@@ -174,7 +174,7 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
 
     do
     {
-        lhsbuf_pushchar
+        lhsbuf_pushc
         (
             vm, 
             &loadf->lexical->buf, 

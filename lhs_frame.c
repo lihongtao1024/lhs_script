@@ -26,18 +26,14 @@ int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame)
     chunk->index = (int)lhsvector_length(vm, &frame->chunks) - 1;
     chunk->parent = frame->curchunk;
     frame->curchunk = chunk;
-
-    LHSCode c;
-    c.mark = LHS_MARKINTEGER;
-    c.code.i = chunk->index;
-    lhscode_unaryexpr(vm, OP_PUSHC, &c);
+    lhscode_unaryl(vm, &vm->codes, OP_PUSHC, chunk->index);
     return LHS_TRUE;
 }
 
 int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame)
 {
     frame->curchunk = frame->curchunk->parent;
-    lhscode_unaryexpr(vm, OP_POPC, 0);
+    lhscode_unary(vm, &vm->codes, OP_POPC);
     return LHS_TRUE;
 }
 

@@ -15,6 +15,7 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
     lhshash_init(vm, &vm->conststrhash, lhsvariable_hashvar, lhsvariable_equalvar);
     lhsvector_init(vm, &vm->conststrvalue, sizeof(LHSValue));
     lhsvector_init(vm, &vm->stack, sizeof(LHSValue));
+    lhsbuf_init(vm, &vm->codes);
 }
 
 static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
@@ -288,5 +289,6 @@ void lhsvm_destroy(LHSVM* vm)
     lhshash_uninit(vm, &vm->shortstrhash);
     lhsvector_uninit(vm, &vm->conststrvalue);
     lhsvector_uninit(vm, &vm->stack);
+    lhsbuf_uninit(vm, &vm->codes);
     lhsslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree, 0);
 }

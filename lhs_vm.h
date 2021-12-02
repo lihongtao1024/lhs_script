@@ -6,6 +6,7 @@
 #include "lhs_hash.h"
 #include "lhs_vector.h"
 #include "lhs_variable.h"
+#include "lhs_strbuf.h"
 #include "lhs_error.h"
 
 #define lhsvm_castvm(vm)        ((LHSVM*)(vm))
@@ -22,6 +23,7 @@ typedef struct LHSVM
     LHSVariables conststrhash;  /*hash table for constant string*/
     LHSVector conststrvalue;    /*constant strings*/
     LHSVector stack;            /*execute stack*/
+    LHSSTRBUF codes;            /*executable byte codes*/
     LHSGCObject* allgc;         /*all garbage collection*/
     size_t nalloc;              /*allocated memory size*/
 } LHSVM;

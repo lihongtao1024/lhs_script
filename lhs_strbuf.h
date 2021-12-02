@@ -1,9 +1,8 @@
 #pragma once
 #include "lhs_config.h"
-#include "lhs_vm.h"
 
-#define lhsbuf_pushstr(vm, b, s)                                        \
-lhsbuf_pushlstr(vm, b, s, strlen(s))
+#define lhsbuf_pushs(vm, b, s)                      \
+lhsbuf_pushls(vm, b, s, strlen(s))
 
 typedef struct LHSSTRBUF
 {
@@ -13,20 +12,33 @@ typedef struct LHSSTRBUF
     char buf[128];
 } LHSSTRBUF;
 
-int lhsbuf_init(LHSVM* vm, LHSSTRBUF* buf);
+int lhsbuf_init(void* vm, LHSSTRBUF* buf);
 
-int lhsbuf_reset(LHSVM* vm, LHSSTRBUF* buf);
+int lhsbuf_reset(void* vm, LHSSTRBUF* buf);
 
-int lhsbuf_pushchar(LHSVM* vm, LHSSTRBUF* buf, char c);
+int lhsbuf_pushc(void* vm, LHSSTRBUF* buf, char c);
 
-int lhsbuf_pushlstr(LHSVM* vm, LHSSTRBUF* buf, const char* str, size_t l);
+int lhsbuf_pushi(void* vm, LHSSTRBUF* buf, int i);
 
-int lhsbuf_topchar(LHSVM* vm, LHSSTRBUF* buf, char* c);
+int lhsbuf_pushl(void* vm, LHSSTRBUF* buf, long long i);
 
-int lhsbuf_popchar(LHSVM* vm, LHSSTRBUF* buf, char *c);
+int lhsbuf_pushf(void* vm, LHSSTRBUF* buf, double n);
 
-int lhsbuf_isshort(LHSVM* vm, LHSSTRBUF* buf);
+int lhsbuf_pushls(void* vm, LHSSTRBUF* buf, const char* str,
+    size_t l);
 
-int lhsbuf_isempty(LHSVM* vm, LHSSTRBUF* buf);
+int lhsbuf_topchar(void* vm, LHSSTRBUF* buf, char* c);
 
-void lhsbuf_uninit(LHSVM* vm, LHSSTRBUF* buf);
+int lhsbuf_popchar(void* vm, LHSSTRBUF* buf, char *c);
+
+int lhsbuf_popi(void* vm, LHSSTRBUF* buf, int i);
+
+int lhsbuf_popl(void* vm, LHSSTRBUF* buf, long long i);
+
+int lhsbuf_popf(void* vm, LHSSTRBUF* buf, double n);
+
+int lhsbuf_isshort(void* vm, LHSSTRBUF* buf);
+
+int lhsbuf_isempty(void* vm, LHSSTRBUF* buf);
+
+void lhsbuf_uninit(void* vm, LHSSTRBUF* buf);

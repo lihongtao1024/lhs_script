@@ -31,7 +31,7 @@ static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
 		{ 
 			return LHS_FALSE;
 		}
-		lhsbuf_pushlstr(vm, buf, temp, l);
+		lhsbuf_pushls(vm, buf, temp, l);
 		break;
 	}
 	case LHS_MARKNUMBER:
@@ -41,19 +41,19 @@ static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
 		{ 
 			return LHS_FALSE;
 		}
-		lhsbuf_pushlstr(vm, buf, temp, l);
+		lhsbuf_pushls(vm, buf, temp, l);
 		break;
 	}
 	case LHS_MARKBOOLEAN:
 	{
-		lhsbuf_pushstr(vm, buf, code->code.b ? "true" : "false");
+		lhsbuf_pushs(vm, buf, code->code.b ? "true" : "false");
 		break;
 	}
 	default:
 	{
 		int l = sprintf(temp, "%s[%d]", markname[code->mark], 
 			code->code.index);
-		lhsbuf_pushlstr(vm, buf, temp, l);
+		lhsbuf_pushls(vm, buf, temp, l);
 		break;
 	}
 	}
@@ -75,22 +75,22 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 	case OP_POP:
 	case OP_PUSHC:
 	{
-		lhsbuf_pushstr(vm, &buf, opname[instruction->op]);
-		lhsbuf_pushchar(vm, &buf, '\t');
+		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
+		lhsbuf_pushc(vm, &buf, '\t');
 		lhscode_dumpcode(vm, &instruction->body.unary.code, &buf);
 		break;
 	}
 	case OP_POPC:
 	{
-		lhsbuf_pushstr(vm, &buf, opname[instruction->op]);
+		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
 		break;
 	}
 	default:
 	{
-		lhsbuf_pushstr(vm, &buf, opname[instruction->op]);
-		lhsbuf_pushchar(vm, &buf, '\t');
+		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
+		lhsbuf_pushc(vm, &buf, '\t');
 		lhscode_dumpcode(vm, &instruction->body.binary.code1, &buf);
-		lhsbuf_pushstr(vm, &buf, ",\t");
+		lhsbuf_pushs(vm, &buf, ",\t");
 		lhscode_dumpcode(vm, &instruction->body.binary.code2, &buf);
 		break;
 	}
@@ -101,7 +101,7 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 	return LHS_TRUE;
 }
 
-int lhscode_unaryexpr(LHSVM* vm, char symbol, LHSCode* code)
+int lhscode_unarydump(LHSVM* vm, char symbol, LHSCode* code)
 {
 	LHSInstruction instruction;
 	instruction.op = lhscode_castop(symbol);
@@ -114,7 +114,7 @@ int lhscode_unaryexpr(LHSVM* vm, char symbol, LHSCode* code)
 	return LHS_TRUE;
 }
 
-int lhscode_binaryexpr(LHSVM* vm, char symbol, LHSCode* code1,
+int lhscode_binarydump(LHSVM* vm, char symbol, LHSCode* code1,
 	LHSCode* code2)
 {
 	LHSInstruction instruction;

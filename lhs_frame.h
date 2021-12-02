@@ -25,7 +25,7 @@ typedef struct LHSFrame
     struct LHSFrame* next;  /*sub frames*/
     LHSVariables variables; /*hash table for variables*/     
     LHSVector values;       /*values for variables*/
-    LHSDebug debug;         /*debug info for frame*/
+    LHSDebug debug;         /*debug info for variables*/
 } LHSFrame;
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame);

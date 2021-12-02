@@ -1,36 +1,105 @@
 #pragma once
 #include "lhs_config.h"
 #include "lhs_variable.h"
+#include "lhs_strbuf.h"
 #include "lhs_vm.h"
 
 #define OP_NONE                 (0)
-#define OP_ADD                  (1)           //+
-#define OP_SUB                  (2)           //-
-#define OP_MUL                  (3)           //*
-#define OP_DIV                  (4)           ///
-#define OP_MOD                  (5)           //%
-#define OP_BAND                 (6)           //&
-#define OP_BOR                  (7)           //|
-#define OP_BXOR                 (8)           //^
-#define OP_LESS                 (9)           //<
-#define OP_GREAT                (10)          //>
-#define OP_EQUAL                (11)          //==
-#define OP_NOTEQUAL             (12)          //!=
-#define OP_GREATEQUAL           (13)          //>=
-#define OP_LESSEQUAL            (14)          //<=
-#define OP_LOGICAND             (15)          //&&
-#define OP_LOGICOR              (16)          //||
-#define OP_BLSHIFT              (17)          //<<
-#define OP_BRSHIFT              (18)          //>>
-#define OP_NEG                  (19)          //-
-#define OP_NOT                  (20)          //!
-#define OP_BNOT                 (21)          //~
+#define OP_ADD                  (1)                 //+
+#define OP_SUB                  (2)                 //-
+#define OP_MUL                  (3)                 //*
+#define OP_DIV                  (4)                 ///
+#define OP_MOD                  (5)                 //%
+#define OP_BAND                 (6)                 //&
+#define OP_BOR                  (7)                 //|
+#define OP_BXOR                 (8)                 //^
+#define OP_LESS                 (9)                 //<
+#define OP_GREAT                (10)                //>
+#define OP_EQUAL                (11)                //==
+#define OP_NOTEQUAL             (12)                //!=
+#define OP_GREATEQUAL           (13)                //>=
+#define OP_LESSEQUAL            (14)                //<=
+#define OP_LOGICAND             (15)                //&&
+#define OP_LOGICOR              (16)                //||
+#define OP_BLSHIFT              (17)                //<<
+#define OP_BRSHIFT              (18)                //>>
+#define OP_NEG                  (19)                //-
+#define OP_NOT                  (20)                //!
+#define OP_BNOT                 (21)                //~
 #define OP_PUSH                 (22)
 #define OP_POP                  (23)
-#define OP_MOVE                 (24)          //=
+#define OP_MOV                  (24)                //=
 #define OP_PUSHC                (25)
 #define OP_POPC                 (26)
 #define OP_MAX                  (27)
+
+#define lhscode_unaryb(vm, c, s, v)                 \
+{                                                   \
+    lhsbuf_pushc((vm), (c), (s));                   \
+    lhsbuf_pushc((vm), (c), LHS_MARKBOOLEAN);       \
+    lhsbuf_pushc((vm), (c), (v));                   \
+    LHSCode code;                                   \
+    code.mark = LHS_MARKBOOLEAN;                    \
+    code.code.b = (v);                              \
+    lhscode_unarydump((vm), (s), &code);            \
+}
+
+#define lhscode_unaryl(vm, c, s, v)                 \
+{                                                   \
+    lhsbuf_pushc((vm), (c), (s));                   \
+    lhsbuf_pushc((vm), (c), LHS_MARKINTEGER);       \
+    lhsbuf_pushl((vm), (c), (v));                   \
+    LHSCode code;                                   \
+    code.mark = LHS_MARKINTEGER;                    \
+    code.code.i = (v);                              \
+    lhscode_unarydump((vm), (s), &code);            \
+}
+
+#define lhscode_unaryf(vm, c, s, v)                 \
+{                                                   \
+    lhsbuf_pushc((vm), (c), (s));                   \
+    lhsbuf_pushc((vm), (c), LHS_MARKNUMBER);        \
+    lhsbuf_pushf((vm), (c), (v));                   \
+    LHSCode code;                                   \
+    code.mark = LHS_MARKNUMBER;                     \
+    code.code.n = (v);                              \
+    lhscode_unarydump((vm), (s), &code);            \
+}
+
+#define lhscode_unaryi(vm, c, s, m, v)              \
+{                                                   \
+    lhsbuf_pushc((vm), (c), (s));                   \
+    lhsbuf_pushc((vm), (c), (m));                   \
+    lhsbuf_pushi((vm), (c), (v));                   \
+    LHSCode code;                                   \
+    code.mark = (m);                                \
+    code.code.index = (v);                          \
+    lhscode_unarydump((vm), (s), &code);            \
+}
+
+#define lhscode_unary(vm, c, s)                     \
+{                                                   \
+    lhsbuf_pushc((vm), (c), (s));                   \
+    LHSCode code;                                   \
+    code.mark = LHS_MARKNONE;                       \
+    lhscode_unarydump((vm), (s), &code);            \
+}
+
+#define lhscode_binary(vm, c, s, m1, v1, m2, v2)    \
+{                                                   \
+    lhsbuf_pushc((vm), (c), (s));                   \
+    lhsbuf_pushc((vm), (c), (m1));                  \
+    lhsbuf_pushi((vm), (c), (v1));                  \
+    lhsbuf_pushc((vm), (c), (m2));                  \
+    lhsbuf_pushi((vm), (c), (v2));                  \
+    LHSCode code1;                                  \
+    code1.mark = (m1);                              \
+    code1.code.index = (v1);                        \
+    LHSCode code2;                                  \
+    code2.mark = (m2);                              \
+    code2.code.index = (v2);                        \
+    lhscode_binarydump((vm), (s), &code1, &code2);  \
+}
 
 typedef struct LHSCode
 {
@@ -61,7 +130,7 @@ typedef struct LHSInstruction
     } body;
 } LHSInstruction;
 
-int lhscode_unaryexpr(LHSVM* vm, char symbol, LHSCode* code);
+int lhscode_unarydump(LHSVM* vm, char symbol, LHSCode* code);
 
-int lhscode_binaryexpr(LHSVM* vm, char symbol, LHSCode* code1, 
+int lhscode_binarydump(LHSVM* vm, char symbol, LHSCode* code1, 
     LHSCode* code2);

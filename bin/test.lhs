@@ -22,7 +22,7 @@ global2 = "abc"
 //wer
 
 if (global1 > 20)
-1{
+{
     var x = 5
     x = global1 * x
 }
@@ -30,3 +30,26 @@ else
 {
     global1 = global1 - 20
 }
+
+/*
+push local[2]
+push 20
+great stack[-2], stack[-1]
+jmpf 48
+pushc 1
+push 5
+mov local[6], statck[-1]
+push local[2]
+push local[6]
+mul stack[-2], stack[-1]
+mov local[6], stack[-1]
+popc
+jmp 54
+pushc 2
+push local[2]
+push 20
+sub stack[-2], stack[-1]
+mov local[2], stack[-1]
+popc
+nop
+*/

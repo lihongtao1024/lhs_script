@@ -27,18 +27,34 @@ int lhsbuf_pushf(void* vm, LHSSTRBUF* buf, double n);
 int lhsbuf_pushls(void* vm, LHSSTRBUF* buf, const char* str,
     size_t l);
 
-int lhsbuf_topchar(void* vm, LHSSTRBUF* buf, char* c);
+int lhsbuf_topc(void* vm, LHSSTRBUF* buf, char* c);
 
-int lhsbuf_popchar(void* vm, LHSSTRBUF* buf, char *c);
+int lhsbuf_topcp(void* vm, LHSSTRBUF* buf, char** c);
 
-int lhsbuf_popi(void* vm, LHSSTRBUF* buf, int i);
+int lhsbuf_popc(void* vm, LHSSTRBUF* buf, char* c);
 
-int lhsbuf_popl(void* vm, LHSSTRBUF* buf, long long i);
+int lhsbuf_topi(void* vm, LHSSTRBUF* buf, int* i);
 
-int lhsbuf_popf(void* vm, LHSSTRBUF* buf, double n);
+int lhsbuf_topip(void* vm, LHSSTRBUF* buf, int** i);
+
+int lhsbuf_popi(void* vm, LHSSTRBUF* buf, int* i);
+
+int lhsbuf_topl(void* vm, LHSSTRBUF* buf, long long* l);
+
+int lhsbuf_toplp(void* vm, LHSSTRBUF* buf, long long** l);
+
+int lhsbuf_popl(void* vm, LHSSTRBUF* buf, long long* l);
+
+int lhsbuf_topf(void* vm, LHSSTRBUF* buf, double* n);
+
+int lhsbuf_topfp(void* vm, LHSSTRBUF* buf, double** n);
+
+int lhsbuf_popf(void* vm, LHSSTRBUF* buf, double* n);
 
 int lhsbuf_isshort(void* vm, LHSSTRBUF* buf);
 
 int lhsbuf_isempty(void* vm, LHSSTRBUF* buf);
+
+size_t lhsbuf_length(void* vm, LHSSTRBUF* buf);
 
 void lhsbuf_uninit(void* vm, LHSSTRBUF* buf);

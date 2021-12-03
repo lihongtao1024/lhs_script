@@ -26,20 +26,14 @@ int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame, void* loadf)
     chunk->index = (int)lhsvector_length(vm, &frame->chunks) - 1;
     chunk->parent = frame->curchunk;
     frame->curchunk = chunk;
-    lhscode_unaryl
-    (
-        vm, 
-        lhsloadf_castlf(loadf)->lexical->code, 
-        OP_PUSHC, 
-        chunk->index
-    );
+    lhscode_unaryl(vm, OP_PUSHC, chunk->index);
     return LHS_TRUE;
 }
 
 int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame, void* loadf)
 {
     frame->curchunk = frame->curchunk->parent;
-    lhscode_unary(vm, lhsloadf_castlf(loadf)->lexical->code, OP_POPC);
+    lhscode_unary(vm, OP_POPC);
     return LHS_TRUE;
 }
 
@@ -109,16 +103,19 @@ LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame)
             }
         }
 
-        nvariable->chunk = 0;
-        ovariable = lhshash_find
-        (
-            vm, 
-            &lhsframe_castmainframe(vm)->variables, 
-            nvariable
-        );
-        if (ovariable && ovariable->mark != LHS_MARKGLOBAL)
+        if (!ovariable)
         {
-            ovariable = 0;
+            nvariable->chunk = 0;
+            ovariable = lhshash_find
+            (
+                vm, 
+                &lhsframe_castmainframe(vm)->variables, 
+                nvariable
+            );
+            if (ovariable && ovariable->mark != LHS_MARKGLOBAL)
+            {
+                ovariable = 0;
+            }
         }
     }
 

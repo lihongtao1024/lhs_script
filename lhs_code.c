@@ -16,7 +16,7 @@ static const char* opname[OP_MAX] =
 	"great", "eq", "ne", "ge", "le",
 	"and", "or", "lsht", "rsht", "neg",
 	"not", "bnot", "push", "pop", "mov",
-	"pushc", "popc"
+	"pushc", "popc", "jmp", "jmpf", "nop"
 };
 
 static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
@@ -74,6 +74,8 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 	case OP_PUSH:
 	case OP_POP:
 	case OP_PUSHC:
+	case OP_JMP:
+	case OP_JMPF:
 	{
 		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
 		lhsbuf_pushc(vm, &buf, '\t');
@@ -81,6 +83,7 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 		break;
 	}
 	case OP_POPC:
+	case OP_NOP:
 	{
 		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
 		break;

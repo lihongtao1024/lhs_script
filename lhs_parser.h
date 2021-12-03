@@ -42,7 +42,6 @@ typedef struct LHSLexical
     int token;
     int lookahead;
     LHSSTRBUF buf;
-    LHSSTRBUF* code;
 } LHSLexical;
 
 int lhsparser_dofile(LHSVM* vm, const char* fname);

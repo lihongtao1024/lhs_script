@@ -10,6 +10,7 @@
 所以我设计的脚本要求全局变量必须显式声明
 全局变量的作用域为整个虚拟机运行环境中
 */
+/*
 set global0 = 17
 var global1 = "aaac"
 var global2 = -global1 + 3.5 - (5 - ~1) * 6  + 2 / 2 - 1
@@ -25,16 +26,25 @@ if (global1 > 20)
 {
     var x = 5
     x = global1 * x
+    if (x > 0)
+    {
+        x = x - 3
+    //}
 }
 else
 {
     global1 = global1 - 20
+    if (global1 < 0)
+    {
+        global1 = 1
+    }
 }
-
+*/
 /*
 push local[2]
 push 20
 great stack[-2], stack[-1]
+
 jmpf 48
 pushc 1
 push 5
@@ -45,6 +55,7 @@ mul stack[-2], stack[-1]
 mov local[6], stack[-1]
 popc
 jmp 54
+
 pushc 2
 push local[2]
 push 20
@@ -53,3 +64,22 @@ mov local[2], stack[-1]
 popc
 nop
 */
+
+if (1 > 2)
+{
+    if (2 > 1)
+    {
+
+    }
+}
+else if ( 2 > 1)
+{
+    if (5 < 10)
+    {
+    }
+}
+else
+{
+    var i = 7
+}
+

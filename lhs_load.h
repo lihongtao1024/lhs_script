@@ -88,4 +88,8 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double);
 
 int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf);
 
+int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf);
+
+int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf);
+
 void lhsloadf_uninit(LHSVM* vm, LHSLoadF* loadf);

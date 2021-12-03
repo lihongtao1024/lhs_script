@@ -195,6 +195,19 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
+int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf)
+{
+    lhsbuf_reset(vm, &loadf->lexical->buf);
+    lhsbuf_pushc(vm, &loadf->lexical->buf, (char)loadf->current);
+    return LHS_TRUE;
+}
+
+int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf)
+{
+    lhsbuf_pushc(vm, &loadf->lexical->buf, (char)loadf->current);
+    return LHS_TRUE;
+}
+
 int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname)
 {
     loadf->file = fopen(fname, "rb");

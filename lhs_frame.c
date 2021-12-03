@@ -1,5 +1,6 @@
 #include "lhs_frame.h"
 #include "lhs_link.h"
+#include "lhs_load.h"
 #include "lhs_code.h"
 
 static void lhsframe_uninitnext(LHSFrame* main, LHSFrame* frame, LHSVM* vm)
@@ -16,24 +17,29 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
 
     frame->curchunk = 0;
     lhsslink_init(frame, next);
-    lhsframe_enterchunk(vm, frame);
     return LHS_TRUE;
 }
 
-int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame)
+int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame, void* loadf)
 {
     LHSChunk* chunk = lhsvector_increment(vm, &frame->chunks);
     chunk->index = (int)lhsvector_length(vm, &frame->chunks) - 1;
     chunk->parent = frame->curchunk;
     frame->curchunk = chunk;
-    lhscode_unaryl(vm, &vm->codes, OP_PUSHC, chunk->index);
+    lhscode_unaryl
+    (
+        vm, 
+        lhsloadf_castlf(loadf)->lexical->code, 
+        OP_PUSHC, 
+        chunk->index
+    );
     return LHS_TRUE;
 }
 
-int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame)
+int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame, void* loadf)
 {
     frame->curchunk = frame->curchunk->parent;
-    lhscode_unary(vm, &vm->codes, OP_POPC);
+    lhscode_unary(vm, lhsloadf_castlf(loadf)->lexical->code, OP_POPC);
     return LHS_TRUE;
 }
 
@@ -129,7 +135,6 @@ const char* lhsframe_name(LHSVM* vm, LHSFrame* frame)
 
 void lhsframe_uninit(LHSVM* vm, LHSFrame* frame)
 {
-    lhsframe_leavechunk(vm, frame);
     lhsdebug_uninit(vm, &frame->debug);
     lhshash_uninit(vm, &frame->variables);
     lhsvector_uninit(vm, &frame->values);

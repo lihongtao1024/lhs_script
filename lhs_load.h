@@ -32,6 +32,9 @@
 #define SYMBOL_DIGIT                (25)          //<number>
 #define SYMBOL_LETTER               (26)          //<string>
 
+#define lhsloadf_castlf(ud)                         \
+((LHSLoadF*)ud)
+
 #define lhsloadf_getc(lf)                           \
 (lf)->current = getc((lf)->file);++(lf)->column
 

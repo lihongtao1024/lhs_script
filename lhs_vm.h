@@ -23,7 +23,7 @@ typedef struct LHSVM
     LHSVariables conststrhash;  /*hash table for constant string*/
     LHSVector conststrvalue;    /*constant strings*/
     LHSVector stack;            /*execute stack*/
-    LHSSTRBUF codes;            /*executable byte codes*/
+    LHSSTRBUF code;             /*executable byte code*/
     LHSGCObject* allgc;         /*all garbage collection*/
     size_t nalloc;              /*allocated memory size*/
 } LHSVM;

@@ -30,9 +30,9 @@ typedef struct LHSFrame
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame);
 
-int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame);
+int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame, void* loadf);
 
-int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame);
+int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame, void* loadf);
 
 LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
     long long line, long long column, int global);

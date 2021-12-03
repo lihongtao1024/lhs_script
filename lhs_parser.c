@@ -48,7 +48,6 @@ typedef struct LHSExprState
     int read;
     LHSLoadF* loadf;
     LHSSTRBUF symbols;
-    LHSSTRBUF codes;
 } LHSExprState;
 
 static const char* reserveds[] =
@@ -107,7 +106,7 @@ static int lhsparser_initreserved(LHSVM* vm)
     return LHS_TRUE;
 }
 
-static int lhsparser_initmainframe(LHSVM* vm, const char* fname)
+static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname)
 {
     vm->mainframe = lhsmem_newgcobject
     (
@@ -117,8 +116,9 @@ static int lhsparser_initmainframe(LHSVM* vm, const char* fname)
     );
 
     lhsframe_init(vm, vm->mainframe);
+    lhsframe_enterchunk(vm, vm->mainframe, loadf);
     vm->currentframe = vm->mainframe;
-    
+
     lhsvm_pushstring(vm, fname);
     LHSVariable* variable = lhsframe_insertvariable
     (
@@ -147,8 +147,9 @@ static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
     lex->token = LHS_TOKENEOF;
     lex->lookahead = LHS_TOKENEOF;
     loadf->lexical = lex;
+    loadf->lexical->code = &vm->code;
 
-    lhsbuf_init(vm, &lex->buf);
+    lhsbuf_init(vm, &lex->buf);    
     return LHS_TRUE;
 }
 
@@ -362,7 +363,6 @@ static int lhsparser_initexprstate(LHSVM* vm, LHSExprState* state,
     state->read = LHS_TRUE;
     state->loadf = loadf;
     lhsbuf_init(vm, &state->symbols);
-    lhsbuf_init(vm, &state->codes);
     lhsbuf_pushc(vm, &state->symbols, SYMBOL_NONE);
     return LHS_TRUE;
 }
@@ -370,7 +370,6 @@ static int lhsparser_initexprstate(LHSVM* vm, LHSExprState* state,
 static void lhsparser_uninitexprstate(LHSVM* vm, LHSExprState* state)
 {
     lhsbuf_uninit(vm, &state->symbols);
-    lhsbuf_uninit(vm, &state->codes);
 }
 
 static int lhsparser_exprrecursive(LHSVM* vm, LHSExprState* state, char nsymbol)
@@ -398,7 +397,7 @@ static int lhsparser_exprrecursive(LHSVM* vm, LHSExprState* state, char nsymbol)
             lhscode_unaryi
             (
                 vm, 
-                &state->codes, 
+                state->loadf->lexical->code, 
                 osymbol, 
                 LHS_MARKSTACK, 
                 -1
@@ -409,7 +408,7 @@ static int lhsparser_exprrecursive(LHSVM* vm, LHSExprState* state, char nsymbol)
             lhscode_binary
             (
                 vm, 
-                &state->codes, 
+                state->loadf->lexical->code, 
                 osymbol, 
                 LHS_MARKSTACK, 
                 -2, 
@@ -458,7 +457,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
                 lhscode_unaryl
                 (
                     vm, 
-                    &state->codes, 
+                    state->loadf->lexical->code, 
                     OP_PUSH,
                     atoll(state->loadf->lexical->buf.data)
                 );
@@ -472,7 +471,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
                 lhscode_unaryf
                 (
                     vm, 
-                    &state->codes, 
+                    state->loadf->lexical->code, 
                     OP_PUSH, 
                     atof(state->loadf->lexical->buf.data)
                 );
@@ -489,7 +488,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
                 lhscode_unaryi
                 (
                     vm, 
-                    &state->codes, 
+                    state->loadf->lexical->code, 
                     OP_PUSH, 
                     constvar->mark, 
                     constvar->index
@@ -521,7 +520,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
                 lhscode_unaryi
                 (
                     vm, 
-                    &state->codes, 
+                    state->loadf->lexical->code, 
                     OP_PUSH, 
                     var->mark, 
                     var->index
@@ -537,7 +536,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
                 lhscode_unaryb
                 (
                     vm, 
-                    &state->codes, 
+                    state->loadf->lexical->code, 
                     OP_PUSH, 
                     LHS_TOKENTRUE ? 1 : 0
                 );
@@ -590,7 +589,7 @@ static int lhsparser_directmov(LHSVM* vm, LHSLoadF* loadf,
     lhscode_binary
     (
         vm, 
-        &vm->codes, 
+        loadf->lexical->code, 
         OP_MOV, 
         variable->mark, 
         variable->index, 
@@ -777,18 +776,18 @@ int lhsparser_dofile(LHSVM* vm, const char* fname)
         return LHS_FALSE;
     }
 
-    if (!lhsparser_initmainframe(vm, fname))
+    LHSLexical lexical;
+    lhsparser_initlexical(vm, &loadf, &lexical);
+
+    if (!lhsparser_initmainframe(vm, &loadf, fname))
     {
         lhsloadf_uninit(vm, &loadf);
         return LHS_FALSE;
     }
 
-    LHSLexical lexical;
-    lhsparser_initlexical(vm, &loadf, &lexical);
-
     if (lhserr_protectedcall
     (
-        vm, 
+        vm,
         lhsparser_initstate, 
         &loadf
     ))

@@ -43,20 +43,8 @@ lhsparser_isexprsymbol((lf)->lexical->lookahead)
  ((t) & UCHAR_MAX) :                                                \
  lhsloadf_symbolid[t])
 
-#define lhsparser_partition1(p, t)                                  \
-LHSPartition p;                                                     \
-p.token1 = (t);                                                     \
-p.token2 = LHS_TOKENEOF;                                            \
-p.token3 = LHS_TOKENEOF
-
-#define lhsparser_partition2(p, t1, t2)                             \
-LHSPartition p;                                                     \
-p.token1 = (t1);                                                    \
-p.token2 = (t2);                                                    \
-p.token3 = LHS_TOKENEOF
-
-#define lhsparser_inpartition(p, t)                                 \
-((t) == (p)->token1 || (t) == (p)->token2 || (t) == (p)->token3)
+#define lhsparser_ischunkfollow(lf)                                 \
+ ((lf)->lexical->token == '}' || (lf)->lexical->token == LHS_TOKENEOF)
 
 typedef struct LHSExprState
 {
@@ -74,12 +62,8 @@ typedef struct LHSIfState
     long long* jmpexit;
 } LHSIfState;
 
-typedef struct LHSPartition
-{
-    int token1;
-    int token2;
-    int token3;
-} LHSPartition;
+static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf);
+static int lhsparser_statesolve(LHSVM* vm, LHSLoadF* loadf);
 
 static const char* reserveds[] =
 {
@@ -117,9 +101,6 @@ static const char lhsparser_prioritytable[][SYMBOL_END] =
 /*(*/  { N, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, E},
 /*)*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, N, N, N, N, N}
 };
-
-int lhsparser_preparestate(LHSVM* vm, LHSLoadF* loadf, LHSPartition* tail);
-int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf);
 
 static int lhsparser_initreserved(LHSVM* vm)
 {
@@ -178,18 +159,20 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname
 
 static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 {
+    lex->flag = LHS_NEXTTOKEN;
     lex->token = LHS_TOKENEOF;
     lex->lookahead = LHS_TOKENEOF;
     loadf->lexical = lex;
 
-    lhsbuf_init(vm, &lex->buf);    
+    lhsbuf_init(vm, &lex->tokenbuf);
+    lhsbuf_init(vm, &lex->lookaheadbuf);
     return LHS_TRUE;
 }
 
 static int lhsparser_uninitlexical(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsbuf_uninit(vm, &loadf->lexical->buf);
-    loadf->lexical = 0;
+    lhsbuf_uninit(vm, &loadf->lexical->tokenbuf);
+    lhsbuf_uninit(vm, &loadf->lexical->lookaheadbuf);
     return LHS_TRUE;
 }
 
@@ -352,15 +335,11 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
         {
             if (lhsloadf_isletter(loadf))
             {
-                lhsloadf_saveidentifier(vm, loadf);                
-                if (lhsbuf_isshort(vm, &loadf->lexical->buf))
+                lhsloadf_saveidentifier(vm, loadf);
+                LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
+                if (lhsbuf_isshort(vm, buf))
                 {
-                    LHSString* str = lhsvm_findshort
-                    (
-                        vm,
-                        loadf->lexical->buf.data,
-                        loadf->lexical->buf.usize
-                    );
+                    LHSString* str = lhsvm_findshort(vm, buf->data, buf->usize);
                     if (str && str->extra)
                     {
                         return str->extra;
@@ -379,7 +358,7 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
                 vm, 
                 loadf,
                 "undefined token '%s'.",
-                loadf->lexical->buf.data
+                loadf->lexical->tokenbuf.data
             );
         }
         }
@@ -388,10 +367,20 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf)
 
 static int lhsparser_nexttoken(LHSVM* vm, LHSLoadF* loadf)
 {
+    loadf->lexical->flag = LHS_NEXTTOKEN;
     if (loadf->lexical->lookahead != LHS_TOKENEOF)
     {
         loadf->lexical->token = loadf->lexical->lookahead;
         loadf->lexical->lookahead = LHS_TOKENEOF;
+        lhsbuf_reset(vm, &loadf->lexical->tokenbuf);
+        lhsbuf_pushls
+        (
+            vm, 
+            &loadf->lexical->tokenbuf, 
+            loadf->lexical->lookaheadbuf.data, 
+            loadf->lexical->lookaheadbuf.usize
+        );
+        lhsbuf_reset(vm, &loadf->lexical->lookaheadbuf);
         return LHS_TRUE;
     }
 
@@ -399,9 +388,104 @@ static int lhsparser_nexttoken(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
+static int lhsparser_checktoken(LHSVM* vm, LHSLoadF* loadf,
+    int token, const char* prefix)
+{
+    if (loadf->lexical->token != token)
+    {
+        if (loadf->lexical->token == LHS_TOKENEOF)
+        {
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf, 
+                "<eof> unexpected end of solving %s.",
+                prefix,
+                loadf->lexical->tokenbuf.data
+            );
+        }
+        else
+        {
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf, 
+                "unexpected %s solving, got '%s'.",
+                prefix,
+                loadf->lexical->tokenbuf.data
+            );
+        }
+    }
+    return LHS_TRUE;
+}
+
+static int lhsparser_checklookahead(LHSVM* vm, LHSLoadF* loadf,
+    int token, const char* prefix)
+{
+    if (loadf->lexical->lookahead != token)
+    {
+        if (loadf->lexical->lookahead == LHS_TOKENEOF)
+        {
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf, 
+                "<eof> unexpected end of solving %s.",
+                prefix,
+                loadf->lexical->lookaheadbuf.data
+            );
+        }
+        else
+        {
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf, 
+                "unexpected %s solving, got '%s'.",
+                prefix,
+                loadf->lexical->lookaheadbuf.data
+            );
+        }
+    }
+    return LHS_TRUE;
+}
+
+static int lhsparser_checkandnexttoken(LHSVM* vm, LHSLoadF* loadf, 
+    int token, const char *prefix)
+{
+    lhsparser_checktoken(vm, loadf, token, prefix);
+    lhsparser_nexttoken(vm, loadf);
+    return LHS_TRUE;
+}
+
+static int lhsparser_nexttokenandcheck(LHSVM* vm, LHSLoadF* loadf, 
+    int token, const char *prefix)
+{
+    lhsparser_nexttoken(vm, loadf);
+    lhsparser_checktoken(vm, loadf, token, prefix);
+    return LHS_TRUE;
+}
+
 static int lhsparser_lookaheadtoken(LHSVM* vm, LHSLoadF* loadf)
 {
+    loadf->lexical->flag = LHS_NEXTLOOKAHEAD;
     loadf->lexical->lookahead = lhsparser_nextlexical(vm, loadf);
+    return LHS_TRUE;
+}
+
+static int lhsparser_checkandlookahead(LHSVM* vm, LHSLoadF* loadf, 
+    int token, const char *prefix)
+{
+    lhsparser_checktoken(vm, loadf, token, prefix);
+    lhsparser_lookaheadtoken(vm, loadf);
+    return LHS_TRUE;
+}
+
+static int lhsparser_lookaheadandcheck(LHSVM* vm, LHSLoadF* loadf, 
+    int token, const char *prefix)
+{
+    lhsparser_lookaheadtoken(vm, loadf);
+    lhsparser_checklookahead(vm, loadf, token, prefix);
     return LHS_TRUE;
 }
 
@@ -501,7 +585,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
 
             if (token == LHS_TOKENINTEGER)
             {
-                lhscode_unaryl(vm, OP_PUSH, atoll(state->loadf->lexical->buf.data));
+                lhscode_unaryl(vm, OP_PUSH, atoll(state->loadf->lexical->tokenbuf.data));
                 lhsparser_lookaheadtoken(vm, state->loadf);
                 state->read = lhsparser_isnextexprsymbol(state->loadf);
                 continue;
@@ -509,7 +593,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
             
             if (token == LHS_TOKENNUMBER)
             {
-                lhscode_unaryf(vm, OP_PUSH, atof(state->loadf->lexical->buf.data));
+                lhscode_unaryf(vm, OP_PUSH, atof(state->loadf->lexical->tokenbuf.data));
                 lhsparser_lookaheadtoken(vm, state->loadf);
                 state->read = lhsparser_isnextexprsymbol(state->loadf);
                 continue;
@@ -517,8 +601,8 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
 
             if (token == LHS_TOKENSTRING)
             {
-                lhsvm_pushlstring(vm, state->loadf->lexical->buf.data,
-                    state->loadf->lexical->buf.usize);
+                lhsvm_pushlstring(vm, state->loadf->lexical->tokenbuf.data,
+                    state->loadf->lexical->tokenbuf.usize);
                 LHSVariable* constvar = lhsvm_insertconstant(vm);
                 lhscode_unaryi(vm, OP_PUSH, constvar->mark,  constvar->index);
                 lhsparser_lookaheadtoken(vm, state->loadf);
@@ -528,8 +612,8 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
 
             if (token == LHS_TOKENIDENTIFIER)
             {
-                lhsvm_pushlstring(vm, state->loadf->lexical->buf.data,
-                    state->loadf->lexical->buf.usize);
+                lhsvm_pushlstring(vm, state->loadf->lexical->tokenbuf.data,
+                    state->loadf->lexical->tokenbuf.usize);
                 LHSVariable* var = lhsframe_getvariable
                 (
                     vm, 
@@ -542,7 +626,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSExprState* state)
                         vm, 
                         state->loadf, 
                         "undefined variable '%s'.", 
-                        state->loadf->lexical->buf.data
+                        state->loadf->lexical->tokenbuf.data
                     );
                 }
                 lhscode_unaryi(vm, OP_PUSH, var->mark,var->index);
@@ -599,7 +683,6 @@ static int lhsparser_exprstate(LHSVM* vm, LHSLoadF* loadf)
 static int lhsparser_directmov(LHSVM* vm, LHSLoadF* loadf, 
     LHSVariable* variable)
 {
-    lhsparser_nexttoken(vm, loadf);
     lhsparser_exprstate(vm, loadf);
     lhscode_binary(vm, OP_MOV, variable->mark, variable->index,LHS_MARKSTACK, -1);
     return LHS_TRUE;
@@ -610,8 +693,8 @@ static int lhsparser_movstate(LHSVM* vm, LHSLoadF* loadf)
     lhsvm_pushlstring
     (
         vm, 
-        loadf->lexical->buf.data, 
-        loadf->lexical->buf.usize
+        loadf->lexical->tokenbuf.data, 
+        loadf->lexical->tokenbuf.usize
     );
     LHSVariable* variable = lhsframe_getvariable
     (
@@ -625,7 +708,19 @@ static int lhsparser_movstate(LHSVM* vm, LHSLoadF* loadf)
             vm, 
             loadf,
             "undefined variable '%s'.",
-            loadf->lexical->buf.data
+            loadf->lexical->tokenbuf.data
+        );
+    }
+
+    lhsparser_nexttoken(vm, loadf);
+    if (loadf->lexical->token != '=')
+    {
+        lhserr_syntaxerr
+        (
+            vm, 
+            loadf,
+            "unexpected token '%s'.",
+            loadf->lexical->tokenbuf.data
         );
     }
 
@@ -642,15 +737,15 @@ static int lhsparser_variablestate(LHSVM* vm, LHSLoadF* loadf, int global)
             vm, 
             loadf,
             "solving variable '%s'.",
-            loadf->lexical->buf.data
+            loadf->lexical->tokenbuf.data
         );
     }
 
     lhsvm_pushlstring
     (
         vm, 
-        loadf->lexical->buf.data, 
-        loadf->lexical->buf.usize
+        loadf->lexical->tokenbuf.data, 
+        loadf->lexical->tokenbuf.usize
     );
 
     lhsvm_pushvalue(vm, -1);
@@ -662,7 +757,7 @@ static int lhsparser_variablestate(LHSVM* vm, LHSLoadF* loadf, int global)
             vm, 
             loadf,
             "variable duplicate definition '%s'.",
-            loadf->lexical->buf.data
+            loadf->lexical->tokenbuf.data
         );
     }
 
@@ -675,8 +770,8 @@ static int lhsparser_variablestate(LHSVM* vm, LHSLoadF* loadf, int global)
         global
     );
 
-    lhsparser_lookaheadtoken(vm, loadf);
-    if (loadf->lexical->lookahead != '=')
+    lhsparser_nexttoken(vm, loadf);
+    if (loadf->lexical->token != '=')
     {
         return LHS_TRUE;
     }
@@ -684,100 +779,63 @@ static int lhsparser_variablestate(LHSVM* vm, LHSLoadF* loadf, int global)
     return lhsparser_directmov(vm, loadf, variable);
 }
 
+int lhsparser_iftruecode(LHSVM* vm, LHSIfState* state)
+{
+    lhscode_unaryl(vm, OP_JMPF, 0);
+    lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), state->loadf);
+    lhsparser_statement(vm, state->loadf);
+    lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), state->loadf);
+    lhscode_unaryl(vm, OP_JMP, 0);
+    return LHS_TRUE;
+}
+
+int lhsparser_iffalsecode(LHSVM* vm, LHSIfState* state)
+{
+    lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), state->loadf);
+    lhsparser_statement(vm, state->loadf);
+    lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), state->loadf);
+    return LHS_TRUE;
+}
+
 int lhsparser_ifsolve(LHSVM* vm, LHSIfState* state)
 {
-    lhsparser_lookaheadtoken(vm, state->loadf);
-    if (state->loadf->lexical->lookahead != '(')
-    {
-        lhserr_syntaxerr
-        (
-            vm, 
-            state->loadf,
-            "unexpected if definition, illegal '%s'.",
-            state->loadf->lexical->buf.data
-        );
-    }
-
+    lhsparser_lookaheadandcheck(vm, state->loadf, '(', "if");
     lhsparser_exprstate(vm, state->loadf);
-    if (state->loadf->lexical->token != '{')
+    lhsparser_checkandnexttoken(vm, state->loadf, '{', "if");
+    
+    lhsparser_iftruecode(vm, state);
+    lhsparser_checkandnexttoken(vm, state->loadf, '}', "if");
+
+    for (; ;)
     {
-        lhserr_syntaxerr
-        (
-            vm, 
-            state->loadf,
-            "unexpected if definition, illegal '%s'.",
-            state->loadf->lexical->buf.data
-        );
+        if (state->loadf->lexical->token != LHS_TOKENELSE)
+        {
+            break;
+        }
+
+        lhsparser_lookaheadtoken(vm, state->loadf);
+        if (state->loadf->lexical->lookahead != LHS_TOKENIF)
+        {
+            break;
+        }
+
+        lhsparser_nexttoken(vm, state->loadf);
+        lhsparser_lookaheadandcheck(vm, state->loadf, '(', "if");
+        lhsparser_exprstate(vm, state->loadf);
+        lhsparser_checkandnexttoken(vm, state->loadf, '{', "if");
+
+        lhsparser_iftruecode(vm, state);    
+        lhsparser_checkandnexttoken(vm, state->loadf, '}', "if");
     }
 
-    lhsparser_nexttoken(vm, state->loadf);
-    lhscode_unaryl(vm, OP_JMPF, 0);
-    state->tsize = lhsbuf_length(vm, &vm->code);
-    lhsbuf_toplp(vm, &vm->code, &state->jmpelse);  
-
-    lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), state->loadf);
-    lhsparser_partition2(ttail, '}', LHS_TOKENIF);
-    lhsparser_preparestate(vm, state->loadf, &ttail);
-    if (state->loadf->lexical->token == LHS_TOKENIF)
-    {
-        lhsparser_ifstate(vm, state->loadf);
-    }
-    lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), state->loadf);
-
-    lhscode_unaryl(vm, OP_JMP, 0);
-    state->tsize = lhsbuf_length(vm, &vm->code) - state->tsize;
-    *state->jmpelse = (long long)state->tsize;
-
-    state->fsize = lhsbuf_length(vm, &vm->code);
-    lhsbuf_toplp(vm, &vm->code, &state->jmpexit);
-
-    lhsparser_nexttoken(vm, state->loadf);
     if (state->loadf->lexical->token == LHS_TOKENELSE)
     {
-        lhsparser_lookaheadtoken(vm, state->loadf);
-        if (state->loadf->lexical->lookahead == LHS_TOKENIF)
-        {
-            lhsparser_nexttoken(vm, state->loadf);
-            lhsparser_ifstate(vm, state->loadf);
-        }
-        else
-        {
-            lhsparser_nexttoken(vm, state->loadf);
-            if (state->loadf->lexical->token != '{')
-            {
-                lhserr_syntaxerr
-                (
-                    vm, 
-                    state->loadf,
-                    "unexpected else definition, illegal '%s'.",
-                    state->loadf->lexical->buf.data
-                );
-            }
-
-            lhsparser_nexttoken(vm, state->loadf);
-            lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), state->loadf);
-            lhsparser_partition2(ftail, '}', LHS_TOKENIF);
-            lhsparser_preparestate(vm, state->loadf, &ftail);
-            if (state->loadf->lexical->token == LHS_TOKENIF)
-            {
-                lhsparser_ifstate(vm, state->loadf);
-            }
-            lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), state->loadf);
-        }
-    }
-    else if (state->loadf->lexical->token != '}')
-    {
-        lhserr_syntaxerr
-        (
-            vm, 
-            state->loadf,
-            "<eof> unexpected end of if, illegal '%s'.",
-            state->loadf->lexical->buf.data
-        );
+        lhsparser_nexttokenandcheck(vm, state->loadf, '{', "if");
+        lhsparser_nexttoken(vm, state->loadf);
+        lhsparser_iffalsecode(vm, state);
+        lhsparser_checkandnexttoken(vm, state->loadf, '}', "if");
     }
 
-    state->fsize = lhsbuf_length(vm, &vm->code) - state->fsize;
-    *state->jmpexit = (long long)state->fsize;
     return LHS_TRUE;
 }
 
@@ -804,63 +862,58 @@ static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-static int lhsparser_preparestate(LHSVM* vm, LHSLoadF* loadf, LHSPartition* tail)
+static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf)
 {
-    while (!lhsparser_inpartition(tail, loadf->lexical->token))
+    while (!lhsparser_ischunkfollow(loadf))
     {
-        switch (loadf->lexical->token)
-        {
-        case LHS_TOKENLOCAL:
-        {
-            lhsparser_variablestate(vm, loadf, LHS_FALSE);
-            lhsparser_nexttoken(vm, loadf);
-            break;
-        }
-        case LHS_TOKENGLOBAL:
-        {
-            lhsparser_variablestate(vm, loadf, LHS_TRUE);
-            lhsparser_nexttoken(vm, loadf);
-            break;
-        }
-        case LHS_TOKENIF:
-        {
-            lhsparser_ifstate(vm, loadf);
-            lhsparser_nexttoken(vm, loadf);
-            break;
-        }
-        case LHS_TOKENIDENTIFIER:
-        {
-            lhsparser_lookaheadtoken(vm, loadf);
-            if (loadf->lexical->lookahead == '=')
-            {
-                lhsparser_movstate(vm, loadf);
-                lhsparser_nexttoken(vm, loadf);
-            }
-            else
-            {
-                lhserr_syntaxerr
-                (
-                    vm, 
-                    loadf,
-                    "illegal identifier '%s'.",
-                    loadf->lexical->buf.data
-                );
-            }
-            break;
-        }
-        default:
-        {
-            lhserr_syntaxerr
-            (
-                vm, 
-                loadf,
-                "unknown token '%s'.",
-                loadf->lexical->buf.data
-            );
-        }
-        }
+        lhsparser_statesolve(vm, loadf);
     }
 
+    return LHS_TRUE;
+}
+
+static int lhsparser_statesolve(LHSVM* vm, LHSLoadF* loadf)
+{
+    switch (loadf->lexical->token)
+    {
+    case LHS_TOKENLOCAL:
+    {
+        lhsparser_variablestate(vm, loadf, LHS_FALSE);
+        lhsparser_nexttoken(vm, loadf);
+        break;
+    }
+    case LHS_TOKENGLOBAL:
+    {
+        lhsparser_variablestate(vm, loadf, LHS_TRUE);
+        lhsparser_nexttoken(vm, loadf);
+        break;
+    }
+    case LHS_TOKENIDENTIFIER:
+    {
+        lhsparser_movstate(vm, loadf);
+        lhsparser_nexttoken(vm, loadf);
+        break;
+    }
+    case LHS_TOKENIF:
+    {
+        lhsparser_ifstate(vm, loadf);
+        break;
+    }
+    case LHS_TOKENEOF:
+    {
+        break;
+    }
+    default:
+    {
+        lhserr_syntaxerr
+        (
+            vm, 
+            loadf,
+            "unknown token '%s'.",
+            loadf->lexical->tokenbuf.data
+        );
+    }
+    }
     return LHS_TRUE;
 }
 
@@ -868,8 +921,8 @@ static int lhsparser_initstate(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsloadf_getc(loadf);
     lhsparser_nexttoken(vm, loadf);
-    lhsparser_partition1(tail, LHS_TOKENEOF);
-    lhsparser_preparestate(vm, loadf, &tail);
+    lhsparser_statement(vm, loadf);
+    lhsparser_statesolve(vm, loadf);
     return LHS_TRUE;
 }
 

@@ -110,16 +110,12 @@ int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf)
 
 int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsbuf_reset(vm, &loadf->lexical->buf);
+    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
+    lhsbuf_reset(vm, buf);
 
     do
     {
-        lhsbuf_pushc
-        (
-            vm, 
-            &loadf->lexical->buf, 
-            (char)loadf->current
-        );
+        lhsbuf_pushc(vm, buf, (char)loadf->current);
         lhsloadf_getc(loadf);
     } while (lhsloadf_isidentifier(loadf));
     return LHS_TRUE;
@@ -127,19 +123,14 @@ int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
 
 int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
 {
-    lhsbuf_reset(vm, &loadf->lexical->buf);
+    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
+    lhsbuf_reset(vm, buf);
 
     int dot = 0;
     *is_double = 0;
     do
     {
-        lhsbuf_pushc
-        (
-            vm,
-            &loadf->lexical->buf,
-            (char)loadf->current
-        );
-
+        lhsbuf_pushc(vm, buf, (char)loadf->current);
         lhsloadf_getc(loadf);
         if (loadf->current == '.')
         {
@@ -156,7 +147,7 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
                 vm, 
                 loadf,
                 "solving decimal '%s'.",
-                loadf->lexical->buf.data
+                buf->data
             );
         }
         else
@@ -169,17 +160,13 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
 
 int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsbuf_reset(vm, &loadf->lexical->buf);
+    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
+    lhsbuf_reset(vm, buf);
     lhsloadf_getc(loadf);
 
     do
     {
-        lhsbuf_pushc
-        (
-            vm, 
-            &loadf->lexical->buf, 
-            (char)loadf->current
-        );
+        lhsbuf_pushc(vm, buf, (char)loadf->current);
         lhsloadf_getc(loadf);
         if (lhsloadf_iseof(loadf))
         {
@@ -197,14 +184,16 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
 
 int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsbuf_reset(vm, &loadf->lexical->buf);
-    lhsbuf_pushc(vm, &loadf->lexical->buf, (char)loadf->current);
+    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
+    lhsbuf_reset(vm, buf);
+    lhsbuf_pushc(vm, buf, (char)loadf->current);
     return LHS_TRUE;
 }
 
 int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsbuf_pushc(vm, &loadf->lexical->buf, (char)loadf->current);
+    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
+    lhsbuf_pushc(vm, buf, (char)loadf->current);
     return LHS_TRUE;
 }
 

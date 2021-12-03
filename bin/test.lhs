@@ -1,3 +1,11 @@
+if ( 5 < 6)
+{
+
+}
+else if ( 5< 7)
+{
+
+}
 //这是行注释
 
 /*
@@ -10,7 +18,7 @@
 所以我设计的脚本要求全局变量必须显式声明
 全局变量的作用域为整个虚拟机运行环境中
 */
-/*
+
 set global0 = 17
 var global1 = "aaac"
 var global2 = -global1 + 3.5 - (5 - ~1) * 6  + 2 / 2 - 1
@@ -29,7 +37,25 @@ if (global1 > 20)
     if (x > 0)
     {
         x = x - 3
-    //}
+    }
+    global1 = global2 / 2
+}
+else if (global1 == 3)
+{
+    if (global1> 1)
+    {
+        if (global1 < 2 )
+        {
+            if (global1 == 1.5)
+            {
+                global1 = 100
+            }
+            else if (global1 == 3.3)
+            {
+                global1 = 200
+            }
+        }
+    }
 }
 else
 {
@@ -38,8 +64,9 @@ else
     {
         global1 = 1
     }
+    global1 = global1 % 5
 }
-*/
+
 /*
 push local[2]
 push 20
@@ -64,7 +91,7 @@ mov local[2], stack[-1]
 popc
 nop
 */
-
+/*
 if (1 > 2)
 {
     if (2 > 1)
@@ -78,8 +105,56 @@ else if ( 2 > 1)
     {
     }
 }
+*/
+//else
+//{
+//    var i = 7
+//}
+
+/*
+push 1
+push 2
+great stack[-2], stack[-1]
+jmpf 0
+pushc 1
+push 2
+push 1
+great stack[-2], stack[-1]
+jmpf 0
+pushc 2
+popc
+jmp 0
+popc
+
+*/
+/*
+if (1 > 2)
+{
+    if (3 < 1)
+    {
+
+    }
+    else
+    {
+
+    }
+}
+else if ( 2 > 1)
+{
+    if (3 == 1)
+    {
+
+    
+}
 else
 {
-    var i = 7
-}
+    if (2 % 2)
+    {
 
+    }
+    else if (2 * 2)
+    {
+
+    }
+}
+*/

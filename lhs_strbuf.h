@@ -55,6 +55,4 @@ int lhsbuf_isshort(void* vm, LHSSTRBUF* buf);
 
 int lhsbuf_isempty(void* vm, LHSSTRBUF* buf);
 
-size_t lhsbuf_length(void* vm, LHSSTRBUF* buf);
-
 void lhsbuf_uninit(void* vm, LHSSTRBUF* buf);

@@ -228,11 +228,6 @@ int lhsbuf_isempty(void* vm, LHSSTRBUF* buf)
     return !buf->usize;
 }
 
-size_t lhsbuf_length(void* vm, LHSSTRBUF* buf)
-{
-    return buf->usize;
-}
-
 void lhsbuf_uninit(void* vm, LHSSTRBUF* buf)
 {
     if (buf->data != buf->buf)

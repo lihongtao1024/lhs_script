@@ -56,6 +56,7 @@ else if (global1 == 3)
             }
         }
     }
+    global1 = 88
 }
 else
 {

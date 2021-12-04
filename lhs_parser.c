@@ -959,6 +959,7 @@ int lhsparser_dofile(LHSVM* vm, const char* fname)
         lhsvm_pop(vm, 2);
     }
     
+    lhscode_dmpcode(vm);
     lhsparser_uninitlexical(vm, &loadf);
     lhsloadf_uninit(vm, &loadf);
     return LHS_TRUE;

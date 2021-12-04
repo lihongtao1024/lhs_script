@@ -36,6 +36,8 @@
 #define OP_NOP                  (29)
 #define OP_MAX                  (30)
 
+#undef OP_DEBUG
+#ifdef OP_DEBUG
 #define lhscode_unaryb(vm, s, v)                        \
 {                                                       \
     lhsbuf_pushc((vm), &(vm)->code, (s));               \
@@ -135,5 +137,50 @@ typedef struct LHSInstruction
 
 int lhscode_unarydump(LHSVM* vm, char symbol, LHSCode* code);
 
-int lhscode_binarydump(LHSVM* vm, char symbol, LHSCode* code1, 
+int lhscode_binarydump(LHSVM* vm, char symbol, LHSCode* code1,
     LHSCode* code2);
+#else
+#define lhscode_unaryb(vm, s, v)                        \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, (s));               \
+    lhsbuf_pushc((vm), &(vm)->code, LHS_MARKBOOLEAN);   \
+    lhsbuf_pushc((vm), &(vm)->code, (v));               \
+}
+
+#define lhscode_unaryl(vm, s, v)                        \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, (s));               \
+    lhsbuf_pushc((vm), &(vm)->code, LHS_MARKINTEGER);   \
+    lhsbuf_pushl((vm), &(vm)->code, (v));               \
+}
+
+#define lhscode_unaryf(vm, s, v)                        \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, (s));               \
+    lhsbuf_pushc((vm), &(vm)->code, LHS_MARKNUMBER);    \
+    lhsbuf_pushf((vm), &(vm)->code, (v));               \
+}
+
+#define lhscode_unaryi(vm, s, m, v)                     \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, (s));               \
+    lhsbuf_pushc((vm), &(vm)->code, (m));               \
+    lhsbuf_pushi((vm), &(vm)->code, (v));               \
+}
+
+#define lhscode_unary(vm, s)                            \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, (s));               \
+}
+
+#define lhscode_binary(vm, s, m1, v1, m2, v2)           \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, (s));               \
+    lhsbuf_pushc((vm), &(vm)->code, (m1));              \
+    lhsbuf_pushi((vm), &(vm)->code, (v1));              \
+    lhsbuf_pushc((vm), &(vm)->code, (m2));              \
+    lhsbuf_pushi((vm), &(vm)->code, (v2));              \
+}
+#endif
+
+int lhscode_dmpcode(LHSVM* vm);

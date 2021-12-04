@@ -1,4 +1,5 @@
 #include "lhs_code.h"
+#include "lhs_strbuf.h"
 #include "lhs_load.h"
 #include "lhs_variable.h"
 
@@ -19,6 +20,7 @@ static const char* opname[OP_MAX] =
 	"pushc", "popc", "jmp", "jmpf", "nop"
 };
 
+#ifdef OP_DEBUG
 static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
 {
 	char temp[64];
@@ -126,5 +128,116 @@ int lhscode_binarydump(LHSVM* vm, char symbol, LHSCode* code1,
 	memcpy(&instruction.body.binary.code2, code2, sizeof(LHSCode));
 
 	lhscode_dumpinstruction(vm, &instruction);
+	return LHS_TRUE;
+}
+#endif
+
+int lhscode_dmpcode(LHSVM* vm)
+{
+	const char* head = vm->code.data;
+	const char* tail = head + vm->code.usize;
+	while (head < tail)
+	{
+		const char* cur = head;
+		char op = *head++;
+		switch (op)
+		{
+		case OP_NEG:
+		case OP_NOT:
+		case OP_BNOT:
+		{
+			char mark = *head++;
+			int index = *((int*)head)++;
+			printf
+			(
+				"%p\t%s\t%s[%d]\n", 
+				cur, 
+				opname[op], 
+				markname[mark], 
+				index
+			);
+			break;
+		}
+		case OP_PUSH:
+		case OP_PUSHC:
+		case OP_JMP:
+		case OP_JMPF:
+		{
+			char mark = *head++;
+			switch (mark)
+			{
+			case LHS_MARKLOCAL:
+			case LHS_MARKGLOBAL:
+			case LHS_MARKSTRING:
+			case LHS_MARKSTACK:
+			{
+				int index = *((int*)head)++;
+				printf
+				(
+					"%p\t%s\t%s[%d]\n", 
+					cur, 
+					opname[op], 
+					markname[mark], 
+					index
+				);
+				break;
+			}
+			case LHS_MARKINTEGER:
+			{
+				long long l = *((long long*)head)++;
+				printf("%p\t%s\t%lld\n", cur, opname[op], l);
+				break;
+			}
+			case LHS_MARKNUMBER:
+			{
+				double n = *((double*)head)++;
+				printf("%p\t%s\t%lf\n", cur, opname[op], n);
+				break;
+			}
+			case LHS_MARKBOOLEAN:
+			{
+				char b = *head++;
+				printf
+				(
+					"%p\t%s\t%s\n", 
+					cur, 
+					opname[op], 
+					b ? "true" : "false"
+				);
+				break;
+			}
+			default:
+			{
+				lhserr_throw(vm, "unexpected byte code.");
+			}
+			}
+			break;
+		}
+		case OP_POPC:
+		case OP_NOP:
+		{
+			printf("%p\t%s\n", cur, opname[op]);
+			break;
+		}
+		default:
+		{
+			char mark1 = *head++;
+			int index1 = *((int*)head)++;
+			char mark2 = *head++;
+			int index2 = *((int*)head)++;
+			printf
+			(
+				"%p\t%s\t%s[%d],\t%s[%d]\n", 
+				cur, 
+				opname[op], 
+				markname[mark1], 
+				index1, 
+				markname[mark2], 
+				index2
+			);
+			break;
+		}
+		}
+	}
 	return LHS_TRUE;
 }

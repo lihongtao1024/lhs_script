@@ -859,7 +859,7 @@ int lhsparser_ifsolve(LHSVM* vm, LHSIfState* state)
     lhsparser_ifprefix(vm, state);
     lhsparser_checkandnexttoken(vm, state->loadf, '}', "if");
 
-    while (LHS_TRUE)
+    do
     {
         if (lhsparser_castlex(state->loadf)->token.t != LHS_TOKENELSE)
         {
@@ -874,8 +874,8 @@ int lhsparser_ifsolve(LHSVM* vm, LHSIfState* state)
 
         lhsparser_nexttoken(vm, state->loadf);
         state->branch->len = vm->code.usize - state->branch->pos;
-        lhsparser_ifstate(vm, state->loadf);
-    }
+        return lhsparser_ifstate(vm, state->loadf);
+    } while (LHS_FALSE);
 
     if (lhsparser_castlex(state->loadf)->token.t == LHS_TOKENELSE)
     {

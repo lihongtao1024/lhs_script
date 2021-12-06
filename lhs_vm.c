@@ -26,7 +26,7 @@ static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
     {
         printf
         (
-            "memory leak, remain:%llu\n", 
+            "memory leak:[%llu] bytes\n", 
             vm->nalloc - o->size
         );
     }

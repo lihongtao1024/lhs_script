@@ -18,7 +18,7 @@ typedef struct LHSVM
     lhsmem_new falloc;          /*memory handler*/
     void* mainframe;            /*main function frame*/
     void* currentframe;         /*current function frame*/    
-    LHSJmp* errorjmp;           /*error jump handler*/
+    LHSError* errorjmp;           /*error jump handler*/
     LHSHashTable shortstrhash;  /*hast table for short string*/
     LHSVariables conststrhash;  /*hash table for constant string*/
     LHSVector conststrvalue;    /*constant strings*/

@@ -60,14 +60,13 @@ typedef struct LHSExprState
 typedef struct LHSIfState
 {
     LHSLoadF* loadf;
-    size_t tsize;
-    size_t fsize;
-    long long* jmpelse;
-    long long* jmpexit;
+    LHSJmp* branch;
+    LHSJmp* finish;
 } LHSIfState;
 
 static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf);
 static int lhsparser_statesolve(LHSVM* vm, LHSLoadF* loadf);
+static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf);
 
 static const char* reserveds[] =
 {
@@ -161,10 +160,26 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname
     return LHS_TRUE;
 }
 
+static int lhsparser_initjmp(LHSVM* vm, LHSJmp* jmp)
+{
+    jmp->pos = 0;
+    jmp->len = 0;
+    jmp->next = 0;
+    return LHS_TRUE;
+}
+
+static int lhsparser_uninitjmp(LHSLexical* lex, LHSJmp* jmp, LHSVM *vm)
+{
+    lhs_unused(lex);
+    lhsmem_freeobject(vm, jmp, sizeof(LHSJmp));
+    return LHS_TRUE;
+}
+
 static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 {
     lex->token.t = LHS_TOKENEOF;
     lex->lookahead.t = LHS_TOKENEOF;
+    lex->alljmp = 0;
     lhsparser_castlex(loadf) = lex;
 
     lhsbuf_init(vm, &lex->token.buf);
@@ -172,8 +187,30 @@ static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
     return LHS_TRUE;
 }
 
+static int lhsparser_solvejmp(LHSLexical* lex, LHSJmp* jmp, LHSVM* vm)
+{
+    long long* addr = (long long*)(vm->code.data + jmp->pos - sizeof(long long));
+    *addr = (long long)vm->code.data + jmp->pos + jmp->len;
+    return LHS_TRUE;
+}
+
+static int lhsparser_lexicalsolve(LHSVM* vm, LHSLexical* lex)
+{
+    lhsslink_foreach(LHSJmp, lex, alljmp, next, lhsparser_solvejmp, vm);
+    return LHS_TRUE;
+}
+
 static int lhsparser_uninitlexical(LHSVM* vm, LHSLoadF* loadf)
 {
+    lhsslink_foreach
+    (
+        LHSJmp, 
+        lhsparser_castlex(loadf), 
+        alljmp, 
+        next, 
+        lhsparser_uninitjmp, 
+        vm
+    );
     lhsbuf_uninit(vm, &lhsparser_castlex(loadf)->token.buf);
     lhsbuf_uninit(vm, &lhsparser_castlex(loadf)->lookahead.buf);
     return LHS_TRUE;
@@ -516,10 +553,14 @@ static void lhsparser_uninitexprstate(LHSVM* vm, LHSExprState* state)
 static int lhsparser_initifstate(LHSVM* vm, LHSIfState* state, LHSLoadF* loadf)
 {
     state->loadf = loadf;
-    state->tsize = 0;
-    state->fsize = 0;
-    state->jmpelse = 0;
-    state->jmpexit = 0;
+
+    state->branch = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, state->branch);
+    lhsslink_push(lhsparser_castlex(loadf), alljmp, state->branch, next);
+
+    state->finish = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, state->finish);
+    lhsslink_push(lhsparser_castlex(loadf), alljmp, state->finish, next);
     return LHS_TRUE;
 }
 
@@ -788,21 +829,25 @@ static int lhsparser_variablestate(LHSVM* vm, LHSLoadF* loadf, int global)
     return lhsparser_directmov(vm, loadf, variable);
 }
 
-int lhsparser_iftruecode(LHSVM* vm, LHSIfState* state)
+int lhsparser_ifprefix(LHSVM* vm, LHSIfState* state)
 {
     lhscode_unaryl(vm, OP_JMPF, 0);
+    state->branch->pos = vm->code.usize;
     lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), state->loadf);
     lhsparser_statement(vm, state->loadf);
     lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), state->loadf);
     lhscode_unaryl(vm, OP_JMP, 0);
+    state->finish->pos = vm->code.usize;
     return LHS_TRUE;
 }
 
-int lhsparser_iffalsecode(LHSVM* vm, LHSIfState* state)
+int lhsparser_ifsuffix(LHSVM* vm, LHSIfState* state)
 {
+    state->branch->len = vm->code.usize - state->branch->pos;
     lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), state->loadf);
     lhsparser_statement(vm, state->loadf);
     lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), state->loadf);
+    state->finish->len = vm->code.usize - state->finish->pos;
     return LHS_TRUE;
 }
 
@@ -810,12 +855,11 @@ int lhsparser_ifsolve(LHSVM* vm, LHSIfState* state)
 {
     lhsparser_lookaheadandcheck(vm, state->loadf, '(', "if");
     lhsparser_exprstate(vm, state->loadf);
-    lhsparser_checkandnexttoken(vm, state->loadf, '{', "if");
-    
-    lhsparser_iftruecode(vm, state);
+    lhsparser_checkandnexttoken(vm, state->loadf, '{', "if");    
+    lhsparser_ifprefix(vm, state);
     lhsparser_checkandnexttoken(vm, state->loadf, '}', "if");
 
-    for (; ;)
+    while (LHS_TRUE)
     {
         if (lhsparser_castlex(state->loadf)->token.t != LHS_TOKENELSE)
         {
@@ -829,19 +873,15 @@ int lhsparser_ifsolve(LHSVM* vm, LHSIfState* state)
         }
 
         lhsparser_nexttoken(vm, state->loadf);
-        lhsparser_lookaheadandcheck(vm, state->loadf, '(', "if");
-        lhsparser_exprstate(vm, state->loadf);
-        lhsparser_checkandnexttoken(vm, state->loadf, '{', "if");
-
-        lhsparser_iftruecode(vm, state);    
-        lhsparser_checkandnexttoken(vm, state->loadf, '}', "if");
+        state->branch->len = vm->code.usize - state->branch->pos;
+        lhsparser_ifstate(vm, state->loadf);
     }
 
     if (lhsparser_castlex(state->loadf)->token.t == LHS_TOKENELSE)
     {
         lhsparser_nexttokenandcheck(vm, state->loadf, '{', "if");
         lhsparser_nexttoken(vm, state->loadf);
-        lhsparser_iffalsecode(vm, state);
+        lhsparser_ifsuffix(vm, state);
         lhsparser_checkandnexttoken(vm, state->loadf, '}', "if");
     }
 
@@ -957,18 +997,18 @@ int lhsparser_dofile(LHSVM* vm, const char* fname)
         return LHS_FALSE;
     }
 
-    if (lhserr_protectedcall
-    (
-        vm,
-        lhsparser_initstate, 
-        &loadf
-    ))
+    int errcode = lhserr_protectedcall(vm, lhsparser_initstate, &loadf);
+    if (errcode)
     {
         lhserr_msg(lhsvm_tostring(vm, -1));
         lhsvm_pop(vm, 2);
     }
+    else
+    {
+        lhsparser_lexicalsolve(vm, &lexical);
+        lhscode_dmpcode(vm);
+    }
     
-    lhscode_dmpcode(vm);
     lhsparser_uninitlexical(vm, &loadf);
     lhsloadf_uninit(vm, &loadf);
     return LHS_TRUE;

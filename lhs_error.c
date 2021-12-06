@@ -3,7 +3,7 @@
 
 int lhserr_protectedcall(void* vm, protectedf fn, void* udata)
 {
-    LHSJmp jmp;
+    LHSError jmp;
     jmp.prev = lhsvm_castvm(vm)->errorjmp;
     lhsvm_castvm(vm)->errorjmp = &jmp;
 

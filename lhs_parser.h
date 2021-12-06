@@ -43,10 +43,18 @@ typedef struct LHSToken
     LHSSTRBUF buf;
 } LHSToken;
 
+typedef struct LHSJmp
+{
+    size_t pos;
+    size_t len;
+    struct LHSJmp* next;
+} LHSJmp;
+
 typedef struct LHSLexical
 {
     LHSToken token;
     LHSToken lookahead;
+    LHSJmp* alljmp;
 } LHSLexical;
 
 int lhsparser_dofile(LHSVM* vm, const char* fname);

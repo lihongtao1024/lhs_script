@@ -20,12 +20,12 @@ lhserr_throw                                                        \
 )
 
 typedef void (*protectedf)(void*, void*);
-typedef struct LHSJmp
+typedef struct LHSError
 {
-    struct LHSJmp* prev;
+    struct LHSError* prev;
     jmp_buf buf;
     int errcode;
-} LHSJmp;
+} LHSError;
 
 int lhserr_protectedcall(void* vm, protectedf fn, void* udata);
 

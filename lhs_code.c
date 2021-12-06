@@ -160,8 +160,6 @@ int lhscode_dmpcode(LHSVM* vm)
 		}
 		case OP_PUSH:
 		case OP_PUSHC:
-		case OP_JMP:
-		case OP_JMPF:
 		{
 			char mark = *head++;
 			switch (mark)
@@ -211,6 +209,19 @@ int lhscode_dmpcode(LHSVM* vm)
 				lhserr_throw(vm, "unexpected byte code.");
 			}
 			}
+			break;
+		}
+		case OP_JMP:
+		case OP_JMPF:
+		{
+			char mark = *head++;
+			if (mark != LHS_MARKINTEGER)
+			{
+				lhserr_throw(vm, "unexpected byte code.");
+			}
+
+			long long l = *((long long*)head)++;
+			printf("%p\t%s\t%p\n", cur, opname[op], (void*)l);
 			break;
 		}
 		case OP_POPC:

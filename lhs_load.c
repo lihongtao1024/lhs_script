@@ -108,9 +108,8 @@ int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
+int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
 {
-    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
     lhsbuf_reset(vm, buf);
 
     do
@@ -121,9 +120,9 @@ int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
+int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double, 
+    LHSSTRBUF* buf)
 {
-    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
     lhsbuf_reset(vm, buf);
 
     int dot = 0;
@@ -158,9 +157,8 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double)
     return LHS_TRUE;
 };
 
-int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
+int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
 {
-    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
     lhsbuf_reset(vm, buf);
     lhsloadf_getc(loadf);
 
@@ -182,17 +180,15 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf)
+int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
 {
-    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
     lhsbuf_reset(vm, buf);
     lhsbuf_pushc(vm, buf, (char)loadf->current);
     return LHS_TRUE;
 }
 
-int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf)
+int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
 {
-    LHSSTRBUF* buf = lhsparser_curtokenbuf(loadf);
     lhsbuf_pushc(vm, buf, (char)loadf->current);
     return LHS_TRUE;
 }

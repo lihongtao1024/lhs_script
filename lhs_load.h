@@ -73,7 +73,7 @@ typedef struct LHSLoadF
     long long line;
     long long column;
     int current;
-    LHSLexical* lexical;
+    void* lexical;
 } LHSLoadF;
 
 int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname);
@@ -82,14 +82,15 @@ int lhsloadf_skipline(LHSVM* vm, LHSLoadF* loadf);
 
 int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf);
 
-int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf);
+int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf);
 
-int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double);
+int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double, 
+    LHSSTRBUF* buf);
 
-int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf);
+int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf);
 
-int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf);
+int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf);
 
-int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf);
+int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf);
 
 void lhsloadf_uninit(LHSVM* vm, LHSLoadF* loadf);

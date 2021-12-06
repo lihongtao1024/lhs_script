@@ -36,19 +36,17 @@
 #define LHS_TOKENNUMBER          (LHS_TOKENRESERVEDBEGIN + 18)             //<number>  65554
 #define LHS_TOKENSTRING          (LHS_TOKENRESERVEDBEGIN + 19)             //<string>  65555
 #define LHS_TOKENRESERVEDEND     (LHS_TOKENRESERVEDBEGIN + 20)
-#define LHS_NEXTTOKEN            0
-#define LHS_NEXTLOOKAHEAD        1
 
-#define lhsparser_curtokenbuf(lf)\
-((lf)->lexical->flag == LHS_NEXTTOKEN) ? &(lf)->lexical->tokenbuf : &(lf)->lexical->lookaheadbuf
+typedef struct LHSToken
+{
+    int t;
+    LHSSTRBUF buf;
+} LHSToken;
 
 typedef struct LHSLexical
 {
-    int flag;
-    int token;
-    int lookahead;
-    LHSSTRBUF tokenbuf;
-    LHSSTRBUF lookaheadbuf;
+    LHSToken token;
+    LHSToken lookahead;
 } LHSLexical;
 
 int lhsparser_dofile(LHSVM* vm, const char* fname);

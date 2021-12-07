@@ -26,9 +26,9 @@
 #define OP_NEG                  (19)                    //-
 #define OP_NOT                  (20)                    //!
 #define OP_BNOT                 (21)                    //~
-#define OP_PUSH                 (22)
-#define OP_POP                  (23)
-#define OP_MOV                  (24)                    //=
+#define OP_MOV                  (22)                    //=
+#define OP_PUSH                 (23)
+#define OP_POP                  (24)
 #define OP_PUSHC                (25)
 #define OP_POPC                 (26)
 #define OP_JMP                  (27)
@@ -36,7 +36,7 @@
 #define OP_NOP                  (29)
 #define OP_MAX                  (30)
 
-#undef OP_DEBUG
+#define OP_DEBUG
 #ifdef OP_DEBUG
 #define lhscode_unaryb(vm, s, v)                        \
 {                                                       \

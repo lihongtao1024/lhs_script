@@ -17,7 +17,7 @@ char lhsloadf_symbolid[] =
     SYMBOL_SUB,      SYMBOL_DIGIT,    SYMBOL_DIV,     SYMBOL_DIGIT,   SYMBOL_DIGIT,
     SYMBOL_DIGIT,    SYMBOL_DIGIT,    SYMBOL_DIGIT,   SYMBOL_DIGIT,   SYMBOL_DIGIT,
     SYMBOL_DIGIT,    SYMBOL_DIGIT,    SYMBOL_DIGIT,   SYMBOL_NONE,    SYMBOL_NONE,
-    SYMBOL_LESS,     SYMBOL_NONE,     SYMBOL_GREAT,   SYMBOL_NONE,    SYMBOL_NONE,
+    SYMBOL_LESS,     SYMBOL_ASSIGN,   SYMBOL_GREAT,   SYMBOL_NONE,    SYMBOL_NONE,
     SYMBOL_LETTER,   SYMBOL_LETTER,   SYMBOL_LETTER,  SYMBOL_LETTER,  SYMBOL_LETTER,
     SYMBOL_LETTER,   SYMBOL_LETTER,   SYMBOL_LETTER,  SYMBOL_LETTER,  SYMBOL_LETTER,
     SYMBOL_LETTER,   SYMBOL_LETTER,   SYMBOL_LETTER,  SYMBOL_LETTER,  SYMBOL_LETTER,
@@ -63,7 +63,7 @@ const char* lhsloadf_symbolname[] =
 {
     "n/a", "+", "-", "*", "/", "%", "&", "|", "^",
     "<", ">", "==", "!=", ">=", "<=", "&&", 
-    "||", "<<", ">>", "-", "!", "~", "(", ")"
+    "||", "<<", ">>", "-", "!", "~", "(", ")", "="
 };
 
 int lhsloadf_skipline(LHSVM* vm, LHSLoadF* loadf)

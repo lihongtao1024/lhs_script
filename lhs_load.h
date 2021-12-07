@@ -26,11 +26,14 @@
 #define SYMBOL_MINUS                (19)          //-
 #define SYMBOL_NOT                  (20)          //!
 #define SYMBOL_BNOT                 (21)          //~
-#define SYMBOL_LBRACKET             (22)          //(
-#define SYMBOL_RBRACKET             (23)          //)
-#define SYMBOL_END                  (24)          //N/A
-#define SYMBOL_DIGIT                (25)          //<number>
-#define SYMBOL_LETTER               (26)          //<string>
+#define SYMBOL_ASSIGN               (22)          //=
+#define SYMBOL_END                  (23)          //N/A
+#define SYMBOL_LBRACKET             (24)          //(
+#define SYMBOL_RBRACKET             (25)          //)
+#define SYMBOL_DIGIT                (26)          //<number>
+#define SYMBOL_LETTER               (27)          //<string>
+#define SYMBOL_MAX                  (28)
+#define SYMBOL_ERROR                SYMBOL_MAX
 
 #define lhsloadf_castlf(ud)                         \
 ((LHSLoadF*)ud)

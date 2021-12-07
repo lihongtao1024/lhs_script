@@ -16,7 +16,7 @@ static const char* opname[OP_MAX] =
 	"mod", "band", "bor", "bxor", "less",
 	"great", "eq", "ne", "ge", "le",
 	"and", "or", "lsht", "rsht", "neg",
-	"not", "bnot", "push", "pop", "mov",
+	"not", "bnot", "mov", "push", "pop",
 	"pushc", "popc", "jmp", "jmpf", "nop"
 };
 

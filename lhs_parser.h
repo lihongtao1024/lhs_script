@@ -3,6 +3,7 @@
 #include "lhs_strbuf.h"
 #include "lhs_vm.h"
 
+#define LHS_TOKENNONE            (0)
 #define LHS_TOKENEOF             EOF
 #define LHS_TOKENSYMBOLBEGIN     (UCHAR_MAX            + 1)
 #define LHS_TOKENEQUAL           (LHS_TOKENSYMBOLBEGIN + SYMBOL_EQUAL)     //==        267

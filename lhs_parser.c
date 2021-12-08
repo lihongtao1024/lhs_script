@@ -35,9 +35,9 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
  ((t) & UCHAR_MAX) :                                                \
  lhsloadf_symbol[t])
 
-#define lhsparser_isblockfollow(lf)                                 \
+#define lhsparser_isblockfollow(lf, n)                              \
 (lhsparser_castlex(lf)->token.t == LHS_TOKENEOF ||                  \
- lhsparser_castlex(lf)->token.t == '}')
+ ((n) && lhsparser_castlex(lf)->token.t == '}'))
 
 typedef struct LHSExprState
 {
@@ -53,7 +53,7 @@ typedef struct LHSIfState
 
 static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf);
 static int lhsparser_exprstate(LHSVM* vm, LHSLoadF* loadf);
-static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf);
+static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested);
 
 static const char* reserveds[] =
 {
@@ -943,7 +943,7 @@ static int lhsparser_blockstate(LHSVM* vm, LHSLoadF* loadf)
     }
 
     lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), loadf);
-    lhsparser_statement(vm, loadf);
+    lhsparser_statement(vm, loadf, LHS_TRUE);
     lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), loadf);
     lhsparser_checkandnexttoken(vm, loadf, '}', "block", "}");
     return LHS_TRUE;
@@ -1014,9 +1014,9 @@ static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf)
+static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
 {
-    while (!lhsparser_isblockfollow(loadf))
+    while (!lhsparser_isblockfollow(loadf, nested))
     {
         switch (lhsparser_castlex(loadf)->token.t)
         {
@@ -1059,7 +1059,7 @@ static int lhsparser_initstate(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsloadf_getc(loadf);
     lhsparser_nexttoken(vm, loadf);
-    lhsparser_statement(vm, loadf);
+    lhsparser_statement(vm, loadf, LHS_FALSE);
     return LHS_TRUE;
 }
 

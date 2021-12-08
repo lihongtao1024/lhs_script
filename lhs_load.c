@@ -3,7 +3,7 @@
 #include "lhs_execute.h"
 #include "lhs_error.h"
 
-char lhsloadf_symbolid[] =
+char lhsloadf_symbol[] =
 {  
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
@@ -13,7 +13,7 @@ char lhsloadf_symbolid[] =
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NOT,     SYMBOL_NONE,
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_MOD,     SYMBOL_BAND,    SYMBOL_NONE,
-    SYMBOL_LBRACKET, SYMBOL_RBRACKET, SYMBOL_MUL,     SYMBOL_ADD,     SYMBOL_NONE,
+    SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_MUL,     SYMBOL_ADD,     SYMBOL_NONE,
     SYMBOL_SUB,      SYMBOL_DIGIT,    SYMBOL_DIV,     SYMBOL_DIGIT,   SYMBOL_DIGIT,
     SYMBOL_DIGIT,    SYMBOL_DIGIT,    SYMBOL_DIGIT,   SYMBOL_DIGIT,   SYMBOL_DIGIT,
     SYMBOL_DIGIT,    SYMBOL_DIGIT,    SYMBOL_DIGIT,   SYMBOL_NONE,    SYMBOL_NONE,
@@ -57,13 +57,6 @@ char lhsloadf_symbolid[] =
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
     SYMBOL_NONE,     SYMBOL_NONE,     SYMBOL_NONE,    SYMBOL_NONE,    SYMBOL_NONE,
     SYMBOL_NONE
-};
-
-const char* lhsloadf_symbolname[] =
-{
-    "n/a", "+", "-", "*", "/", "%", "&", "|", "^",
-    "<", ">", "==", "!=", ">=", "<=", "&&", 
-    "||", "<<", ">>", "-", "!", "~", "(", ")", "="
 };
 
 int lhsloadf_skipline(LHSVM* vm, LHSLoadF* loadf)

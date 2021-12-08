@@ -28,11 +28,9 @@
 #define SYMBOL_BNOT                 (21)          //~
 #define SYMBOL_ASSIGN               (22)          //=
 #define SYMBOL_END                  (23)          //N/A
-#define SYMBOL_LBRACKET             (24)          //(
-#define SYMBOL_RBRACKET             (25)          //)
-#define SYMBOL_DIGIT                (26)          //<number>
-#define SYMBOL_LETTER               (27)          //<string>
-#define SYMBOL_MAX                  (28)
+#define SYMBOL_DIGIT                (24)          //<number>
+#define SYMBOL_LETTER               (25)          //<string>
+#define SYMBOL_MAX                  (26)
 #define SYMBOL_ERROR                SYMBOL_MAX
 
 #define lhsloadf_castlf(ud)                         \
@@ -51,11 +49,11 @@
 ++(lf)->line; (lf)->column = 0
 
 #define lhsloadf_isletter(lf)                       \
-(lhsloadf_symbolid[(unsigned char)                  \
+(lhsloadf_symbol[(unsigned char)                  \
 ((lf)->current)] == SYMBOL_LETTER)
 
 #define lhsloadf_isdigit(lf)                        \
-(lhsloadf_symbolid[(unsigned char)                  \
+(lhsloadf_symbol[(unsigned char)                  \
 ((lf)->current)] == SYMBOL_DIGIT)
 
 #define lhsloadf_isidentifier(lf)                   \
@@ -67,8 +65,7 @@
 #define lhsloadf_isright(lf)                        \
 ((lf)->lexical->token == LHS_TOKENIDENTIFIER)
 
-extern char lhsloadf_symbolid[];
-extern const char* lhsloadf_symbolname[];
+extern char lhsloadf_symbol[];
 
 typedef struct LHSLoadF
 {

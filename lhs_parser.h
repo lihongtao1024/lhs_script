@@ -32,11 +32,11 @@
 #define LHS_TOKENTRUE            (LHS_TOKENRESERVEDBEGIN + 13)             //true      65549
 #define LHS_TOKENFALSE           (LHS_TOKENRESERVEDBEGIN + 14)             //false     65550
 #define LHS_TOKENRETURN          (LHS_TOKENRESERVEDBEGIN + 15)             //return    65551
-#define LHS_TOKENIDENTIFIER      (LHS_TOKENRESERVEDBEGIN + 16)             //<name>    65552
-#define LHS_TOKENINTEGER         (LHS_TOKENRESERVEDBEGIN + 17)             //<integer> 65553
-#define LHS_TOKENNUMBER          (LHS_TOKENRESERVEDBEGIN + 18)             //<number>  65554
-#define LHS_TOKENSTRING          (LHS_TOKENRESERVEDBEGIN + 19)             //<string>  65555
-#define LHS_TOKENRESERVEDEND     (LHS_TOKENRESERVEDBEGIN + 20)
+#define LHS_TOKENRESERVEDEND     (LHS_TOKENRESERVEDBEGIN + 16)
+#define LHS_TOKENIDENTIFIER      (LHS_TOKENRESERVEDBEGIN + 17)             //<identifier>65553
+#define LHS_TOKENINTEGER         (LHS_TOKENRESERVEDBEGIN + 18)             //<integer> 65554
+#define LHS_TOKENNUMBER          (LHS_TOKENRESERVEDBEGIN + 19)             //<number>  65555
+#define LHS_TOKENSTRING          (LHS_TOKENRESERVEDBEGIN + 20)             //<string>  65556
 
 typedef struct LHSToken
 {

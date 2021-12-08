@@ -18,7 +18,7 @@
 (((t) & ~UCHAR_MAX) ?                                               \
  ((t) > LHS_TOKENSYMBOLBEGIN &&                                     \
   (t) < LHS_TOKENSYMBOLEND) :                                       \
-(lhsloadf_symbol[(t)] > SYMBOL_BEGIN &&                           \
+(lhsloadf_symbol[(t)] > SYMBOL_BEGIN &&                             \
  lhsloadf_symbol[(t)] < SYMBOL_END))
 
 #define lhsparser_istokensymbol(lf)                                 \

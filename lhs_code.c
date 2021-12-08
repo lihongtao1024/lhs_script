@@ -7,7 +7,7 @@
 
 static const char* markname[LHS_MARKMAX] =
 {
-	0, "local", "global", 0, 0, 0, "const", "stack",
+	0, "v", "g", 0, 0, 0, "c", "s",
 };
 
 static const char* opname[OP_MAX] =

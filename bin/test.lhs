@@ -53,7 +53,7 @@ else
 }
 
 /*
-echunk x
+pushc x
 
 push local[1]
 push 0
@@ -61,7 +61,7 @@ mov stack[-2], stack[-1]
 
 push local[1]
 push 5
-less stack[-2], stack[-1]
+l stack[-2], stack[-1]
 jz 79
 jmp 74
 
@@ -76,7 +76,7 @@ push local[1]
 call global[1], 1
 jmp 67
 
-lchunk
+popc
 
 for (var i = 0; i < 5; i = i +　1)
 {

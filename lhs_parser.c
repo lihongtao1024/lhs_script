@@ -35,7 +35,7 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
  ((t) & UCHAR_MAX) :                                                \
  lhsloadf_symbol[t])
 
-#define lhsparser_isblockfollow(lf, n)                              \
+#define lhsparser_isyield(lf, n)                                    \
 (lhsparser_castlex(lf)->token.t == LHS_TOKENEOF ||                  \
  ((n) && lhsparser_castlex(lf)->token.t == '}'))
 
@@ -952,7 +952,7 @@ static int lhsparser_blockstate(LHSVM* vm, LHSLoadF* loadf)
 int lhsparser_iftrue(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
 {
     /*iftrue -> blockstate*/
-    lhscode_unaryl(vm, OP_JMPF, 0);
+    lhscode_unaryl(vm, OP_JZ, 0);
     state->branch->pos = vm->code.usize;
     
     lhsparser_blockstate(vm, loadf);
@@ -1016,7 +1016,7 @@ static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf)
 
 static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
 {
-    while (!lhsparser_isblockfollow(loadf, nested))
+    while (!lhsparser_isyield(loadf, nested))
     {
         switch (lhsparser_castlex(loadf)->token.t)
         {

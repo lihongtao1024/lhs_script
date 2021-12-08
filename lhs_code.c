@@ -13,12 +13,12 @@ static const char* markname[LHS_MARKMAX] =
 static const char* opname[OP_MAX] =
 {
 	"nop", "add", "sub", "mul", "div",
-	"mod", "band", "bor", "bxor", "less",
-	"great", "eq", "ne", "ge", "le",
-	"and", "or", "lsht", "rsht", "neg",
-	"not", "bnot", "mov", "push", "pop",
-	"pushc", "popc", "jmp", "jmpf", "nop",
-	"call"
+	"mod", "andb", "orb", "xorb", "l",
+	"g", "eq", "ne", "ge", "le",
+	"and", "or", "shl", "shr", "neg",
+	"not", "notb", "mov", "push", "pop",
+	"pushc", "popc", "jmp", "jz", "jnz", 
+	"nop", "call"
 };
 
 #ifdef OP_DEBUG
@@ -73,12 +73,13 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 	{
 	case OP_NEG:
 	case OP_NOT:
-	case OP_BNOT:
+	case OP_NOTB:
 	case OP_PUSH:
 	case OP_POP:
 	case OP_PUSHC:
 	case OP_JMP:
-	case OP_JMPF:
+	case OP_JZ:
+	case OP_JNZ:
 	{
 		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
 		lhsbuf_pushc(vm, &buf, '\t');
@@ -145,7 +146,7 @@ int lhscode_dmpcode(LHSVM* vm)
 		{
 		case OP_NEG:
 		case OP_NOT:
-		case OP_BNOT:
+		case OP_NOTB:
 		{
 			char mark = *head++;
 			int index = *((int*)head)++;
@@ -213,7 +214,8 @@ int lhscode_dmpcode(LHSVM* vm)
 			break;
 		}
 		case OP_JMP:
-		case OP_JMPF:
+		case OP_JZ:
+		case OP_JNZ:
 		{
 			char mark = *head++;
 			if (mark != LHS_MARKINTEGER)

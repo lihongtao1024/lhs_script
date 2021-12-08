@@ -51,3 +51,52 @@ else
     }
     var func3 = getvalue(3, 5, global2 + 5 * -4 - (getvalue(1))) - 6
 }
+
+/*
+echunk x
+
+push local[1]
+push 0
+mov stack[-2], stack[-1]
+
+push local[1]
+push 5
+less stack[-2], stack[-1]
+jz 79
+jmp 74
+
+push local[1]
+push local[1]
+push 1
+add stack[-2], stack[-1]
+mov stack[-2], stack[-1]
+jmp 61
+
+push local[1]
+call global[1], 1
+jmp 67
+
+lchunk
+
+for (var i = 0; i < 5; i = i +　1)
+{
+    printf(i)
+}
+
+var i = 0
+for (; i < 5; i = i +　1)
+{
+
+}
+
+var i = 0
+for (; i < 5;)
+{
+
+}
+
+for (; ;)
+{
+
+}
+*/

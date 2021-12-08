@@ -10,32 +10,33 @@
 #define OP_MUL                  (3)                     //*
 #define OP_DIV                  (4)                     ///
 #define OP_MOD                  (5)                     //%
-#define OP_BAND                 (6)                     //&
-#define OP_BOR                  (7)                     //|
-#define OP_BXOR                 (8)                     //^
-#define OP_LESS                 (9)                     //<
-#define OP_GREAT                (10)                    //>
-#define OP_EQUAL                (11)                    //==
-#define OP_NOTEQUAL             (12)                    //!=
-#define OP_GREATEQUAL           (13)                    //>=
-#define OP_LESSEQUAL            (14)                    //<=
-#define OP_LOGICAND             (15)                    //&&
-#define OP_LOGICOR              (16)                    //||
-#define OP_BLSHIFT              (17)                    //<<
-#define OP_BRSHIFT              (18)                    //>>
+#define OP_ANDB                 (6)                     //&
+#define OP_ORB                  (7)                     //|
+#define OP_XORB                 (8)                     //^
+#define OP_L                    (9)                     //<
+#define OP_G                    (10)                    //>
+#define OP_E                    (11)                    //==
+#define OP_NE                   (12)                    //!=
+#define OP_GE                   (13)                    //>=
+#define OP_LE                   (14)                    //<=
+#define OP_AND                  (15)                    //&&
+#define OP_OR                   (16)                    //||
+#define OP_SHL                  (17)                    //<<
+#define OP_SHR                  (18)                    //>>
 #define OP_NEG                  (19)                    //-
 #define OP_NOT                  (20)                    //!
-#define OP_BNOT                 (21)                    //~
+#define OP_NOTB                 (21)                    //~
 #define OP_MOV                  (22)                    //=
 #define OP_PUSH                 (23)
 #define OP_POP                  (24)
 #define OP_PUSHC                (25)
 #define OP_POPC                 (26)
 #define OP_JMP                  (27)
-#define OP_JMPF                 (28)
-#define OP_NOP                  (29)
-#define OP_CALL                 (30)
-#define OP_MAX                  (31)
+#define OP_JZ                   (28)
+#define OP_JNZ                  (29)
+#define OP_NOP                  (30)
+#define OP_CALL                 (31)
+#define OP_MAX                  (32)
 
 #define OP_DEBUG
 #ifdef OP_DEBUG

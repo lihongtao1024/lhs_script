@@ -34,7 +34,8 @@
 #define OP_JMP                  (27)
 #define OP_JMPF                 (28)
 #define OP_NOP                  (29)
-#define OP_MAX                  (30)
+#define OP_CALL                 (30)
+#define OP_MAX                  (31)
 
 #define OP_DEBUG
 #ifdef OP_DEBUG
@@ -104,6 +105,21 @@
     code2.mark = (m2);                                  \
     code2.code.index = (v2);                            \
     lhscode_binarydump((vm), (s), &code1, &code2);      \
+}
+
+#define lhscode_call(vm, m, v, n)                       \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, OP_CALL);           \
+    lhsbuf_pushc((vm), &(vm)->code, (m));               \
+    lhsbuf_pushi((vm), &(vm)->code, (v));               \
+    lhsbuf_pushi((vm), &(vm)->code, (n));               \
+    LHSCode code1;                                      \
+    code1.mark = (m);                                   \
+    code1.code.index = (v);                             \
+    LHSCode code2;                                      \
+    code2.mark = LHS_MARKINTEGER;                       \
+    code2.code.i = (n);                                 \
+    lhscode_binarydump((vm), OP_CALL, &code1, &code2);  \
 }
 
 typedef struct LHSCode
@@ -180,6 +196,14 @@ int lhscode_binarydump(LHSVM* vm, char symbol, LHSCode* code1,
     lhsbuf_pushi((vm), &(vm)->code, (v1));              \
     lhsbuf_pushc((vm), &(vm)->code, (m2));              \
     lhsbuf_pushi((vm), &(vm)->code, (v2));              \
+}
+
+#define lhscode_call(vm, m, v, n)                       \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, OP_CALL);           \
+    lhsbuf_pushc((vm), &(vm)->code, (m));               \
+    lhsbuf_pushi((vm), &(vm)->code, (v));               \
+    lhsbuf_pushi((vm), &(vm)->code, (n));               \
 }
 #endif
 

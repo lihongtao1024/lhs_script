@@ -17,7 +17,8 @@ static const char* opname[OP_MAX] =
 	"great", "eq", "ne", "ge", "le",
 	"and", "or", "lsht", "rsht", "neg",
 	"not", "bnot", "mov", "push", "pop",
-	"pushc", "popc", "jmp", "jmpf", "nop"
+	"pushc", "popc", "jmp", "jmpf", "nop",
+	"call"
 };
 
 #ifdef OP_DEBUG
@@ -228,6 +229,22 @@ int lhscode_dmpcode(LHSVM* vm)
 		case OP_NOP:
 		{
 			printf("%p\t%s\n", cur, opname[op]);
+			break;
+		}
+		case OP_CALL:
+		{
+			char mark = *head++;
+			int index = *((int*)head)++;
+			int argn = *((int*)head)++;
+			printf
+			(
+				"%p\t%s\t%s[%d],\t%d\n", 
+				cur, 
+				opname[op], 
+				markname[mark], 
+				index,
+				argn
+			);
 			break;
 		}
 		default:

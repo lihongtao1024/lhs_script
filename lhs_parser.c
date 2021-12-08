@@ -46,7 +46,6 @@ typedef struct LHSExprState
 
 typedef struct LHSIfState
 {
-    LHSLoadF* loadf;
     LHSJmp* branch;
     LHSJmp* finish;
 } LHSIfState;
@@ -516,10 +515,8 @@ static int lhsparser_resetexprstate(LHSVM* vm, LHSExprState* state)
     return LHS_TRUE;
 }
 
-static int lhsparser_resetifstate(LHSVM* vm, LHSIfState* state, LHSLoadF* loadf)
+static int lhsparser_resetifstate(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
 {
-    state->loadf = loadf;
-
     state->branch = lhsmem_newobject(vm, sizeof(LHSJmp));
     lhsparser_initjmp(vm, state->branch);
     lhsslink_push(lhsparser_castlex(loadf), alljmp, state->branch, next);
@@ -596,6 +593,7 @@ static int lhsparser_exprargs(LHSVM* vm, LHSLoadF* loadf)
 static int lhsparser_exprfunc(LHSVM* vm, LHSLoadF* loadf)
 {
     /*exprfunc -> LHS_TOKENIDENTIFIER '(' [exprargs] ')'*/
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENIDENTIFIER, "function", "<identifier>");
     lhsvm_pushvalue(vm, -1);
     LHSVariable* function = lhsframe_getvariable(vm, lhsframe_castcurframe(vm));
     if (!function)
@@ -614,7 +612,6 @@ static int lhsparser_exprfunc(LHSVM* vm, LHSLoadF* loadf)
         lhsvm_pop(vm, 1);
     }
 
-    lhsparser_nexttoken(vm, loadf);
     lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
 
     int argn = lhsparser_exprargs(vm, loadf);
@@ -801,6 +798,7 @@ static int lhsparser_exprstate(LHSVM* vm, LHSLoadF* loadf)
 static int lhsparser_localstate(LHSVM* vm, LHSLoadF* loadf)
 {
     /*var -> identifier ['=' exprstate] {',' identifier ['=' exprstate]}*/
+    lhsparser_checktoken(vm, loadf, LHS_TOKENLOCAL, "var", "var");
     while (LHS_TRUE)
     {
         lhsparser_nexttokenandcheck
@@ -868,6 +866,7 @@ static int lhsparser_localstate(LHSVM* vm, LHSLoadF* loadf)
 static int lhsparser_globalstate(LHSVM* vm, LHSLoadF* loadf)
 {
     /*set -> identifier ['=' exprstate] {',' identifier ['=' exprstate]}*/
+    lhsparser_checktoken(vm, loadf, LHS_TOKENGLOBAL, "set", "set");
     while (LHS_TRUE)
     {
         lhsparser_nexttokenandcheck
@@ -932,81 +931,83 @@ static int lhsparser_globalstate(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-int lhsparser_ifprefix(LHSVM* vm, LHSIfState* state)
+static int lhsparser_blockstate(LHSVM* vm, LHSLoadF* loadf)
 {
+    /*blockstate -> '{' '}' | '{' [statement] '}'*/
+    lhsparser_checkandnexttoken(vm, loadf, '{', "block", "{");
+    if (lhsparser_castlex(loadf)->token.t == '}')
+    {
+        lhsparser_nexttoken(vm, loadf);
+        return LHS_TRUE;
+    }
+
+    lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), loadf);
+    lhsparser_statement(vm, loadf);
+    lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), loadf);
+    lhsparser_checkandnexttoken(vm, loadf, '}', "block", "}");
+    return LHS_TRUE;
+}
+
+int lhsparser_iftrue(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
+{
+    /*iftrue -> blockstate*/
     lhscode_unaryl(vm, OP_JMPF, 0);
     state->branch->pos = vm->code.usize;
-    lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), state->loadf);
-    lhsparser_statement(vm, state->loadf);
-    lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), state->loadf);
+    
+    lhsparser_blockstate(vm, loadf);
+    
     lhscode_unaryl(vm, OP_JMP, 0);
     state->finish->pos = vm->code.usize;
     return LHS_TRUE;
 }
 
-int lhsparser_ifsuffix(LHSVM* vm, LHSIfState* state)
+int lhsparser_iffalse(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
 {
+    /*iffalse -> blockstate*/
     state->branch->len = vm->code.usize - state->branch->pos;
-    lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), state->loadf);
-    lhsparser_statement(vm, state->loadf);
-    lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), state->loadf);
+
+    lhsparser_blockstate(vm, loadf);
+
     state->finish->len = vm->code.usize - state->finish->pos;
-    return LHS_TRUE;
-}
-
-int lhsparser_ifsolve(LHSVM* vm, LHSIfState* state)
-{
-    lhsparser_nexttokenandcheck(vm, state->loadf, '(', "if", "(");
-    lhsparser_exprstate(vm, state->loadf);
-    lhsparser_checkandnexttoken(vm, state->loadf, '{', "if", "{");
-    lhsparser_ifprefix(vm, state);
-    lhsparser_checkandnexttoken(vm, state->loadf, '}', "if", "}");
-
-    do
-    {
-        if (lhsparser_castlex(state->loadf)->token.t != LHS_TOKENELSE)
-        {
-            break;
-        }
-
-        lhsparser_lookaheadtoken(vm, state->loadf);
-        if (lhsparser_castlex(state->loadf)->lookahead.t != LHS_TOKENIF)
-        {
-            break;
-        }
-
-        lhsparser_nexttoken(vm, state->loadf);
-        state->branch->len = vm->code.usize - state->branch->pos;
-        return lhsparser_ifstate(vm, state->loadf);
-    } while (LHS_FALSE);
-
-    if (lhsparser_castlex(state->loadf)->token.t == LHS_TOKENELSE)
-    {
-        lhsparser_nexttokenandcheck(vm, state->loadf, '{', "if", "{");
-        lhsparser_nexttoken(vm, state->loadf);
-        lhsparser_ifsuffix(vm, state);
-        lhsparser_checkandnexttoken(vm, state->loadf, '}', "if", "}");
-    }
-
     return LHS_TRUE;
 }
 
 static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf)
 {
-    LHSIfState ifstate;
-    lhsparser_resetifstate(vm, &ifstate, loadf);
+    /*if '(' exprstate ')' ifstrue [{ifstrue}] [iffalse]*/
+    LHSIfState state;
+    lhsparser_resetifstate(vm, loadf, &state);
 
-    if (lhserr_protectedcall
-    (
-        vm, 
-        lhsparser_ifsolve,
-        &ifstate
-    ))
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENIF, "if", "if");
+    lhsparser_checkandnexttoken(vm, loadf, '(', "if", "(");
+    lhsparser_exprstate(vm, loadf);
+    lhsparser_checkandnexttoken(vm, loadf, ')', "if", ")");
+    lhsparser_iftrue(vm, loadf, &state);
+
+    LHSToken* token = &lhsparser_castlex(loadf)->token,
+        * lookahead = &lhsparser_castlex(loadf)->lookahead;
+    do
     {
-        lhserr_msg(lhsvm_tostring(vm, -1));
-        lhsvm_pop(vm, 2);
+        if (token->t != LHS_TOKENELSE)
+        {
+            break;
+        }
 
-        lhserr_throw(vm, "");
+        lhsparser_lookaheadtoken(vm, loadf);
+        if (lookahead->t != LHS_TOKENIF)
+        {
+            break;
+        }
+
+        lhsparser_nexttoken(vm, loadf);
+        state.branch->len = vm->code.usize - state.branch->pos;
+        return lhsparser_ifstate(vm, loadf);
+    } while (LHS_FALSE);
+
+    if (token->t == LHS_TOKENELSE)
+    {
+        lhsparser_nexttoken(vm, loadf);
+        lhsparser_iffalse(vm, loadf, &state);
     }
 
     return LHS_TRUE;
@@ -1029,6 +1030,11 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf)
     case LHS_TOKENIF:
     {
         lhsparser_ifstate(vm, loadf);
+        break;
+    }
+    case '{':
+    {
+        lhsparser_blockstate(vm, loadf);
         break;
     }
     case LHS_TOKENEOF:

@@ -61,7 +61,7 @@ static const char* reserveds[] =
     "break", "continue", "true", "false", "return"
 };
 
-static const char lhsparser_priority[][SYMBOL_END] =
+static const char priorities[][SYMBOL_END] =
 {
      /*N/A, +, -, *, /, %, &, |, ^, <, >,==,!=,>=,<=,&&,||,<<,>>, -, !, ~, =*/
 /*N/A*/{ E, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G},
@@ -534,7 +534,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         return LHS_FALSE;
     }
 
-    switch (lhsparser_priority[state->prev->symbol][state->symbol])
+    switch (priorities[state->prev->symbol][state->symbol])
     {
     case L:
     {

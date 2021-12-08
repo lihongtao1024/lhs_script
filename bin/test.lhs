@@ -1,3 +1,15 @@
+var a
+if (a)
+{
+    var c
+    if (a)
+    {
+        var b
+    }
+
+    var b
+}
+
 set fn1 = getvalue(1), fn2 = getvalue()
 set global0 = (-5-(1 + (-2))) * 3, global10
 var global1, global11 = -6 % 3
@@ -27,8 +39,15 @@ else if (global2)
     {
         var func2 = getvalue(3, 5, global2 + 5 * -4 - (getvalue(1))) - 6
     }
+
+    var func2 = getvalue(3, 5, global2 + 5 * -4 - (getvalue(1))) - 6
 }
 else
 {
+    var func2 = getvalue(3, 5, global2 + 5 * -4 - (getvalue(1))) - 6
+    if (func2)
+    {
 
+    }
+    var func3 = getvalue(3, 5, global2 + 5 * -4 - (getvalue(1))) - 6
 }

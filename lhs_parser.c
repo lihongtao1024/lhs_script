@@ -35,8 +35,9 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
  ((t) & UCHAR_MAX) :                                                \
  lhsloadf_symbol[t])
 
-#define lhsparser_isfininsh(lf)                                     \
-(lhsparser_castlex(lf)->token.t == LHS_TOKENEOF)
+#define lhsparser_isblockfollow(lf)                                 \
+(lhsparser_castlex(lf)->token.t == LHS_TOKENEOF ||                  \
+ lhsparser_castlex(lf)->token.t == '}')
 
 typedef struct LHSExprState
 {
@@ -1015,47 +1016,40 @@ static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf)
 
 static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf)
 {
-    switch (lhsparser_castlex(loadf)->token.t)
+    while (!lhsparser_isblockfollow(loadf))
     {
-    case LHS_TOKENLOCAL:
-    {
-        lhsparser_localstate(vm, loadf);
-        break;
-    }
-    case LHS_TOKENGLOBAL:
-    {
-        lhsparser_globalstate(vm, loadf);
-        break;
-    }
-    case LHS_TOKENIF:
-    {
-        lhsparser_ifstate(vm, loadf);
-        break;
-    }
-    case '{':
-    {
-        lhsparser_blockstate(vm, loadf);
-        break;
-    }
-    case LHS_TOKENEOF:
-    {
-        break;
-    }
-    default:
-    {
-        lhsparser_exprstate(vm, loadf);
-        break;
-    }
-    }
-
-    return LHS_TRUE;
-}
-
-static int lhsparser_solvestate(LHSVM* vm, LHSLoadF* loadf)
-{
-    while (!lhsparser_isfininsh(loadf))
-    {
-        lhsparser_statement(vm, loadf);
+        switch (lhsparser_castlex(loadf)->token.t)
+        {
+        case LHS_TOKENLOCAL:
+        {
+            lhsparser_localstate(vm, loadf);
+            break;
+        }
+        case LHS_TOKENGLOBAL:
+        {
+            lhsparser_globalstate(vm, loadf);
+            break;
+        }
+        case LHS_TOKENIF:
+        {
+            lhsparser_ifstate(vm, loadf);
+            break;
+        }
+        case '{':
+        {
+            lhsparser_blockstate(vm, loadf);
+            break;
+        }
+        case LHS_TOKENEOF:
+        {
+            break;
+        }
+        default:
+        {
+            lhsparser_exprstate(vm, loadf);
+            break;
+        }
+        }
     }
 
     return LHS_TRUE;
@@ -1065,7 +1059,7 @@ static int lhsparser_initstate(LHSVM* vm, LHSLoadF* loadf)
 {
     lhsloadf_getc(loadf);
     lhsparser_nexttoken(vm, loadf);
-    lhsparser_solvestate(vm, loadf);
+    lhsparser_statement(vm, loadf);
     return LHS_TRUE;
 }
 

@@ -18,12 +18,13 @@ typedef struct LHSVM
     lhsmem_new falloc;          /*memory handler*/
     void* mainframe;            /*main function frame*/
     void* currentframe;         /*current function frame*/    
-    LHSError* errorjmp;           /*error jump handler*/
+    LHSError* errorjmp;         /*error jump handler*/
     LHSHashTable shortstrhash;  /*hast table for short string*/
     LHSVariables conststrhash;  /*hash table for constant string*/
     LHSVector conststrvalue;    /*constant strings*/
     LHSVector stack;            /*execute stack*/
     LHSSTRBUF code;             /*executable byte code*/
+    LHSValue* top;              /*runtime stack top*/
     LHSGCObject* allgc;         /*all garbage collection*/
     size_t nalloc;              /*allocated memory size*/
 } LHSVM;
@@ -47,8 +48,6 @@ LHSValue* lhsvm_getvalue(LHSVM* vm, int index);
 const char* lhsvm_tostring(LHSVM* vm, int index);
 
 LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l);
-
-LHSValue* lhsvm_top(LHSVM* vm);
 
 size_t lhsvm_gettop(LHSVM* vm);
 

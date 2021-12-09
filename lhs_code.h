@@ -4,6 +4,10 @@
 #include "lhs_strbuf.h"
 #include "lhs_vm.h"
 
+#define LHS_MULTRET             (-1)
+#define LHS_VOIDRET             (0)
+#define LHS_RETSULT             (1)
+
 #define OP_NONE                 (0)
 #define OP_ADD                  (1)                     //+
 #define OP_SUB                  (2)                     //-
@@ -108,18 +112,19 @@
     lhscode_binarydump((vm), (s), &code1, &code2);      \
 }
 
-#define lhscode_call(vm, m, v, n)                       \
+#define lhscode_call(vm, m, v, an, rb)                  \
 {                                                       \
     lhsbuf_pushc((vm), &(vm)->code, OP_CALL);           \
     lhsbuf_pushc((vm), &(vm)->code, (m));               \
     lhsbuf_pushi((vm), &(vm)->code, (v));               \
-    lhsbuf_pushi((vm), &(vm)->code, (n));               \
+    lhsbuf_pushi((vm), &(vm)->code, (an));              \
+    lhsbuf_pushc((vm), &(vm)->code, (rb));              \
     LHSCode code1;                                      \
     code1.mark = (m);                                   \
     code1.code.index = (v);                             \
     LHSCode code2;                                      \
-    code2.mark = LHS_MARKINTEGER;                       \
-    code2.code.i = (n);                                 \
+    code2.mark = (an);                                  \
+    code2.code.index = (rb);                            \
     lhscode_binarydump((vm), OP_CALL, &code1, &code2);  \
 }
 
@@ -199,12 +204,13 @@ int lhscode_binarydump(LHSVM* vm, char symbol, LHSCode* code1,
     lhsbuf_pushi((vm), &(vm)->code, (v2));              \
 }
 
-#define lhscode_call(vm, m, v, n)                       \
+#define lhscode_call(vm, m, v, an, rb)                  \
 {                                                       \
     lhsbuf_pushc((vm), &(vm)->code, OP_CALL);           \
     lhsbuf_pushc((vm), &(vm)->code, (m));               \
     lhsbuf_pushi((vm), &(vm)->code, (v));               \
-    lhsbuf_pushi((vm), &(vm)->code, (n));               \
+    lhsbuf_pushi((vm), &(vm)->code, (an));              \
+    lhsbuf_pushc((vm), &(vm)->code, (rb));              \
 }
 #endif
 

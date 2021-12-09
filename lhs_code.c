@@ -92,6 +92,19 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
 		break;
 	}
+	case OP_CALL:
+	{
+		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
+		lhsbuf_pushc(vm, &buf, '\t');
+		lhscode_dumpcode(vm, &instruction->body.binary.code1, &buf);
+		lhsbuf_pushs(vm, &buf, ",\t");
+
+		char temp[64];
+		sprintf(temp, "%d,\t%d", instruction->body.binary.code2.mark,
+			instruction->body.binary.code2.code.index);
+		lhsbuf_pushs(vm, &buf, temp);
+		break;
+	}
 	default:
 	{
 		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
@@ -238,14 +251,16 @@ int lhscode_dmpcode(LHSVM* vm)
 			char mark = *head++;
 			int index = *((int*)head)++;
 			int argn = *((int*)head)++;
+			char retn = *head++;
 			printf
 			(
-				"%p\t%s\t%s[%d],\t%d\n", 
+				"%p\t%s\t%s[%d],\t%d,\t%d\n", 
 				cur, 
 				opname[op], 
 				markname[mark], 
 				index,
-				argn
+				argn,
+				(int)retn
 			);
 			break;
 		}

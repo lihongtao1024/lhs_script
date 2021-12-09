@@ -616,7 +616,7 @@ static int lhsparser_exprfunc(LHSVM* vm, LHSLoadF* loadf)
     lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
 
     int argn = lhsparser_exprargs(vm, loadf);
-    lhscode_call(vm, function->mark, function->index, argn);
+    lhscode_call(vm, function->mark, function->index, argn, LHS_MULTRET);
 
     lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
     return LHS_TRUE;

@@ -216,7 +216,7 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
     }
     default:
     {
-        lhsvm_pushstring(vm, "nil");
+        lhsvm_pushstring(vm, "null");
         str = lhsvalue_caststring(vm->top->gc)->data;
         break;
     }

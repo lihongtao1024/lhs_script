@@ -106,3 +106,9 @@ for (; ;)
 
 }
 */
+
+function (x, y, z)
+{
+    var x = 10
+
+}

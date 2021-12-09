@@ -10,22 +10,24 @@
 #define LHS_FRAMENAME               0
 #define lhsframe_castmainframe(vm)  ((LHSFrame*)(vm)->mainframe)
 #define lhsframe_castcurframe(vm)   ((LHSFrame*)(vm)->currentframe)
+#define lhsframe_castframe(o)       ((LHSFrame*)(o))
 
 typedef struct LHSChunk
 {
     int index;              /*chunk index*/
     struct LHSChunk* parent;
+    struct LHSChunk* chain;
 } LHSChunk;
 
 typedef struct LHSFrame
 {
     LHSGCObject gc;         /*garbage collection handle*/
-    LHSVector chunks;       /*logic chunks*/
     LHSChunk* curchunk;     /*current chunk*/
-    struct LHSFrame* next;  /*sub frames*/
+    LHSChunk* allchunks;     /*chain chunk*/
     LHSVariables variables; /*hash table for variables*/     
     LHSVector values;       /*values for variables*/
     LHSDebug debug;         /*debug info for variables*/
+    int nchunk;
 } LHSFrame;
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame);

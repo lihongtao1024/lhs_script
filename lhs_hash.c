@@ -1,7 +1,7 @@
 #include "lhs_hash.h"
 #include "lhs_vm.h"
 
-#define LHS_HASHSIZE            64
+#define LHS_HASHSIZE            4
 #define lhshash_mod(h, l)       ((h) & ((l) - 1))
 #define lhshash_castdata(o)                                             \
 *(void**)(((char *)(o)) + offsetof(LHSHashNode, data))
@@ -84,14 +84,14 @@ static LHSHashNode* lhshash_search(LHSHashTable* hash, void *userdata,
 }
 
 int lhshash_init(void* vm, LHSHashTable* hash, lhshash_calc calc, 
-    lhshash_equal comp)
+    lhshash_equal comp, size_t n)
 {
     hash->calc = calc;
     hash->equal = comp;
     hash->usize = 0;
     hash->size = 0;
     hash->nodes = 0;
-    return lhshash_grow(vm, hash, LHS_HASHSIZE);
+    return lhshash_grow(vm, hash, n ? max(n, LHS_HASHSIZE) : LHS_HASHSIZE);
 }
 
 int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata, 

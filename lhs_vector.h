@@ -9,7 +9,8 @@ typedef struct LHSVector
     void* nodes;
 } LHSVector;
 
-int lhsvector_init(void* vm, LHSVector* vector, size_t esize);
+int lhsvector_init(void* vm, LHSVector* vector, size_t esize, 
+    size_t n);
 
 int lhsvector_push(void* vm, LHSVector* vector, void* data, 
     size_t* index);

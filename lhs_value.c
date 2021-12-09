@@ -16,13 +16,13 @@ long long lhsvalue_hashformula(const char* str, size_t l, size_t seed)
     return h;
 }
 
-long long lhsvalue_hashstring(void* data)
+long long lhsvalue_hashstr(void* data)
 {
     LHSString* str = lhsvalue_caststring(data);
     return lhsvalue_hashformula(str->data, str->length, 0);
 }
 
-int lhsvalue_equalstring(void* data1, void* data2)
+int lhsvalue_equalstr(void* data1, void* data2)
 {
     LHSString* s1 = lhsvalue_caststring(data1),
         * s2 = lhsvalue_caststring(data2);

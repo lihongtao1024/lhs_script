@@ -2,7 +2,7 @@
 
 int lhsdebug_init(void* vm, LHSDebug* debugs)
 {
-    lhsvector_init(vm, &debugs->symbols, sizeof(LHSSymbol));
+    lhsvector_init(vm, &debugs->symbols, sizeof(LHSSymbol), 0);
     return LHS_TRUE;
 }
 

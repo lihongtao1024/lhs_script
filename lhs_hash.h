@@ -21,7 +21,7 @@ typedef struct LHSHashTable
 } LHSHashTable;
 
 int lhshash_init(void* vm, LHSHashTable* hash, lhshash_calc calc, 
-    lhshash_equal comp);
+    lhshash_equal comp, size_t n);
 
 int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata, 
     long long* ohash);

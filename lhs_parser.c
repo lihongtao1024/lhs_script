@@ -51,6 +51,11 @@ typedef struct LHSIfState
     LHSJmp* finish;
 } LHSIfState;
 
+typedef struct LHSFuncState
+{
+    LHSJmp* leave;
+} LHSFuncState;
+
 static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf);
 static int lhsparser_exprstate(LHSVM* vm, LHSLoadF* loadf);
 static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested);
@@ -89,6 +94,13 @@ static const char priorities[][SYMBOL_END] =
 /*~*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
 /*=*/  { L, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, N}
 };
+
+static const char* lhsparser_anonymous(LHSVM* vm)
+{
+    static char buf[64]; static int index;
+    sprintf(buf, "1_anonymous_%x", index++);
+    return buf;
+}
 
 static int lhsparser_initreserved(LHSVM* vm)
 {
@@ -129,7 +141,7 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname
         lhsframe_castmainframe(vm), 
         0, 
         0,
-        LHS_TRUE
+        LHS_FALSE
     );
     LHSValue* value = lhsvalue_castvalue
     (
@@ -142,6 +154,66 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname
     );
     value->type = LHS_TGC;
     value->gc = lhsgc_castgc(variable->name);
+    return LHS_TRUE;
+}
+
+static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
+{
+    LHSFrame* frame = lhsframe_castframe
+    (
+        lhsmem_newgcobject
+        (
+            vm, 
+            sizeof(LHSFrame), 
+            LHS_TGCFRAME
+        )
+    );
+
+    lhsframe_init(vm, frame);
+    lhsframe_enterchunk(vm, frame, loadf);
+    vm->currentframe = frame;
+
+    lhsvm_pushvalue(vm, -1);
+    LHSVariable* framebody = lhsframe_insertvariable
+    (
+        vm, 
+        lhsframe_castmainframe(vm), 
+        0, 
+        0,
+        LHS_TRUE
+    );
+    LHSValue* framevalue = lhsvalue_castvalue
+    (
+        lhsvector_at
+        (
+            vm, 
+            &lhsframe_castmainframe(vm)->values,
+            framebody->index
+        )
+    );
+    framevalue->type = LHS_TGC;
+    framevalue->gc = lhsgc_castgc(frame);
+
+    LHSVariable* framename = lhsframe_insertvariable
+    (
+        vm, 
+        lhsframe_castcurframe(vm), 
+        0, 
+        0,
+        LHS_FALSE
+    );
+    LHSValue* namevalue = lhsvalue_castvalue
+    (
+        lhsvector_at
+        (
+            vm, 
+            &lhsframe_castcurframe(vm)->values, 
+            framename->index
+        )
+    );
+    namevalue->type = LHS_TGC;
+    namevalue->gc = lhsgc_castgc(framename->name);
+
     return LHS_TRUE;
 }
 
@@ -525,6 +597,12 @@ static int lhsparser_resetifstate(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
     state->finish = lhsmem_newobject(vm, sizeof(LHSJmp));
     lhsparser_initjmp(vm, state->finish);
     lhsslink_push(lhsparser_castlex(loadf), alljmp, state->finish, next);
+    return LHS_TRUE;
+}
+
+static int lhsparser_resetfuncstate(LHSVM* vm, LHSLoadF* loadf, LHSFuncState* state)
+{
+    state->leave = 0;
     return LHS_TRUE;
 }
 
@@ -1046,6 +1124,31 @@ static int lhsparser_forstate(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
+static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
+{
+    /*funcstate -> function [identifier] '(' funcargs ')' blockstate*/
+    LHSFuncState state;
+    lhsparser_resetfuncstate(vm, loadf, &state);
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENFUNCTION, "function", "function");
+    
+    LHSToken* token = &lhsparser_castlex(loadf)->token;
+    if (token->t != LHS_TOKENIDENTIFIER)
+    {
+        lhsvm_pushstring(vm, lhsparser_anonymous(vm));
+        lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
+    }
+    else
+    {
+        lhsvm_pushlstring(vm, token->buf.data, token->buf.usize);
+        lhsparser_nexttokenandcheck(vm, loadf, '(', "function", "(");
+        lhsparser_nexttoken(vm, loadf);
+    }
+
+    lhsparser_insertframe(vm, loadf);
+
+    return LHS_TRUE;
+}
+
 static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
 {
     while (!lhsparser_isyield(loadf, nested))
@@ -1070,6 +1173,11 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
         case LHS_TOKENFOR:
         {
             lhsparser_forstate(vm, loadf);
+            break;
+        }
+        case LHS_TOKENFUNCTION:
+        {
+            lhsparser_funcstate(vm, loadf);
             break;
         }
         case '{':

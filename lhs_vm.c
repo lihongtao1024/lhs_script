@@ -2,14 +2,8 @@
 #include "lhs_frame.h"
 #include "lhs_vm.h"
 
-#define lhsvm_incrementstack(vm)                              \
-lhsvalue_castvalue(lhsvector_increment((vm), &(vm)->stack))
-
-#define lhsvm_minstack(vm)                                    \
-(lhsvalue_castvalue((vm)->stack.nodes) - 1)
-
-#define lhsvm_maxstack(vm)                                    \
-(lhsvm_minstack(vm) + (vm)->stack.usize)
+#define lhsvm_gettopstring(vm)                                              \
+(lhsvalue_caststring(lhsvm_gettopvalue(vm)->gc))
 
 static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
 {
@@ -17,14 +11,14 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
     vm->mainframe = 0;
     vm->currentframe = 0;
     vm->allgc = 0;
+    vm->top = 0;
     vm->errorjmp = 0;
 
     lhsslink_push(vm, allgc, &vm->gc, next);
-    lhshash_init(vm, &vm->shortstrhash, lhsvalue_hashstring, lhsvalue_equalstring);
-    lhshash_init(vm, &vm->conststrhash, lhsvariable_hashvar, lhsvariable_equalvar);
-    lhsvector_init(vm, &vm->conststrvalue, sizeof(LHSValue));
-    lhsvector_init(vm, &vm->stack, sizeof(LHSValue));
-    vm->top = lhsvm_minstack(vm);
+    lhshash_init(vm, &vm->shortstrhash, lhsvalue_hashstr, lhsvalue_equalstr, 16);
+    lhshash_init(vm, &vm->conststrhash, lhsvariable_hashvar, lhsvariable_equalvar, 16);
+    lhsvector_init(vm, &vm->conststrvalue, sizeof(LHSValue), 16);
+    lhsvector_init(vm, &vm->stack, sizeof(LHSValue), 128);
     lhsbuf_init(vm, &vm->code);
 }
 
@@ -34,13 +28,35 @@ static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
 
     if ((void*)vm == (void*)o)
     {
-        printf
-        (
-            "memory leak:[%llu] bytes\n", 
-            vm->nalloc - o->size
-        );
+        printf("memory leak:[%llu] bytes\n", vm->nalloc - o->size);
     }
+
+    switch (o->type)
+    {
+    case LHS_TGCFRAME:
+    {
+        lhsframe_uninit(vm, lhsframe_castframe(o));
+        break;
+    }
+    }
+
     lhsmem_freeobject(vm, o, o->size);
+}
+
+static LHSValue* lhsvm_incrementstack(LHSVM* vm)
+{
+    if (vm->top < vm->stack.usize)
+    {
+        return lhsvalue_castvalue(lhsvector_at(vm, &vm->stack, vm->top++));
+    }
+    
+    ++vm->top;
+    return lhsvalue_castvalue(lhsvector_increment(vm, &vm->stack));
+}
+
+static LHSValue* lhsvm_gettopvalue(LHSVM* vm)
+{
+    return lhsvalue_castvalue(lhsvector_at(vm, &vm->stack, vm->top - 1));
 }
 
 LHSVM* lhsvm_create(lhsmem_new fn)
@@ -61,24 +77,24 @@ LHSVM* lhsvm_create(lhsmem_new fn)
 
 int lhsvm_pushnil(LHSVM* vm)
 {
-    vm->top = lhsvm_incrementstack(vm);
-    vm->top->type = LHS_TNONE;
+    LHSValue* value = lhsvm_incrementstack(vm);
+    value->type = LHS_TNONE;
     return LHS_TRUE;
 }
 
 int lhsvm_pushboolean(LHSVM* vm, char b)
 {
-    vm->top = lhsvm_incrementstack(vm);
-    vm->top->type = LHS_TBOOLEAN;
-    vm->top->b = (b ? 1 : 0);
+    LHSValue* value = lhsvm_incrementstack(vm);
+    value->type = LHS_TBOOLEAN;
+    value->b = (b ? 1 : 0);
     return LHS_TRUE;
 }
 
 int lhsvm_pushvalue(LHSVM* vm, int index)
 {
     LHSValue* value = lhsvm_getvalue(vm, index);
-    vm->top = lhsvm_incrementstack(vm);
-    memcpy(vm->top, value, sizeof(LHSValue));
+    LHSValue* top = lhsvm_incrementstack(vm);
+    memcpy(top, value, sizeof(LHSValue));
     return LHS_TRUE;
 }
 
@@ -102,26 +118,26 @@ int lhsvm_pushlstring(LHSVM* vm, const char* str, size_t l)
         );
     }
 
-    vm->top = lhsvm_incrementstack(vm);
-    vm->top->type = LHS_TGC;
-    vm->top->gc = lhsgc_castgc(string);
+    LHSValue* value = lhsvm_incrementstack(vm);
+    value->type = LHS_TGC;
+    value->gc = lhsgc_castgc(string);
     return LHS_TRUE;
 }
 
 int lhsvm_pushnumber(LHSVM* vm, double number)
 {
-    vm->top = lhsvm_incrementstack(vm);
-    vm->top->type = LHS_TNUMBER;
-    vm->top->n = number;
+    LHSValue* value = lhsvm_incrementstack(vm);
+    value->type = LHS_TNUMBER;
+    value->n = number;
 
     return LHS_TRUE;
 }
 
 int lhsvm_pushinteger(LHSVM* vm, long long integer)
 {
-    vm->top = lhsvm_incrementstack(vm);
-    vm->top->type = LHS_TINTEGER;
-    vm->top->i = integer;
+    LHSValue* value = lhsvm_incrementstack(vm);
+    value->type = LHS_TINTEGER;
+    value->i = integer;
 
     return LHS_TRUE;
 }
@@ -135,7 +151,7 @@ LHSValue* lhsvm_getvalue(LHSVM* vm, int index)
         (
             vm, 
             &vm->stack, 
-            lhsvector_length(vm, &vm->stack) + index
+            vm->top + index
         );
     }
     else if (index > 0)
@@ -158,20 +174,20 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
     {
         int l = sprintf(buf, "%lld", value->i);
         lhsvm_pushlstring(vm, buf, (size_t)l);
-        str = lhsvalue_caststring(vm->top->gc)->data;
+        str = lhsvm_gettopstring(vm)->data;
         break;
     }
     case LHS_TNUMBER:
     {
         int l = sprintf(buf, "%lf", value->n);
         lhsvm_pushlstring(vm, buf, (size_t)l);
-        str = lhsvalue_caststring(vm->top->gc)->data;
+        str = lhsvm_gettopstring(vm)->data;
         break;
     }
     case LHS_TBOOLEAN:
     {
         lhsvm_pushstring(vm, value->b ? "true" : "false");
-        str = lhsvalue_caststring(vm->top->gc)->data;
+        str = lhsvm_gettopstring(vm)->data;
         break;
     }
     case LHS_TGC:
@@ -182,20 +198,20 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
         {
             l = sprintf(buf, "vm:%p", value->gc);
             lhsvm_pushlstring(vm, buf, l);
-            str = lhsvalue_caststring(vm->top->gc)->data;
+            str = lhsvm_gettopstring(vm)->data;
             break;
         }
         case LHS_TGCFRAME:
         {
             l = sprintf(buf, "frame:%p", value->gc);
             lhsvm_pushlstring(vm, buf, l);
-            str = lhsvalue_caststring(vm->top->gc)->data;
+            str = lhsvm_gettopstring(vm)->data;
             break;
         }
         case LHS_TGCSTRING:
         {
-            vm->top = lhsvm_incrementstack(vm);
-            memcpy(vm->top, value, sizeof(LHSValue));
+            LHSValue* top = lhsvm_incrementstack(vm);
+            memcpy(top, value, sizeof(LHSValue));
             str = lhsvalue_caststring(value->gc)->data;
             break;
         }
@@ -203,13 +219,13 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
         {
             l = sprintf(buf, "fdata:%p", value->gc);
             lhsvm_pushlstring(vm, buf, l);
-            str = lhsvalue_caststring(vm->top->gc)->data;
+            str = lhsvm_gettopstring(vm)->data;
             break;
         }
         default:
         {
             lhsvm_pushstring(vm, "null");
-            str = lhsvalue_caststring(vm->top->gc)->data;
+            str = lhsvm_gettopstring(vm)->data;
         }
         }
         break;
@@ -217,7 +233,7 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
     default:
     {
         lhsvm_pushstring(vm, "null");
-        str = lhsvalue_caststring(vm->top->gc)->data;
+        str = lhsvm_gettopstring(vm)->data;
         break;
     }
     }
@@ -236,24 +252,16 @@ LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l)
 
 size_t lhsvm_gettop(LHSVM* vm)
 {
-    if (vm->top < lhsvm_minstack(vm) ||
-        vm->top > lhsvm_maxstack(vm))
-    {
-        lhserr_throw(vm, "incorrect top.");
-    }
-
-    size_t index = ((const char*)(vm->top) - (const char*)(lhsvm_minstack(vm))) 
-        / sizeof(LHSValue);
-    return index;
+    return 0;
 }
 
 int lhsvm_pop(LHSVM* vm, size_t n)
 {
-    if (vm->top - n < lhsvm_minstack(vm) )
+    if (n > vm->top)
     {
-        lhserr_throw(vm, "incorrect top.");
+        lhserr_throw(vm, "incorrect stack top.");
     }
-
+    
     vm->top -= n;
     return LHS_TRUE;
 }
@@ -290,10 +298,6 @@ LHSVariable* lhsvm_insertconstant(LHSVM* vm)
 
 void lhsvm_destroy(LHSVM* vm)
 {
-    if (vm->mainframe)
-    {
-        lhsframe_uninit(vm, vm->mainframe);
-    }
     lhshash_uninit(vm, &vm->conststrhash);
     lhshash_uninit(vm, &vm->shortstrhash);
     lhsvector_uninit(vm, &vm->conststrvalue);

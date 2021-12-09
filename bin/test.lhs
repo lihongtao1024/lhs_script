@@ -107,8 +107,8 @@ for (; ;)
 }
 */
 
-function (x, y, z)
+function test(x, y, z)
 {
-    var x = 10
+    x = 10
 
 }

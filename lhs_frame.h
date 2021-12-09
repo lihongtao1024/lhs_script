@@ -7,10 +7,19 @@
 #include "lhs_gc.h"
 #include "lhs_vm.h"
 
-#define LHS_FRAMENAME               0
-#define lhsframe_castmainframe(vm)  ((LHSFrame*)(vm)->mainframe)
-#define lhsframe_castcurframe(vm)   ((LHSFrame*)(vm)->currentframe)
-#define lhsframe_castframe(o)       ((LHSFrame*)(o))
+#define LHS_FRAMENAME                      (0)
+#define lhsframe_castmainframe(vm)         ((LHSFrame*)(vm)->mainframe)
+#define lhsframe_castcurframe(vm)          ((LHSFrame*)(vm)->currentframe)
+#define lhsframe_castframe(o)              ((LHSFrame*)(o))
+
+#define lhsframe_insertvar(vm, f, l, c)    \
+(lhsframe_insertvariable((vm), (f), (l), (c), LHS_FALSE, LHS_FALSE))        
+
+#define lhsframe_insertglobal(vm, f, l, c) \
+(lhsframe_insertvariable((vm), (f), (l), (c), LHS_TRUE, LHS_FALSE))
+
+#define lhsframe_insertparam(vm, f, l, c)  \
+(lhsframe_insertvariable((vm), (f), (l), (c), LHS_FALSE, LHS_TRUE))
 
 typedef struct LHSChunk
 {
@@ -37,7 +46,7 @@ int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame, void* loadf);
 int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame, void* loadf);
 
 LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
-    long long line, long long column, int global);
+    long long line, long long column, int global, int param);
 
 LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame);
 

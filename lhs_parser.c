@@ -135,13 +135,12 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname
     vm->currentframe = vm->mainframe;
 
     lhsvm_pushstring(vm, fname);
-    LHSVariable* variable = lhsframe_insertvariable
+    LHSVariable* variable = lhsframe_insertvar
     (
         vm, 
         lhsframe_castmainframe(vm), 
         0, 
-        0,
-        LHS_FALSE
+        0
     );
     LHSValue* value = lhsvalue_castvalue
     (
@@ -174,13 +173,12 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     vm->currentframe = frame;
 
     lhsvm_pushvalue(vm, -1);
-    LHSVariable* framebody = lhsframe_insertvariable
+    LHSVariable* framebody = lhsframe_insertglobal
     (
         vm, 
         lhsframe_castmainframe(vm), 
         0, 
-        0,
-        LHS_TRUE
+        0
     );
     LHSValue* framevalue = lhsvalue_castvalue
     (
@@ -194,13 +192,12 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     framevalue->type = LHS_TGC;
     framevalue->gc = lhsgc_castgc(frame);
 
-    LHSVariable* framename = lhsframe_insertvariable
+    LHSVariable* framename = lhsframe_insertvar
     (
         vm, 
         lhsframe_castcurframe(vm), 
         0, 
-        0,
-        LHS_FALSE
+        0
     );
     LHSValue* namevalue = lhsvalue_castvalue
     (
@@ -654,10 +651,10 @@ static int lhsparser_exprargs(LHSVM* vm, LHSLoadF* loadf)
         return 0;
     }
 
-    int argn = 0;
+    int narg = 0;
     while (LHS_TRUE)
     {
-        ++argn;
+        ++narg;
         lhsparser_exprstate(vm, loadf);
         if (token->t != ',')
         {
@@ -666,7 +663,7 @@ static int lhsparser_exprargs(LHSVM* vm, LHSLoadF* loadf)
         lhsparser_nexttoken(vm, loadf);
     }
     
-    return argn;
+    return narg;
 }
 
 static int lhsparser_exprfunc(LHSVM* vm, LHSLoadF* loadf)
@@ -677,13 +674,12 @@ static int lhsparser_exprfunc(LHSVM* vm, LHSLoadF* loadf)
     LHSVariable* function = lhsframe_getvariable(vm, lhsframe_castcurframe(vm));
     if (!function)
     {
-        function = lhsframe_insertvariable
+        function = lhsframe_insertglobal
         (
             vm,
             lhsframe_castmainframe(vm),
             loadf->line,
-            loadf->column,
-            LHS_TRUE
+            loadf->column
         );
     }
     else
@@ -908,13 +904,12 @@ static int lhsparser_localstate(LHSVM* vm, LHSLoadF* loadf)
             );
         }
 
-        LHSVariable* variable = lhsframe_insertvariable
+        LHSVariable* variable = lhsframe_insertvar
         (
             vm, 
             lhsframe_castcurframe(vm), 
             loadf->line, 
-            loadf->column,
-            LHS_FALSE
+            loadf->column
         );
 
         lhsparser_lookaheadtoken(vm, loadf);
@@ -976,13 +971,12 @@ static int lhsparser_globalstate(LHSVM* vm, LHSLoadF* loadf)
             );
         }
 
-        LHSVariable* variable = lhsframe_insertvariable
+        LHSVariable* variable = lhsframe_insertglobal
         (
             vm, 
             lhsframe_castcurframe(vm), 
             loadf->line, 
-            loadf->column,
-            LHS_TRUE
+            loadf->column
         );
 
         lhsparser_lookaheadtoken(vm, loadf);
@@ -1114,13 +1108,63 @@ static int lhsparser_foragr3(LHSVM* vm, LHSLoadF* loadf)
 
 static int lhsparser_forargs(LHSVM* vm, LHSLoadF* loadf)
 {
-    /*forargs -> [forarg1]; [forarg2]; [forarg3]*/
+    /*forargs -> [forarg1] ';' [forarg2] ';' [forarg3]*/
     return LHS_TRUE;
 }
 
 static int lhsparser_forstate(LHSVM* vm, LHSLoadF* loadf)
 {
     /*forstate -> for '(' forargs ')' blockstate*/
+    return LHS_TRUE;
+}
+
+static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
+{
+    /*funcargs -> null | {identifier [',']}*/
+    LHSToken* token = &lhsparser_castlex(loadf)->token;
+    if (token->t == ')')
+    {
+        return LHS_TRUE;
+    }
+
+    int nparam = 0;
+    while (LHS_TRUE)
+    {
+        lhsparser_checktoken(vm, loadf, LHS_TOKENIDENTIFIER, 
+            "function", "<identifier>");
+        lhsvm_pushlstring(vm, token->buf.data, token->buf.usize);
+        lhsvm_pushvalue(vm, -1);
+        if (lhsframe_getvariable(vm, lhsframe_castcurframe(vm)))
+        {
+            lhsvm_pop(vm, 1);
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf,
+                "param duplicate definition '%s'.",
+                token->buf.data
+            );
+        }
+
+        LHSVariable* param = lhsframe_insertparam
+        (
+            vm,
+            lhsframe_castcurframe(vm),
+            loadf->line,
+            loadf->column
+        );
+        param->mark = LHS_MARKSTACK;
+        param->index = ++nparam;
+
+        lhsparser_nexttoken(vm, loadf);
+        if (token->t != ',')
+        {
+            break;
+        }
+
+        lhsparser_nexttoken(vm, loadf);
+    }
+
     return LHS_TRUE;
 }
 
@@ -1145,7 +1189,10 @@ static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
     }
 
     lhsparser_insertframe(vm, loadf);
+    lhsparser_funcargs(vm, loadf);
+    lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
 
+    lhsparser_blockstate(vm, loadf);
     return LHS_TRUE;
 }
 

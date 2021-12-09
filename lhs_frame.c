@@ -41,7 +41,7 @@ int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame, void* loadf)
 }
 
 LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
-    long long line, long long column, int global)
+    long long line, long long column, int global, int param)
 {    
     LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVariable* variable = lhsvariable_castvar
@@ -62,11 +62,14 @@ LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame,
         chunk = 0;
     }
 
-    LHSValue *value = lhsvector_increment(vm, &curframe->values);
-    value->type = LHS_TNONE;
+    if (!param)
+    {
+        LHSValue *value = lhsvector_increment(vm, &curframe->values);
+        value->type = LHS_TNONE;
+        variable->index = (int)lhsvector_length(vm, &curframe->values) - 1;
+    }
 
-    variable->chunk = chunk;
-    variable->index = (int)lhsvector_length(vm, &curframe->values) - 1;
+    variable->chunk = chunk;    
     variable->mark = global ? LHS_MARKGLOBAL : LHS_MARKLOCAL;
     variable->name = lhsvalue_caststring(key->gc);
 

@@ -78,13 +78,13 @@ jmp 67
 
 popc
 
-for (var i = 0; i < 5; i = i +　1)
+for (var i = 0; i < 5; i = i + 1)
 {
     printf(i)
 }
 
 var i = 0
-for (; i < 5; i = i +　1)
+for (; i < 5; i = i + 1)
 {
 
 }

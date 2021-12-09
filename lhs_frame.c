@@ -17,6 +17,7 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
     frame->curchunk = 0;
     frame->allchunks = 0;
     frame->nchunk = 0;
+    frame->nret = LHS_MULTRET;
     return LHS_TRUE;
 }
 

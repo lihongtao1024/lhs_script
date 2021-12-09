@@ -16,7 +16,7 @@ var global1, global11 = -6 % 3
 var global2 = -global1 + 3.5 - (5 - ~1) * 6  + 2 / 2 - 1
 var global3 = !global2+-1
 --6
-global0
+//global0
 var global4 = 1 * global0
 global1 = 55
 //global3 + 3 + 1.2 * 7 - 6
@@ -110,5 +110,17 @@ for (; ;)
 function test(x, y, z)
 {
     x = 10
-
+    if (x)
+    {
+        return 1
+    }
+    else if (x > 5)
+    {
+        return (5 + 6)
+    }
+    
+    return x
+    + 6
+    //1
+    //var k = 10
 }

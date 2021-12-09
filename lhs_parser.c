@@ -1196,6 +1196,37 @@ static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
+static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
+{
+    /*retstate -> return [exprstate]*/
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENRETURN, "function", "return");
+
+    LHSFrame* frame = lhsframe_castcurframe(vm);
+    LHSToken* token = &lhsparser_castlex(loadf)->token;
+    if (token->t == '}')
+    {
+        if (frame->nret == LHS_RETSULT)
+        {
+            lhserr_syntaxerr(vm, loadf, "incorrect function return.");
+        }
+
+        frame->nret = LHS_VOIDRET;
+        lhscode_unary(vm, OP_RETURN);
+        return LHS_TRUE;
+    }
+
+    if (frame->nret == LHS_VOIDRET)
+    {
+        lhserr_syntaxerr(vm, loadf, "incorrect function return.");
+    }
+
+    lhsparser_exprstate(vm, loadf);
+    frame->nret = LHS_RETSULT;
+    lhscode_unaryi(vm, OP_RET, LHS_MARKSTACK, -1);
+    lhsparser_checktoken(vm, loadf, '}', "return", "}");
+    return LHS_TRUE;
+}
+
 static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
 {
     while (!lhsparser_isyield(loadf, nested))
@@ -1227,10 +1258,43 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
             lhsparser_funcstate(vm, loadf);
             break;
         }
+        case LHS_TOKENRETURN:
+        {
+            lhsparser_retstate(vm, loadf);
+            break;
+        }
         case '{':
         {
             lhsparser_blockstate(vm, loadf);
             break;
+        }
+        case LHS_TOKENIDENTIFIER:
+        {
+            lhsparser_lookaheadtoken(vm, loadf);
+            if (lhsparser_castlex(loadf)->lookahead.t == '=')
+            {
+                goto exprstate;
+            }
+            else
+            {
+                goto syntaxerr;
+            }
+            break;
+        }
+        case LHS_TOKENINTEGER:
+        case LHS_TOKENNUMBER:
+        case LHS_TOKENSTRING:
+        case LHS_TOKENTRUE:
+        case LHS_TOKENFALSE:
+        {
+syntaxerr:
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf, 
+                "unexpected token '%s'.", 
+                lhsparser_castlex(loadf)->token.buf.data
+            );
         }
         case LHS_TOKENEOF:
         {
@@ -1238,6 +1302,7 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
         }
         default:
         {
+exprstate:
             lhsparser_exprstate(vm, loadf);
             break;
         }

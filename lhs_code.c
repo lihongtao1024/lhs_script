@@ -18,7 +18,7 @@ static const char* opname[OP_MAX] =
 	"and", "or", "shl", "shr", "neg",
 	"not", "notb", "mov", "push", "pop",
 	"pushc", "popc", "jmp", "jz", "jnz", 
-	"nop", "call"
+	"nop", "call", "ret", "return"
 };
 
 #ifdef OP_DEBUG
@@ -80,6 +80,7 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 	case OP_JMP:
 	case OP_JZ:
 	case OP_JNZ:
+	case OP_RET:
 	{
 		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
 		lhsbuf_pushc(vm, &buf, '\t');
@@ -88,6 +89,7 @@ static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
 	}
 	case OP_POPC:
 	case OP_NOP:
+	case OP_RETURN:
 	{
 		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
 		break;
@@ -160,6 +162,7 @@ int lhscode_dmpcode(LHSVM* vm)
 		case OP_NEG:
 		case OP_NOT:
 		case OP_NOTB:
+		case OP_RET:
 		{
 			char mark = *head++;
 			int index = *((int*)head)++;
@@ -241,6 +244,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			break;
 		}
 		case OP_POPC:
+		case OP_RETURN:
 		case OP_NOP:
 		{
 			printf("%p\t%s\n", cur, opname[op]);

@@ -37,6 +37,7 @@ typedef struct LHSFrame
     LHSVector values;       /*values for variables*/
     LHSDebug debug;         /*debug info for variables*/
     int nchunk;
+    int nret;
 } LHSFrame;
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame);

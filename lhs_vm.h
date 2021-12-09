@@ -24,7 +24,6 @@ typedef struct LHSVM
     LHSVector conststrvalue;    /*constant strings*/
     LHSVector stack;            /*execute stack*/
     LHSSTRBUF code;             /*executable byte code*/
-    LHSValue* top;              /*runtime stack top*/
     LHSGCObject* allgc;         /*all garbage collection*/
     size_t nalloc;              /*allocated memory size*/
 } LHSVM;

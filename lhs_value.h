@@ -42,8 +42,6 @@ typedef struct LHSValue
     };
 } LHSValue;
 
-typedef LHSValue* LHSStack;
-
 long long lhsvalue_hashformula(const char* str, size_t l, size_t seed);
 
 long long lhsvalue_hashstring(void* data);

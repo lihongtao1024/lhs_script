@@ -6,8 +6,9 @@
 #define LHS_TINTEGER            (1)
 #define LHS_TNUMBER             (2)
 #define LHS_TBOOLEAN            (3)
-#define LHS_TGC                 (4)
-#define LHS_SHORTSTRLEN         (64)
+#define LHS_TDELEGATE           (4)
+#define LHS_TGC                 (5)
+#define LHS_SHORTSTRLEN         (40)
 #define lhsvalue_castvalue(ud)  ((LHSValue*)(ud))
 #define lhsvalue_caststring(ud) ((LHSString*)lhsgc_castgc((ud)))
 #define lhsvalue_isshortstr(s)  ((s)->length < LHS_SHORTSTRLEN)
@@ -16,8 +17,8 @@ typedef struct LHSString
 {
     LHSGCObject gc;
     long long hash;
-    size_t length;
-    int extra;
+    int length;
+    int reserved;
     char data[0];
 } LHSString;
 
@@ -25,8 +26,8 @@ typedef struct LHSShortString
 {
     LHSGCObject gc;
     long long hash;
-    size_t length;
-    int extra;
+    int length;
+    int reserved;
     char data[LHS_SHORTSTRLEN];
 } LHSShortString;
 
@@ -39,6 +40,7 @@ typedef struct LHSValue
         long long i;
         double n;
         LHSGCObject* gc;
+        lhsvm_delegate dg;
     };
 } LHSValue;
 

@@ -18,8 +18,8 @@
 typedef struct LHSVariable
 {
     LHSGCObject gc;
-    int index;
-    int mark;
+    char mark;
+    int index;    
     int chunk;
     LHSString *name;
 } LHSVariable;

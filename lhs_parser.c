@@ -157,6 +157,7 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname
     );
     value->type = LHS_TGC;
     value->gc = lhsgc_castgc(variable->name);
+    lhsframe_castmainframe(vm)->name = variable->index;
     return LHS_TRUE;
 }
 
@@ -214,7 +215,7 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     );
     namevalue->type = LHS_TGC;
     namevalue->gc = lhsgc_castgc(framename->name);
-
+    lhsframe_castcurframe(vm)->name = framename->index;
     return LHS_TRUE;
 }
 
@@ -439,9 +440,9 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
                 if (lhsbuf_isshort(vm, buf))
                 {
                     LHSString* str = lhsvm_findshort(vm, buf->data, buf->usize);
-                    if (str && str->extra)
+                    if (str && str->reserved)
                     {
-                        return str->extra;
+                        return str->reserved;
                     }
                 }
                 return LHS_TOKENIDENTIFIER;
@@ -733,7 +734,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf)
     case LHS_TOKENSTRING:
     {
         lhsvm_pushlstring(vm, token->buf.data, token->buf.usize);
-        LHSVariable *constant = lhsvm_insertconstant(vm);
+        LHSVariable *constant = lhsframe_insertconstant(vm);
         lhscode_unaryi(vm, OP_PUSH, constant->mark, constant->index);
         lhsparser_nexttoken(vm, loadf);
         break;
@@ -1339,7 +1340,7 @@ static int lhsparser_initstate(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-int lhsparser_dofile(LHSVM* vm, const char* fname)
+int lhsparser_loadfile(LHSVM* vm, const char* fname)
 {    
     if (!lhsparser_initreserved(vm))
     {
@@ -1375,5 +1376,6 @@ int lhsparser_dofile(LHSVM* vm, const char* fname)
     
     lhsparser_uninitlexical(vm, &loadf);
     lhsloadf_uninit(vm, &loadf);
+
     return LHS_TRUE;
 }

@@ -2,7 +2,6 @@
 #include "lhs_config.h"
 #include "lhs_alloc.h"
 #include "lhs_gc.h"
-#include "lhs_value.h"
 #include "lhs_hash.h"
 #include "lhs_vector.h"
 #include "lhs_variable.h"
@@ -31,6 +30,8 @@ typedef struct LHSVM
 
 LHSVM* lhsvm_create(lhsmem_new fn);
 
+int lhsvm_dofile(LHSVM* vm, const char* name);
+
 int lhsvm_pushnil(LHSVM* vm);
 
 int lhsvm_pushboolean(LHSVM* vm, char b);
@@ -43,6 +44,8 @@ int lhsvm_pushnumber(LHSVM* vm, double number);
 
 int lhsvm_pushinteger(LHSVM* vm, long long number);
 
+int lhsvm_pushdelegate(LHSVM* vm, lhsvm_delegate delegate);
+
 LHSValue* lhsvm_getvalue(LHSVM* vm, int index);
 
 const char* lhsvm_tostring(LHSVM* vm, int index);
@@ -51,8 +54,8 @@ LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l);
 
 size_t lhsvm_gettop(LHSVM* vm);
 
-int lhsvm_pop(LHSVM* vm, size_t n);
+int lhsvm_setglobal(LHSVM* vm, const char* name);
 
-LHSVariable* lhsvm_insertconstant(LHSVM* vm);
+int lhsvm_pop(LHSVM* vm, size_t n);
 
 void lhsvm_destroy(LHSVM* vm);

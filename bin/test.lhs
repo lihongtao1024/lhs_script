@@ -110,20 +110,7 @@ for (; ;)
 
 function test(x, y, z)
 {
-    x = 10
-    if (x)
-    {
-        return 1
-    }
-    else if (x > 5)
-    {
-        return (5 + 6)
-    }
-    
-    return x
-    + 6
-    //1
-    //var k = 10
+    print(x, y, z)
 }
 test(1, 2, 3)
 //0x00000033a430e1c8 o

@@ -16,6 +16,7 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
 
     frame->curchunk = 0;
     frame->allchunks = 0;
+    frame->name = -1;
     frame->nchunk = 0;
     frame->nret = LHS_MULTRET;
     return LHS_TRUE;
@@ -41,8 +42,37 @@ int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame, void* loadf)
     return LHS_TRUE;
 }
 
+LHSVariable* lhsframe_insertconstant(LHSVM* vm)
+{
+    LHSValue* key = lhsvm_getvalue(vm, -1);
+    size_t size = sizeof(LHSVariable);
+    LHSVariable* nvariable = lhsmem_newobject(vm, size);
+    nvariable->name = lhsvalue_caststring(key->gc);
+
+    LHSVariable* ovariable = lhshash_find(vm, &vm->conststrhash, nvariable);
+    if (ovariable)
+    {
+        lhsmem_freeobject(vm, nvariable, sizeof(LHSVariable));
+        lhsvm_pop(vm, 1);
+        return ovariable;
+    }
+
+    lhsmem_initgc(lhsgc_castgc(&nvariable->gc), LHS_TGCFULLDATA, size);
+    lhsslink_push(lhsvm_castvm(vm), allgc, lhsgc_castgc(&nvariable->gc), next);
+    lhshash_insert(vm, &vm->conststrhash, nvariable, 0);
+
+    LHSValue* value = lhsvector_increment(vm, &vm->conststrvalue);
+    memcpy(value, key, size);
+
+    nvariable->index = (int)lhsvector_length(vm, &vm->conststrvalue) - 1;
+    nvariable->mark = LHS_MARKSTRING;
+
+    lhsvm_pop(vm, 1);
+    return nvariable;
+}
+
 LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame, 
-    long long line, long long column, int global, int param)
+    long long line, long long column, int global)
 {    
     LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVariable* variable = lhsvariable_castvar
@@ -63,13 +93,10 @@ LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame,
         chunk = 0;
     }
 
-    if (!param)
-    {
-        LHSValue *value = lhsvector_increment(vm, &curframe->values);
-        value->type = LHS_TNONE;
-        variable->index = (int)lhsvector_length(vm, &curframe->values) - 1;
-    }
+    LHSValue *value = lhsvector_increment(vm, &curframe->values);
+    value->type = LHS_TNONE;
 
+    variable->index = (int)lhsvector_length(vm, &curframe->values) - 1;
     variable->chunk = chunk;    
     variable->mark = global ? LHS_MARKGLOBAL : LHS_MARKLOCAL;
     variable->name = lhsvalue_caststring(key->gc);
@@ -133,7 +160,7 @@ LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame)
 
 const char* lhsframe_name(LHSVM* vm, LHSFrame* frame)
 {
-    LHSSymbol* symbol = lhsdebug_at(vm, &frame->debug, LHS_FRAMENAME);
+    LHSSymbol* symbol = lhsdebug_at(vm, &frame->debug, frame->name);
     return symbol->identifier->data;
 }
 

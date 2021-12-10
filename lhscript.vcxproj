@@ -145,6 +145,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="lhs_baselib.c" />
     <ClCompile Include="lhs_code.c" />
     <ClCompile Include="lhs_debug.c" />
     <ClCompile Include="lhs_error.c" />
@@ -163,6 +164,7 @@
     <ClCompile Include="lhs_vm.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="lhs_baselib.h" />
     <ClInclude Include="lhs_code.h" />
     <ClInclude Include="lhs_debug.h" />
     <ClInclude Include="lhs_strbuf.h" />

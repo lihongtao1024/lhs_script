@@ -58,4 +58,4 @@ typedef struct LHSLexical
     LHSJmp* alljmp;
 } LHSLexical;
 
-int lhsparser_dofile(LHSVM* vm, const char* fname);
+int lhsparser_loadfile(LHSVM* vm, const char* fname);

@@ -9,7 +9,7 @@ typedef struct LHSSTRBUF
     size_t usize;
     size_t size;
     char* data;
-    char buf[128];
+    char buf[32];
 } LHSSTRBUF;
 
 int lhsbuf_init(void* vm, LHSSTRBUF* buf);

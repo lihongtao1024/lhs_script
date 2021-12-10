@@ -77,9 +77,9 @@ LHSGCObject* lhsmem_newgclstring(void* vm, void* data, size_t l, int extra)
         );
     }
 
-    str->extra = extra;
+    str->reserved = extra;
     str->data[l] = 0;
-    str->length = l;
+    str->length = (int)l;
     str->hash = 0;
     memcpy(str->data, data, l);
 

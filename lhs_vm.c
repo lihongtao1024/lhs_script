@@ -1,6 +1,9 @@
+#include "lhs_vm.h"
 #include "lhs_link.h"
 #include "lhs_frame.h"
-#include "lhs_vm.h"
+#include "lhs_value.h"
+#include "lhs_parser.h"
+#include "lhs_baselib.h"
 
 #define lhsvm_gettopstring(vm)                                              \
 (lhsvalue_caststring(lhsvm_gettopvalue(vm)->gc))
@@ -75,6 +78,21 @@ LHSVM* lhsvm_create(lhsmem_new fn)
     return vm;
 }
 
+int lhsvm_dofile(LHSVM* vm, const char* name)
+{
+    if (!lhsparser_loadfile(vm, name))
+    {
+        return LHS_FALSE;
+    }
+
+    if (!lhsreg_baselib(vm))
+    {
+        return LHS_FALSE;
+    }
+
+    return LHS_TRUE;
+}
+
 int lhsvm_pushnil(LHSVM* vm)
 {
     LHSValue* value = lhsvm_incrementstack(vm);
@@ -138,6 +156,15 @@ int lhsvm_pushinteger(LHSVM* vm, long long integer)
     LHSValue* value = lhsvm_incrementstack(vm);
     value->type = LHS_TINTEGER;
     value->i = integer;
+
+    return LHS_TRUE;
+}
+
+int lhsvm_pushdelegate(LHSVM* vm, lhsvm_delegate delegate)
+{
+    LHSValue* value = lhsvm_incrementstack(vm);
+    value->type = LHS_TDELEGATE;
+    value->dg = delegate;
 
     return LHS_TRUE;
 }
@@ -244,7 +271,7 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
 LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l)
 {
     LHSShortString ss;
-    ss.length = l;
+    ss.length = (int)l;
     memcpy(ss.data, data, l);
 
     return lhshash_find(vm, &vm->shortstrhash, &ss);
@@ -253,6 +280,34 @@ LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l)
 size_t lhsvm_gettop(LHSVM* vm)
 {
     return 0;
+}
+
+int lhsvm_setglobal(LHSVM* vm, const char* name)
+{
+    lhsvm_pushstring(vm, name);
+    lhsvm_pushvalue(vm, -1);
+    LHSVariable *variable = lhsframe_getvariable(vm, vm->mainframe);
+    if (variable)
+    {
+        lhsvm_pop(vm, 1);
+        variable->chunk = 0;
+        variable->mark = LHS_MARKGLOBAL;
+    }
+    else
+    {
+        variable = lhsframe_insertglobal(vm, vm->mainframe, 0, 0);
+    }
+
+    LHSValue* value = lhsvector_at
+    (
+        vm, 
+        &lhsframe_castmainframe(vm)->values, 
+        variable->index
+    );
+    memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
+
+    lhsvm_pop(vm, 1);
+    return LHS_TRUE;
 }
 
 int lhsvm_pop(LHSVM* vm, size_t n)
@@ -264,36 +319,6 @@ int lhsvm_pop(LHSVM* vm, size_t n)
     
     vm->top -= n;
     return LHS_TRUE;
-}
-
-LHSVariable* lhsvm_insertconstant(LHSVM* vm)
-{
-    LHSValue* key = lhsvm_getvalue(vm, -1);
-
-    size_t size = sizeof(LHSVariable);
-    LHSVariable* nvariable = lhsmem_newobject(vm, size);
-    nvariable->name = lhsvalue_caststring(key->gc);
-
-    LHSVariable* ovariable = lhshash_find(vm, &vm->conststrhash, nvariable);
-    if (ovariable)
-    {
-        lhsmem_freeobject(vm, nvariable, sizeof(LHSVariable));
-        lhsvm_pop(vm, 1);
-        return ovariable;
-    }
-
-    lhsmem_initgc(lhsgc_castgc(&nvariable->gc), LHS_TGCFULLDATA, size);
-    lhsslink_push(lhsvm_castvm(vm), allgc, lhsgc_castgc(&nvariable->gc), next);
-    lhshash_insert(vm, &vm->conststrhash, nvariable, 0);
-
-    LHSValue* value = lhsvector_increment(vm, &vm->conststrvalue);
-    memcpy(value, key, size);
-
-    nvariable->index = (int)lhsvector_length(vm, &vm->conststrvalue) - 1;
-    nvariable->mark = LHS_MARKSTRING;
-    
-    lhsvm_pop(vm, 1);
-    return nvariable;
 }
 
 void lhsvm_destroy(LHSVM* vm)

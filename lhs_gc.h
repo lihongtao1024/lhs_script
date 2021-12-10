@@ -9,7 +9,7 @@
 
 typedef struct LHSGCObject
 {
-    int type;
+    char type;
     int marked;
     size_t size;
     struct LHSGCObject* next;

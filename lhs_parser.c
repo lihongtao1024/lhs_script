@@ -6,10 +6,10 @@
 #include "lhs_code.h"
 #include "lhs_error.h"
 
-#define G   (1)
-#define L   (0)
-#define N   (-1)
-#define E   (2)
+#define G        (1)
+#define L        (0)
+#define N        (-1)
+#define E        (2)
 
 #define lhsparser_castlex(lf)                                       \
 ((LHSLexical*)(lf)->lexical)
@@ -25,10 +25,13 @@
 lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 
 #define lhsparser_isunarysymbol(s)                                  \
-((s) == SYMBOL_NOT || (s) == SYMBOL_BNOT || (s) == SYMBOL_MINUS)
+((s) == SYMBOL_NOT || (s) == SYMBOL_NOTB || (s) == SYMBOL_MINUS)
 
 #define lhsparser_islbracket(lf)                                    \
 (lhsparser_castlex(lf)->token.t == '(')
+
+#define lhsparser_resetframe(vm)                                    \
+((vm)->currentframe = (vm)->mainframe)
 
 #define lhsparser_truncate(t)                                       \
 (((t) & ~UCHAR_MAX) ?                                               \
@@ -54,6 +57,7 @@ typedef struct LHSIfState
 typedef struct LHSFuncState
 {
     LHSJmp* leave;
+    LHSJmp* finish;
 } LHSFuncState;
 
 static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf);
@@ -599,7 +603,13 @@ static int lhsparser_resetifstate(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
 
 static int lhsparser_resetfuncstate(LHSVM* vm, LHSLoadF* loadf, LHSFuncState* state)
 {
-    state->leave = 0;
+    state->leave = 0;/* lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, state->leave);
+    lhsslink_push(lhsparser_castlex(loadf), alljmp, state->leave, next);*/
+
+    state->finish = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, state->finish);
+    lhsslink_push(lhsparser_castlex(loadf), alljmp, state->finish, next);
     return LHS_TRUE;
 }
 
@@ -1192,7 +1202,14 @@ static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
     lhsparser_funcargs(vm, loadf);
     lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
 
+    lhscode_unaryl(vm, OP_JMP, 0);
+    state.finish->pos = vm->code.usize;
+
     lhsparser_blockstate(vm, loadf);
+
+    state.finish->len = vm->code.usize - state.finish->pos;
+
+    lhsparser_resetframe(vm);
     return LHS_TRUE;
 }
 
@@ -1270,8 +1287,10 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
         }
         case LHS_TOKENIDENTIFIER:
         {
+            LHSToken* lookahead = &lhsparser_castlex(loadf)->lookahead;
             lhsparser_lookaheadtoken(vm, loadf);
-            if (lhsparser_castlex(loadf)->lookahead.t == '=')
+            if (lookahead->t == '=' ||
+                lookahead->t == '(')
             {
                 goto exprstate;
             }

@@ -1,3 +1,4 @@
+
 var a
 if (a)
 {
@@ -124,3 +125,6 @@ function test(x, y, z)
     //1
     //var k = 10
 }
+test(1, 2, 3)
+//0x00000033a430e1c8 o
+//0x00000033a430de58 n

@@ -5,7 +5,7 @@
 
 static lhsframe_freechunk(LHSFrame* frame, LHSChunk* chunk, LHSVM* vm)
 {
-    lhsmem_freeobject(vm, chunk, sizeof(chunk));
+    lhsmem_freeobject(vm, chunk, sizeof(LHSChunk));
 }
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame)

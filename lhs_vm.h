@@ -11,12 +11,14 @@
 #define lhsvm_castvm(vm)        ((LHSVM*)(vm))
 #define lhsvm_pushstring(vm, s) lhsvm_pushlstring(vm, s, strlen(s))
 
+typedef size_t StkID;
 typedef struct LHSVM
 {
     LHSGCObject gc;             /*garbage collect handle*/
     lhsmem_new falloc;          /*memory handler*/
     void* mainframe;            /*main function frame*/
-    void* currentframe;         /*current function frame*/    
+    void* currentframe;         /*current function frame*/
+    void* callcontext;          /*runtime context*/
     LHSError* errorjmp;         /*error jump handler*/
     LHSHashTable shortstrhash;  /*hast table for short string*/
     LHSVariables conststrhash;  /*hash table for constant string*/
@@ -25,7 +27,7 @@ typedef struct LHSVM
     LHSSTRBUF code;             /*executable byte code*/
     LHSGCObject* allgc;         /*all garbage collection*/
     size_t nalloc;              /*allocated memory size*/
-    size_t top;                 /*position of runtime stack top*/
+    StkID top;                  /*position of runtime stack top*/
 } LHSVM;
 
 LHSVM* lhsvm_create(lhsmem_new fn);
@@ -46,16 +48,18 @@ int lhsvm_pushinteger(LHSVM* vm, long long number);
 
 int lhsvm_pushdelegate(LHSVM* vm, lhsvm_delegate delegate);
 
+int lhsvm_setglobal(LHSVM* vm, const char* name);
+
 LHSValue* lhsvm_getvalue(LHSVM* vm, int index);
+
+size_t lhsvm_gettop(LHSVM* vm);
+
+int lhsvm_pop(LHSVM* vm, size_t n);
+
+LHSValue* lhsvm_incrementstack(LHSVM* vm);
 
 const char* lhsvm_tostring(LHSVM* vm, int index);
 
 LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l);
-
-size_t lhsvm_gettop(LHSVM* vm);
-
-int lhsvm_setglobal(LHSVM* vm, const char* name);
-
-int lhsvm_pop(LHSVM* vm, size_t n);
 
 void lhsvm_destroy(LHSVM* vm);

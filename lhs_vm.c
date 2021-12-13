@@ -3,7 +3,9 @@
 #include "lhs_frame.h"
 #include "lhs_value.h"
 #include "lhs_parser.h"
+#include "lhs_code.h"
 #include "lhs_baselib.h"
+#include "lhs_execute.h"
 
 #define lhsvm_gettopstring(vm)                                              \
 (lhsvalue_caststring(lhsvm_gettopvalue(vm)->gc))
@@ -13,6 +15,7 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
     vm->falloc = fn;
     vm->mainframe = 0;
     vm->currentframe = 0;
+    vm->callcontext = 0;
     vm->allgc = 0;
     vm->top = 0;
     vm->errorjmp = 0;
@@ -46,7 +49,7 @@ static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
     lhsmem_freeobject(vm, o, o->size);
 }
 
-static LHSValue* lhsvm_incrementstack(LHSVM* vm)
+LHSValue* lhsvm_incrementstack(LHSVM* vm)
 {
     if (vm->top < vm->stack.usize)
     {
@@ -90,7 +93,7 @@ int lhsvm_dofile(LHSVM* vm, const char* name)
         return LHS_FALSE;
     }
 
-    return LHS_TRUE;
+    return !!lhsexec_pcall(vm, LHS_DEFAULTFN, 0, LHS_MULTRET, LHS_DEFAULTFN);
 }
 
 int lhsvm_pushnil(LHSVM* vm)

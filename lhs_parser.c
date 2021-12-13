@@ -182,8 +182,8 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     (
         vm, 
         lhsframe_castmainframe(vm), 
-        0, 
-        0
+        loadf->line, 
+        loadf->column
     );
     LHSValue* framevalue = lhsvalue_castvalue
     (
@@ -201,8 +201,8 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     (
         vm, 
         lhsframe_castcurframe(vm), 
-        0, 
-        0
+        loadf->line, 
+        loadf->column
     );
     LHSValue* namevalue = lhsvalue_castvalue
     (

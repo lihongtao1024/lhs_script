@@ -1,3 +1,4 @@
+print("aaa", 1, 3, 5)
 
 var a
 if (a)

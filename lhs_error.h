@@ -19,6 +19,17 @@ lhserr_throw                                                        \
     __VA_ARGS__                                                     \
 )
 
+#define lhserr_runtimeerr(vm, dbg, fmt, ...)                        \
+lhserr_throw                                                        \
+(                                                                   \
+    vm,                                                             \
+    "runtime error at:[%s:%lld:%lld], "##fmt,                       \
+    (dbg)->identifier->data,                                        \
+    (dbg)->line,                                                    \
+    (dbg)->column                                                   \
+    __VA_ARGS__                                                     \
+)
+
 typedef void (*protectedf)(void*, void*);
 typedef struct LHSError
 {

@@ -12,8 +12,9 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
 {
     lhsvector_init(vm, &frame->values, sizeof(LHSValue), 0);
     lhshash_init(vm, &frame->variables, lhsvariable_hashvar, lhsvariable_equalvar, 0);
-    lhsdebug_init(vm, &frame->debug);
+    lhsdebug_init(vm, &frame->debugs);
 
+    frame->parent = 0;
     frame->curchunk = 0;
     frame->allchunks = 0;
     frame->name = -1;
@@ -102,7 +103,7 @@ LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame,
     variable->name = lhsvalue_caststring(key->gc);
 
     lhshash_insert(vm, &curframe->variables, variable, 0);
-    lhsdebug_insert(vm, &curframe->debug, variable->name, line, column);
+    lhsdebug_insert(vm, &curframe->debugs, variable->name, line, column);
     lhsvm_pop(vm, 1);
     return variable;
 }
@@ -160,13 +161,13 @@ LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame)
 
 const char* lhsframe_name(LHSVM* vm, LHSFrame* frame)
 {
-    LHSSymbol* symbol = lhsdebug_at(vm, &frame->debug, frame->name);
+    LHSSymbol* symbol = lhsdebug_at(vm, &frame->debugs, frame->name);
     return symbol->identifier->data;
 }
 
 void lhsframe_uninit(LHSVM* vm, LHSFrame* frame)
 {
-    lhsdebug_uninit(vm, &frame->debug);
+    lhsdebug_uninit(vm, &frame->debugs);
     lhshash_uninit(vm, &frame->variables);
     lhsvector_uninit(vm, &frame->values);
     lhsslink_foreach

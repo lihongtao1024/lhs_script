@@ -30,11 +30,12 @@ typedef struct LHSChunk
 typedef struct LHSFrame
 {
     LHSGCObject gc;         /*garbage collection handle*/
+    struct LHSFrame* parent;
     LHSChunk* curchunk;     /*current chunk*/
     LHSChunk* allchunks;    /*chain chunk*/
     LHSVariables variables; /*hash table for variables*/     
     LHSVector values;       /*values for variables*/
-    LHSDebug debug;         /*debug info for variables*/
+    LHSDebug debugs;         /*debug info for variables*/
     int name;               /*function name index in values*/
     int nchunk;
     int nret;

@@ -4,6 +4,7 @@
 #include "lhs_strbuf.h"
 #include "lhs_vm.h"
 
+#define LHS_DEFAULTFN           (-1)
 #define LHS_MULTRET             (-1)
 #define LHS_VOIDRET             (0)
 #define LHS_RETSULT             (1)

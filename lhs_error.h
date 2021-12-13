@@ -1,5 +1,6 @@
 #pragma once
 #include "lhs_config.h"
+#include "lhs_debug.h"
 
 /*error handler*/
 #define lhserr_no(fmt, ...)                                         \
@@ -19,17 +20,6 @@ lhserr_throw                                                        \
     __VA_ARGS__                                                     \
 )
 
-#define lhserr_runtimeerr(vm, dbg, fmt, ...)                        \
-lhserr_throw                                                        \
-(                                                                   \
-    vm,                                                             \
-    "runtime error at:[%s:%lld:%lld], "##fmt,                       \
-    (dbg)->identifier->data,                                        \
-    (dbg)->line,                                                    \
-    (dbg)->column                                                   \
-    __VA_ARGS__                                                     \
-)
-
 typedef void (*protectedf)(void*, void*);
 typedef struct LHSError
 {
@@ -41,3 +31,5 @@ typedef struct LHSError
 int lhserr_protectedcall(void* vm, protectedf fn, void* udata);
 
 int lhserr_throw(void* vm, const char* fmt, ...);
+
+int lhserr_runtimeerr(void* vm, LHSSymbol* dbg, const char* fmt, ...);

@@ -3,9 +3,9 @@
 #include "lhs_load.h"
 #include "lhs_code.h"
 
-static lhsframe_freechunk(LHSFrame* frame, LHSChunk* chunk, LHSVM* vm)
+static void lhsframe_freechunk(LHSVM* vm, LHSVector* vector, LHSChunk** chunk)
 {
-    lhsmem_freeobject(vm, chunk, sizeof(LHSChunk));
+    lhsmem_freeobject(vm, *chunk, sizeof(LHSChunk));
 }
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame)
@@ -13,12 +13,11 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
     lhsvector_init(vm, &frame->values, sizeof(LHSValue), 0);
     lhshash_init(vm, &frame->variables, lhsvariable_hashvar, lhsvariable_equalvar, 0);
     lhsdebug_init(vm, &frame->debugs);
+    lhsvector_init(vm, &frame->allchunks, sizeof(LHSChunk*), 0);
 
     frame->parent = 0;
-    frame->curchunk = 0;
-    frame->allchunks = 0;
+    frame->curchunk = 0;    
     frame->name = -1;
-    frame->nchunk = 0;
     frame->nret = LHS_MULTRET;
     return LHS_TRUE;
 }
@@ -26,10 +25,9 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
 int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame, void* loadf)
 {
     LHSChunk* chunk = lhsmem_newobject(vm, sizeof(LHSChunk));
-    lhsslink_init(chunk, chain);
-    lhsslink_push(frame, allchunks, chunk, chain);
+    *(LHSChunk**)lhsvector_increment(vm, &frame->allchunks) = chunk;
 
-    chunk->index = frame->nchunk++;
+    chunk->index = (int)lhsvector_length(vm, &frame->allchunks) - 1;
     chunk->parent = frame->curchunk;
     frame->curchunk = chunk;
     lhscode_unaryl(vm, OP_PUSHC, chunk->index);
@@ -170,13 +168,6 @@ void lhsframe_uninit(LHSVM* vm, LHSFrame* frame)
     lhsdebug_uninit(vm, &frame->debugs);
     lhshash_uninit(vm, &frame->variables);
     lhsvector_uninit(vm, &frame->values);
-    lhsslink_foreach
-    (
-        LHSChunk, 
-        frame, 
-        allchunks, 
-        chain, 
-        lhsframe_freechunk, 
-        vm
-    );
+    lhsvector_foreach(vm, &frame->allchunks, lhsframe_freechunk);
+    lhsvector_uninit(vm, &frame->allchunks);
 }

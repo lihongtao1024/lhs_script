@@ -24,20 +24,18 @@ typedef struct LHSChunk
 {
     int index;              /*chunk index*/
     struct LHSChunk* parent;
-    struct LHSChunk* chain;
 } LHSChunk;
 
 typedef struct LHSFrame
 {
     LHSGCObject gc;         /*garbage collection handle*/
     struct LHSFrame* parent;
-    LHSChunk* curchunk;     /*current chunk*/
-    LHSChunk* allchunks;    /*chain chunk*/
     LHSVariables variables; /*hash table for variables*/     
     LHSVector values;       /*values for variables*/
-    LHSDebug debugs;         /*debug info for variables*/
+    LHSDebug debugs;        /*debug info for variables*/
+    LHSVector allchunks;    /*chain chunk*/
+    LHSChunk* curchunk;     /*current chunk*/
     int name;               /*function name index in values*/
-    int nchunk;
     int nret;
 } LHSFrame;
 

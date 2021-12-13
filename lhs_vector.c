@@ -127,6 +127,15 @@ size_t lhsvector_length(void* vm, LHSVector* vector)
     return vector->usize;
 }
 
+void lhsvector_foreach(void* vm, LHSVector* vector, 
+    lhsvector_iterator iterator)
+{
+    for (size_t i = 0; i < vector->usize; ++i)
+    {
+        iterator(vm, vector, lhsvector_castat(vector, i));
+    }
+}
+
 void lhsvector_uninit(void* vm, LHSVector* vector)
 {    
     if (vector->size)

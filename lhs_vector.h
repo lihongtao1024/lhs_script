@@ -9,6 +9,8 @@ typedef struct LHSVector
     void* nodes;
 } LHSVector;
 
+typedef void (*lhsvector_iterator)(void*, LHSVector*, void*);
+
 int lhsvector_init(void* vm, LHSVector* vector, size_t esize, 
     size_t n);
 
@@ -26,5 +28,8 @@ void* lhsvector_increment(void* vm, LHSVector* vector);
 void* lhsvector_back(void* vm, LHSVector* vector);
 
 size_t lhsvector_length(void* vm, LHSVector* vector);
+
+void lhsvector_foreach(void* vm, LHSVector* vector, 
+    lhsvector_iterator iterator);
 
 void lhsvector_uninit(void* vm, LHSVector* vector);

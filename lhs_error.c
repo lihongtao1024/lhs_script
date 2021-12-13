@@ -71,10 +71,10 @@ int lhserr_runtimeerr(void* vm, LHSSymbol* dbg, const char* fmt, ...)
         lhsbuf_pushs(vm, &buf, "stack at:[");
         lhsbuf_pushls(vm, &buf, stack->identifier->data, stack->identifier->length);
         lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", dbg->line);
+        sprintf(tmp, "%lld", stack->line);
         lhsbuf_pushs(vm, &buf, tmp);
         lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", dbg->column);
+        sprintf(tmp, "%lld", stack->column);
         lhsbuf_pushs(vm, &buf, tmp);
         lhsbuf_pushs(vm, &buf, "].\n");
         frame = frame->parent;

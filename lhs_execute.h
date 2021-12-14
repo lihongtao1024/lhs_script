@@ -8,11 +8,11 @@ typedef const char* IPID;
 typedef struct LHSCallContext
 {
     struct LHSCallContext* prev;
-    StkID base;
-    StkID errfn;
-    StkID top;
-    IPID ip;
-    IPID rp;
+    StkID base;         /*base for argument*/
+    StkID errfn;        /*error handler*/
+    StkID top;          /*stack top for this call*/
+    IPID ip;            /*instruction point*/
+    IPID rp;            /*return instruction point*/
     int narg;
     int nret;
 } LHSCallContext;

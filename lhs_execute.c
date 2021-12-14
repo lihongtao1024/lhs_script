@@ -28,7 +28,7 @@ typedef int (*lhsexec_instruct)(LHSVM*);
 static int lhsexec_calldelegate(LHSVM*, lhsvm_delegate, int, int);
 static int lhsexec_callframe(LHSVM* vm, LHSFrame* frame, int narg, int nret);
 
-static LHSCallContext* lhsexec_alloccc(LHSVM* vm, int narg, int nret, 
+static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret, 
     StkID errfn, IPID ip)
 {
     LHSCallContext* cc = lhsmem_newobject(vm, sizeof(LHSCallContext));
@@ -502,7 +502,7 @@ static int lhsexec_return(LHSVM* vm)
 static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg, 
     int narg, int nret)
 {
-    LHSCallContext* cc = lhsexec_alloccc
+    LHSCallContext* cc = lhsexec_nestcc
     (
         vm,
         narg, 
@@ -526,9 +526,9 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg,
     vm->top = cc->base;
     cc->top = vm->top + 1;
 
-    LHSCallContext* c = cc->prev;
-    c->top = cc->top;
-    vm->callcontext = c;
+    LHSCallContext* prev = cc->prev;
+    prev->top = cc->top;
+    vm->callcontext = prev;
 
     lhsmem_freeobject(vm, cc, sizeof(LHSCallContext));
     return LHS_TRUE;
@@ -538,7 +538,7 @@ static int lhsexec_callframe(LHSVM* vm, LHSFrame* frame, int narg, int nret)
 {
     lhserr_check(vm, frame->narg == narg, "system error.");
     lhsframe_setframe(vm, frame);
-    lhsexec_alloccc
+    lhsexec_nestcc
     (
         vm,
         narg, 
@@ -635,7 +635,7 @@ static int lhsexec_reset(LHSVM* vm)
 
 int lhsexec_pcall(LHSVM* vm, int narg, int nret, StkID errfn)
 {
-    lhsexec_alloccc(vm, narg, nret, errfn, vm->code.data);
+    lhsexec_nestcc(vm, narg, nret, errfn, vm->code.data);
     int errcode = lhserr_protectedcall(vm, lhsexec_execute, 0);
     if (errcode)
     {

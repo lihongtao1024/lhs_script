@@ -35,13 +35,19 @@ typedef struct LHSFrame
     LHSDebug debugs;        /*debug info for variables*/
     LHSVector allchunks;    /*chain chunk*/
     LHSChunk* curchunk;     /*current chunk*/
+    size_t entry;           /*ip entry*/
     int name;               /*function name index in values*/
+    int narg;
     int nret;
 } LHSFrame;
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame);
 
 int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame, void* loadf);
+
+int lhsframe_setchunk(LHSVM* vm, LHSFrame* frame, LHSChunk* chunk);
+
+int lhsframe_resetchunk(LHSVM* vm, LHSFrame* frame);
 
 int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame, void* loadf);
 
@@ -53,5 +59,9 @@ LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame,
 LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame);
 
 const char* lhsframe_name(LHSVM* vm, LHSFrame* frame);
+
+int lhsframe_setframe(LHSVM* vm, LHSFrame* frame);
+
+int lhsframe_resetframe(LHSVM* vm);
 
 void lhsframe_uninit(LHSVM* vm, LHSFrame* frame);

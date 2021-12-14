@@ -30,8 +30,9 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 #define lhsparser_islbracket(lf)                                    \
 (lhsparser_castlex(lf)->token.t == '(')
 
-#define lhsparser_resetframe(vm)                                    \
-((vm)->currentframe = (vm)->mainframe)
+#define lhsparser_resetframe(vm, n)                                 \
+lhsframe_castcurframe(vm)->narg = n;                                \
+(vm)->currentframe = (vm)->mainframe
 
 #define lhsparser_truncate(t)                                       \
 (((t) & ~UCHAR_MAX) ?                                               \
@@ -136,6 +137,7 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname
 
     lhsframe_init(vm, vm->mainframe);
     lhsframe_enterchunk(vm, vm->mainframe, loadf);
+    lhscode_unaryl(vm, OP_PUSHC, 0);
     vm->currentframe = vm->mainframe;
 
     lhsvm_pushstring(vm, fname);
@@ -178,44 +180,66 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     vm->currentframe = frame;
 
     lhsvm_pushvalue(vm, -1);
-    LHSVariable* framebody = lhsframe_insertglobal
-    (
-        vm, 
-        lhsframe_castmainframe(vm), 
-        loadf->line, 
-        loadf->column
-    );
-    LHSValue* framevalue = lhsvalue_castvalue
-    (
-        lhsvector_at
-        (
-            vm, 
-            &lhsframe_castmainframe(vm)->values,
-            framebody->index
-        )
-    );
-    framevalue->type = LHS_TGC;
-    framevalue->gc = lhsgc_castgc(frame);
+    LHSVariable* variable = lhsframe_getvariable(vm, lhsframe_castmainframe(vm));
+    if (variable)
+    {
+        variable->chunk = 0;
+        variable->mark = LHS_MARKGLOBAL;
 
-    LHSVariable* framename = lhsframe_insertvar
-    (
-        vm, 
-        lhsframe_castcurframe(vm), 
-        loadf->line, 
-        loadf->column
-    );
-    LHSValue* namevalue = lhsvalue_castvalue
-    (
-        lhsvector_at
+        LHSValue* value = lhsvector_at
+        (
+            vm,
+            &lhsframe_castmainframe(vm)->values,
+            variable->index
+        );
+        value->type = LHS_TGC;
+        value->gc = lhsgc_castgc(frame);
+
+        lhsvm_pop(vm, 1);
+    }
+    else
+    {
+        lhsvm_pushvalue(vm, -1);
+        LHSVariable* framebody = lhsframe_insertglobal
         (
             vm, 
-            &lhsframe_castcurframe(vm)->values, 
-            framename->index
-        )
-    );
-    namevalue->type = LHS_TGC;
-    namevalue->gc = lhsgc_castgc(framename->name);
-    lhsframe_castcurframe(vm)->name = framename->index;
+            lhsframe_castmainframe(vm), 
+            loadf->line, 
+            loadf->column
+        );
+        LHSValue* framevalue = lhsvalue_castvalue
+        (
+            lhsvector_at
+            (
+                vm, 
+                &lhsframe_castmainframe(vm)->values,
+                framebody->index
+            )
+        );
+        framevalue->type = LHS_TGC;
+        framevalue->gc = lhsgc_castgc(frame);
+
+        LHSVariable* framename = lhsframe_insertvar
+        (
+            vm, 
+            lhsframe_castcurframe(vm), 
+            loadf->line, 
+            loadf->column
+        );
+        LHSValue* namevalue = lhsvalue_castvalue
+        (
+            lhsvector_at
+            (
+                vm, 
+                &lhsframe_castcurframe(vm)->values, 
+                framename->index
+            )
+        );
+        namevalue->type = LHS_TGC;
+        namevalue->gc = lhsgc_castgc(framename->name);
+        lhsframe_castcurframe(vm)->name = framename->index;
+    }
+
     return LHS_TRUE;
 }
 
@@ -249,7 +273,7 @@ static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 static int lhsparser_jmpsolve(LHSLexical* lex, LHSJmp* jmp, LHSVM* vm)
 {
     long long* addr = (long long*)(vm->code.data + jmp->pos - sizeof(long long));
-    *addr = (long long)vm->code.data + jmp->pos + jmp->len;
+    *addr = jmp->pos + jmp->len;
     return LHS_TRUE;
 }
 
@@ -1025,7 +1049,10 @@ static int lhsparser_blockstate(LHSVM* vm, LHSLoadF* loadf)
         return LHS_TRUE;
     }
 
-    lhsparser_statement(vm, loadf, LHS_TRUE);    
+    lhscode_unaryl(vm, OP_PUSHC, lhsframe_castcurframe(vm)->curchunk->index);
+    lhsparser_statement(vm, loadf, LHS_TRUE);
+    lhscode_unary(vm, OP_POPC);
+
     lhsparser_checkandnexttoken(vm, loadf, '}', "block", "}");
     return LHS_TRUE;
 }
@@ -1135,7 +1162,7 @@ static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
     LHSToken* token = &lhsparser_castlex(loadf)->token;
     if (token->t == ')')
     {
-        return LHS_TRUE;
+        return 0;
     }
 
     int nparam = 0;
@@ -1176,7 +1203,7 @@ static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
         lhsparser_nexttoken(vm, loadf);
     }
 
-    return LHS_TRUE;
+    return nparam;
 }
 
 static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
@@ -1199,18 +1226,17 @@ static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
         lhsparser_nexttoken(vm, loadf);
     }
 
-    lhsparser_insertframe(vm, loadf);
-    lhsparser_funcargs(vm, loadf);
-    lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
-
     lhscode_unaryl(vm, OP_JMP, 0);
     state.finish->pos = vm->code.usize;
 
-    lhsparser_blockstate(vm, loadf);
+    lhsparser_insertframe(vm, loadf);
+    int narg = lhsparser_funcargs(vm, loadf);
+    lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
 
+    lhsparser_blockstate(vm, loadf);
     state.finish->len = vm->code.usize - state.finish->pos;
 
-    lhsparser_resetframe(vm);
+    lhsparser_resetframe(vm, narg);
     return LHS_TRUE;
 }
 
@@ -1228,6 +1254,7 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
             lhserr_syntaxerr(vm, loadf, "incorrect function return.");
         }
 
+        frame->curchunk = 0;
         frame->nret = LHS_VOIDRET;
         lhscode_unary(vm, OP_RETURN);
         return LHS_TRUE;
@@ -1239,6 +1266,8 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
     }
 
     lhsparser_exprstate(vm, loadf);
+
+    frame->curchunk = 0;
     frame->nret = LHS_RETSULT;
     lhscode_unaryi(vm, OP_RET, LHS_MARKSTACK, -1);
     lhsparser_checktoken(vm, loadf, '}', "return", "}");
@@ -1337,6 +1366,8 @@ static int lhsparser_initstate(LHSVM* vm, LHSLoadF* loadf)
     lhsloadf_getc(loadf);
     lhsparser_nexttoken(vm, loadf);
     lhsparser_statement(vm, loadf, LHS_FALSE);
+    lhscode_unary(vm, OP_POPC);
+    lhscode_unary(vm, OP_EXIT);
     return LHS_TRUE;
 }
 
@@ -1370,6 +1401,7 @@ int lhsparser_loadfile(LHSVM* vm, const char* fname)
     }
     else
     {
+        lhsframe_castmainframe(vm)->curchunk = 0;
         lhsparser_lexicalsolve(vm, &lexical);
         lhscode_dmpcode(vm);
     }

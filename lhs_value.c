@@ -1,5 +1,11 @@
 #include "lhs_value.h"
 
+const char* lhsvalue_typename[] =
+{
+    "null", "integer", "number", "boolean", "delegate",
+    "gc", "vm", "string", "string", "fdata"
+};
+
 long long lhsvalue_hashformula(const char* str, size_t l, size_t seed)
 {
     if (!seed)

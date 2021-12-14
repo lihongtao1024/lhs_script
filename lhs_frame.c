@@ -16,8 +16,10 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
     lhsvector_init(vm, &frame->allchunks, sizeof(LHSChunk*), 0);
 
     frame->parent = 0;
-    frame->curchunk = 0;    
+    frame->curchunk = 0;
+    frame->entry = vm->code.usize;
     frame->name = -1;
+    frame->narg = 0;
     frame->nret = LHS_MULTRET;
     return LHS_TRUE;
 }
@@ -30,14 +32,25 @@ int lhsframe_enterchunk(LHSVM* vm, LHSFrame* frame, void* loadf)
     chunk->index = (int)lhsvector_length(vm, &frame->allchunks) - 1;
     chunk->parent = frame->curchunk;
     frame->curchunk = chunk;
-    lhscode_unaryl(vm, OP_PUSHC, chunk->index);
+    return LHS_TRUE;
+}
+
+int lhsframe_setchunk(LHSVM* vm, LHSFrame* frame, LHSChunk* chunk)
+{
+    chunk->parent = frame->curchunk;
+    frame->curchunk = chunk;
+    return LHS_TRUE;
+}
+
+int lhsframe_resetchunk(LHSVM* vm, LHSFrame* frame)
+{
+    frame->curchunk = frame->curchunk->parent;
     return LHS_TRUE;
 }
 
 int lhsframe_leavechunk(LHSVM* vm, LHSFrame* frame, void* loadf)
 {
     frame->curchunk = frame->curchunk->parent;
-    lhscode_unary(vm, OP_POPC);
     return LHS_TRUE;
 }
 
@@ -85,11 +98,14 @@ LHSVariable* lhsframe_insertvariable(LHSVM* vm, LHSFrame* frame,
     );
 
     LHSFrame* curframe = frame; 
-    int chunk = frame->curchunk->index;
+    int chunk = 0;
     if (global)
     {
         curframe = lhsframe_castmainframe(vm);
-        chunk = 0;
+    }
+    else
+    {
+        chunk = frame->curchunk->index;
     }
 
     LHSValue *value = lhsvector_increment(vm, &curframe->values);
@@ -113,7 +129,7 @@ LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame)
     (
         lhsmem_newobject(vm, sizeof(LHSVariable))
     );
-    nvariable->chunk = frame->curchunk->index;
+    nvariable->chunk = frame->curchunk ? frame->curchunk->index : 0;
     nvariable->name = lhsvalue_caststring(key->gc);
 
     LHSVariable* ovariable = lhshash_find
@@ -122,7 +138,8 @@ LHSVariable* lhsframe_getvariable(LHSVM* vm, LHSFrame* frame)
         &frame->variables, 
         nvariable
     );
-    if (!ovariable)
+    if (!ovariable && 
+        frame->curchunk)
     {
         for (LHSChunk* chunk = frame->curchunk->parent; 
             chunk; 
@@ -161,6 +178,20 @@ const char* lhsframe_name(LHSVM* vm, LHSFrame* frame)
 {
     LHSSymbol* symbol = lhsdebug_at(vm, &frame->debugs, frame->name);
     return symbol->identifier->data;
+}
+
+int lhsframe_setframe(LHSVM* vm, LHSFrame* frame)
+{
+    frame->parent = vm->currentframe;
+    vm->currentframe = frame;
+    return LHS_TRUE;
+}
+
+int lhsframe_resetframe(LHSVM* vm)
+{
+    lhsframe_castframe(vm->currentframe)->curchunk = 0;
+    vm->currentframe = lhsframe_castframe(vm->currentframe)->parent;
+    return LHS_TRUE;
 }
 
 void lhsframe_uninit(LHSVM* vm, LHSFrame* frame)

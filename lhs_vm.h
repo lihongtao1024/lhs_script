@@ -52,7 +52,7 @@ int lhsvm_setglobal(LHSVM* vm, const char* name);
 
 LHSValue* lhsvm_getvalue(LHSVM* vm, int index);
 
-size_t lhsvm_gettop(LHSVM* vm);
+int lhsvm_gettop(LHSVM* vm);
 
 int lhsvm_pop(LHSVM* vm, size_t n);
 

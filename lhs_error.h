@@ -20,6 +20,15 @@ lhserr_throw                                                        \
     __VA_ARGS__                                                     \
 )
 
+#define lhserr_check(vm, exp, fmt, ...)                             \
+(exp) || lhserr_throw                                               \
+(                                                                   \
+    vm,                                                             \
+    "check '%s', runtime error: "##fmt,                            \
+    #exp,                                                           \
+    __VA_ARGS__                                                     \
+);
+
 typedef void (*protectedf)(void*, void*);
 typedef struct LHSError
 {

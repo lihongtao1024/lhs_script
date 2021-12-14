@@ -93,7 +93,12 @@ int lhsvm_dofile(LHSVM* vm, const char* name)
         return LHS_FALSE;
     }
 
-    return !!lhsexec_pcall(vm, LHS_DEFAULTFN, 0, LHS_MULTRET, LHS_DEFAULTFN);
+    if (!lhsexec_pcall(vm, 0, LHS_MULTRET, 0))
+    {
+        return LHS_FALSE;
+    }
+
+    return LHS_TRUE;
 }
 
 int lhsvm_pushnil(LHSVM* vm)
@@ -175,18 +180,24 @@ int lhsvm_pushdelegate(LHSVM* vm, lhsvm_delegate delegate)
 LHSValue* lhsvm_getvalue(LHSVM* vm, int index)
 {
     LHSValue* value = 0;
+
     if (index < 0)
+    {
+        size_t top = vm->top;
+        if (vm->callcontext)
+        {
+            top = max(lhsexec_castcc(vm->callcontext)->top, top);
+        }
+        value = lhsvector_at(vm, &vm->stack,  top + index);
+    }
+    else if (index > 0)
     {
         value = lhsvector_at
         (
             vm, 
             &vm->stack, 
-            vm->top + index
+            lhsexec_castcc(vm->callcontext)->base + index - 1
         );
-    }
-    else if (index > 0)
-    {
-
     }
 
     return value;
@@ -233,7 +244,7 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
         }
         case LHS_TGCFRAME:
         {
-            l = sprintf(buf, "frame:%p", value->gc);
+            l = sprintf(buf, "function:%p", value->gc);
             lhsvm_pushlstring(vm, buf, l);
             str = lhsvm_gettopstring(vm)->data;
             break;
@@ -280,9 +291,14 @@ LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l)
     return lhshash_find(vm, &vm->shortstrhash, &ss);
 }
 
-size_t lhsvm_gettop(LHSVM* vm)
+int lhsvm_gettop(LHSVM* vm)
 {
-    return 0;
+    if (!vm->callcontext)
+    {
+        return (int)vm->top;
+    }
+
+    return (int)(vm->top - lhsexec_castcc(vm->callcontext)->base);
 }
 
 int lhsvm_setglobal(LHSVM* vm, const char* name)

@@ -18,136 +18,8 @@ static const char* opname[OP_MAX] =
 	"and", "or", "shl", "shr", "neg",
 	"not", "notb", "mov", "push", "pop",
 	"pushc", "popc", "jmp", "jz", "jnz", 
-	"nop", "call", "ret", "return"
+	"nop", "call", "ret", "return", "exit"
 };
-
-#ifdef OP_DEBUG
-static int lhscode_dumpcode(LHSVM* vm, LHSCode* code, LHSSTRBUF* buf)
-{
-	char temp[64];
-	switch (code->mark)
-	{
-	case LHS_MARKINTEGER:
-	{
-		int l = sprintf(temp, "%lld", code->code.i);
-		if (l == -1)
-		{ 
-			return LHS_FALSE;
-		}
-		lhsbuf_pushls(vm, buf, temp, l);
-		break;
-	}
-	case LHS_MARKNUMBER:
-	{
-		int l = sprintf(temp, "%lf", code->code.n);
-		if (l == -1)
-		{ 
-			return LHS_FALSE;
-		}
-		lhsbuf_pushls(vm, buf, temp, l);
-		break;
-	}
-	case LHS_MARKBOOLEAN:
-	{
-		lhsbuf_pushs(vm, buf, code->code.b ? "true" : "false");
-		break;
-	}
-	default:
-	{
-		int l = sprintf(temp, "%s[%d]", markname[code->mark], 
-			code->code.index);
-		lhsbuf_pushls(vm, buf, temp, l);
-		break;
-	}
-	}
-
-	return LHS_TRUE;
-}
-
-static int lhscode_dumpinstruction(LHSVM* vm, LHSInstruction* instruction)
-{
-	LHSSTRBUF buf;
-	lhsbuf_init(vm, &buf);
-
-	switch (instruction->op)
-	{
-	case OP_NEG:
-	case OP_NOT:
-	case OP_NOTB:
-	case OP_PUSH:
-	case OP_POP:
-	case OP_PUSHC:
-	case OP_JMP:
-	case OP_JZ:
-	case OP_JNZ:
-	case OP_RET:
-	{
-		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
-		lhsbuf_pushc(vm, &buf, '\t');
-		lhscode_dumpcode(vm, &instruction->body.unary.code, &buf);
-		break;
-	}
-	case OP_POPC:
-	case OP_NOP:
-	case OP_RETURN:
-	{
-		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
-		break;
-	}
-	case OP_CALL:
-	{
-		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
-		lhsbuf_pushc(vm, &buf, '\t');
-		lhscode_dumpcode(vm, &instruction->body.binary.code1, &buf);
-		lhsbuf_pushs(vm, &buf, ",\t");
-
-		char temp[64];
-		sprintf(temp, "%d,\t%d", instruction->body.binary.code2.mark,
-			instruction->body.binary.code2.code.index);
-		lhsbuf_pushs(vm, &buf, temp);
-		break;
-	}
-	default:
-	{
-		lhsbuf_pushs(vm, &buf, opname[instruction->op]);
-		lhsbuf_pushc(vm, &buf, '\t');
-		lhscode_dumpcode(vm, &instruction->body.binary.code1, &buf);
-		lhsbuf_pushs(vm, &buf, ",\t");
-		lhscode_dumpcode(vm, &instruction->body.binary.code2, &buf);
-		break;
-	}
-	}
-
-	printf("%s\n", buf.data);
-	lhsbuf_uninit(vm, &buf);
-	return LHS_TRUE;
-}
-
-int lhscode_unarydump(LHSVM* vm, char symbol, LHSCode* code)
-{
-	LHSInstruction instruction;
-	instruction.op = lhscode_castop(symbol);
-	if (code)
-	{
-		memcpy(&instruction.body.unary.code, code, sizeof(LHSCode));
-	}
-
-	lhscode_dumpinstruction(vm, &instruction);
-	return LHS_TRUE;
-}
-
-int lhscode_binarydump(LHSVM* vm, char symbol, LHSCode* code1,
-	LHSCode* code2)
-{
-	LHSInstruction instruction;
-	instruction.op = lhscode_castop(symbol);
-	memcpy(&instruction.body.binary.code1, code1, sizeof(LHSCode));
-	memcpy(&instruction.body.binary.code2, code2, sizeof(LHSCode));
-
-	lhscode_dumpinstruction(vm, &instruction);
-	return LHS_TRUE;
-}
-#endif
 
 int lhscode_dmpcode(LHSVM* vm)
 {
@@ -240,12 +112,14 @@ int lhscode_dmpcode(LHSVM* vm)
 			}
 
 			long long l = *((long long*)head)++;
+			l += (long long)(vm->code.data);
 			printf("%p\t%s\t%p\n", cur, opname[op], (void*)l);
 			break;
 		}
 		case OP_POPC:
 		case OP_RETURN:
 		case OP_NOP:
+		case OP_EXIT:
 		{
 			printf("%p\t%s\n", cur, opname[op]);
 			break;

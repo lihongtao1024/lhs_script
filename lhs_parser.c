@@ -1409,5 +1409,5 @@ int lhsparser_loadfile(LHSVM* vm, const char* fname)
     lhsparser_uninitlexical(vm, &loadf);
     lhsloadf_uninit(vm, &loadf);
 
-    return LHS_TRUE;
+    return !errcode;
 }

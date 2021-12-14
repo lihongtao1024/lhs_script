@@ -408,6 +408,11 @@ static int lhsexec_call(LHSVM* vm)
     narg = lhsexec_i(cc);
     nret = lhsexec_b(cc);
 
+    if (vm->top < lhsexec_castcc(vm->callcontext)->top)
+    {
+        vm->top = lhsexec_castcc(vm->callcontext)->top;
+    }
+
     if (value->type == LHS_TDELEGATE)
     {
         lhsexec_calldelegate(vm, value->dg, narg, nret);

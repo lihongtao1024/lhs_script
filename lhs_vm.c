@@ -183,12 +183,7 @@ LHSValue* lhsvm_getvalue(LHSVM* vm, int index)
 
     if (index < 0)
     {
-        size_t top = vm->top;
-        if (vm->callcontext)
-        {
-            top = max(lhsexec_castcc(vm->callcontext)->top, top);
-        }
-        value = lhsvector_at(vm, &vm->stack,  top + index);
+        value = lhsvector_at(vm, &vm->stack,  vm->top + index);
     }
     else if (index > 0)
     {

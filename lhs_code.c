@@ -83,9 +83,6 @@ int lhscode_dmpcode(LHSVM* vm)
 			break;
 		}
 		case OP_MOVS:
-		case OP_NEG:
-		case OP_NOT:
-		case OP_NOTB:
 		case OP_RET:
 		{
 			char mark = *head++;

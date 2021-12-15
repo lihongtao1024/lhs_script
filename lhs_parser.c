@@ -50,20 +50,19 @@ lhsframe_castcurframe(vm)->narg = n;                                \
 (lhsparser_castlex(lf)->token.t == LHS_TOKENEOF ||                  \
  ((n) && lhsparser_castlex(lf)->token.t == '}'))
 
-#define lhsparser_nestexprnode(vm, s)                               \
-{                                                                   \
-    LHSExprNode* node = lhsmem_newobject((vm), sizeof(LHSExprNode));\
-    lhsparser_initexprnode((vm), node);                             \
-    node->prev = (s)->node;                                         \
-    (s)->node = node;                                               \
-}
-
-typedef struct LHSExprNode
+typedef struct LHSExprUnary
 {
-    struct LHSExprNode* prev;
+    struct LHSExprUnary* next;
+    char unary;
+} LHSExprUnary;
+
+typedef struct LHSExprChain
+{
+    struct LHSExprChain* prev;
     char type;
     char symbol;
-    LHSSTRBUF unarys;
+    int nunary;
+    LHSExprUnary* unary;
     union
     {
         struct
@@ -82,11 +81,12 @@ typedef struct LHSExprNode
         long long i;
         double n;
     } factor;
-} LHSExprNode;
+} LHSExprChain;
 
 typedef struct LHSExprState
 {
-    LHSExprNode* node;
+    LHSExprChain* chain;
+    LHSExprUnary* unary;
 } LHSExprState;
 
 typedef struct LHSIfState
@@ -646,38 +646,34 @@ static int lhsparser_lookaheadtoken(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-static int lhsparser_initexprnode(LHSVM* vm, LHSExprNode* node)
+static int lhsparser_resetexprnode(LHSVM* vm, LHSExprChain* chain, LHSExprState* state)
 {
-    node->prev = 0;
-    node->symbol = SYMBOL_NONE;
-    node->type = LHS_EXPRNONE;
-    lhsbuf_init(vm, &node->unarys);
-    return LHS_TRUE;
-}
+    chain->prev = state->chain;
+    state->chain = chain;
 
-static int lhsparser_uninitexprnode(LHSVM* vm, LHSExprNode* node)
-{
-    lhsbuf_uninit(vm, &node->unarys);
+    chain->symbol = SYMBOL_NONE;
+    chain->type = LHS_EXPRNONE;
+    chain->nunary = 0;
+    lhsslink_init(chain, unary);
     return LHS_TRUE;
 }
 
 static int lhsparser_initexprstate(LHSVM* vm, LHSExprState* state)
 {
-    state->node = lhsmem_newobject(vm, sizeof(LHSExprNode));
-    lhsparser_initexprnode(vm, state->node);
+    state->chain = 0;
+    lhsslink_init(state, unary);
+    return LHS_TRUE;
+}
+
+static int lhsparser_uninitexprunary(LHSExprState* state, LHSExprUnary* unary, LHSVM* vm)
+{
+    lhsmem_freeobject(vm, unary, sizeof(LHSExprUnary));
     return LHS_TRUE;
 }
 
 static int lhsparser_uninitexprstate(LHSVM* vm, LHSExprState* state)
 {
-    LHSExprNode* s = state->node;
-    while (s)
-    {
-        LHSExprNode* p = s->prev;
-        lhsparser_uninitexprnode(vm, s);
-        lhsmem_freeobject(vm, s, sizeof(LHSExprNode));
-        s = p;
-    }
+    lhsslink_foreach(LHSExprUnary, state, unary, next, lhsparser_uninitexprunary, vm);
     return LHS_TRUE;
 }
 
@@ -705,112 +701,109 @@ static int lhsparser_resetfuncstate(LHSVM* vm, LHSLoadF* loadf, LHSFuncState* st
     return LHS_TRUE;
 }
 
-static int lhsparser_exprcode(LHSVM* vm, LHSExprNode* node)
+static int lhsparser_exprcode(LHSVM* vm, LHSExprChain* chain)
 {
-    switch (node->type)
+    switch (chain->type)
     {
     case LHS_EXPRINT:
     {
         lhscode_op(vm, OP_PUSH);
-        lhscode_integer(vm, node->factor.i);
+        lhscode_integer(vm, chain->factor.i);
         break;
     }
     case LHS_EXPRNUM:
     {
         lhscode_op(vm, OP_PUSH);
-        lhscode_number(vm, node->factor.n);
+        lhscode_number(vm, chain->factor.n);
         break;
     }
     case LHS_EXPRBOOLEAN:
     {
         lhscode_op(vm, OP_PUSH);
-        lhscode_boolean(vm, node->factor.b);
+        lhscode_boolean(vm, chain->factor.b);
         break;
     }
     case LHS_EXPRREF:
     {
         lhscode_op(vm, OP_PUSH);
-        lhscode_ref(vm, node->factor.ref.mark, node->factor.ref.index);
+        lhscode_ref(vm, chain->factor.ref.mark, chain->factor.ref.index);
         break;
     }
     case LHS_EXPRCALL:
     {
         lhscode_op(vm, OP_CALL);
-        lhscode_ref(vm, node->factor.call.mark, node->factor.call.index);
-        lhscode_index(vm, node->factor.call.narg);
-        lhscode_index(vm, node->factor.call.nret);
+        lhscode_ref(vm, chain->factor.call.mark, chain->factor.call.index);
+        lhscode_index(vm, chain->factor.call.narg);
+        lhscode_index(vm, chain->factor.call.nret);
         break;
     }
     default:
     {
-        break;
+        return LHS_TRUE;
     }
+    }
+
+    for (int i = 0; i < chain->nunary; ++i)
+    {
+        lhscode_op(vm, chain->unary->unary);
+        chain->unary = chain->unary->next;
     }
     return LHS_TRUE;
 }
 
-static int lhsparser_exprmov(LHSVM* vm, LHSExprNode* node)
+static int lhsparser_exprmov(LHSVM* vm, LHSExprChain* chain)
 {
-    lhscode_op(vm, node->type == LHS_EXPRREF ? OP_MOV : OP_MOVS);
-    lhscode_ref(vm, node->prev->factor.ref.mark, node->prev->factor.ref.index);
-    if (node->type == LHS_EXPRREF)
+    lhscode_op(vm, chain->type == LHS_EXPRREF ? OP_MOV : OP_MOVS);
+    lhscode_ref(vm, chain->prev->factor.ref.mark, chain->prev->factor.ref.index);
+    if (chain->type == LHS_EXPRREF)
     {
-        lhscode_ref(vm, node->factor.ref.mark, node->factor.ref.index);
+        lhscode_ref(vm, chain->factor.ref.mark, chain->factor.ref.index);
     }
     return LHS_TRUE;
 }
 
 static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
-    LHSExprNode* node = state->node;
-    if (!node)
+    LHSExprChain* chain = state->chain;
+    if (!chain)
     {
         return LHS_FALSE;
     }
 
-    LHSExprNode* prev = node->prev;
-    switch (priorities[prev->symbol][node->symbol])
+    LHSExprChain* prev = chain->prev;
+    switch (priorities[prev->symbol][chain->symbol])
     {
     case L:
     {
         /*if ((prev->type & LHS_EXPRCONST) &&
-            (node->type & LHS_EXPRCONST))
+            (chain->type & LHS_EXPRCONST))
         {
 
         }
         else*/
         {
-            if (node->prev->symbol == SYMBOL_ASSIGN)
+            if (chain->prev->symbol == SYMBOL_ASSIGN)
             {
-                lhsparser_exprmov(vm, node);
+                lhsparser_exprmov(vm, chain);
             }
             else
             {
-                lhsparser_exprcode(vm, node->prev);
-                lhsparser_exprcode(vm, node);
-                lhscode_op(vm, node->prev->symbol);
+                lhsparser_exprcode(vm, chain->prev);
+                lhsparser_exprcode(vm, chain);
+                lhscode_op(vm, chain->prev->symbol);
             }
 
-            node->prev->type = LHS_EXPRNONE;
-            node->type = LHS_EXPRNONE;
+            chain->prev->type = LHS_EXPRNONE;
+            chain->type = LHS_EXPRNONE;
         }
 
-        node->prev = prev->prev;
-        lhsparser_uninitexprnode(vm, prev);
-        lhsmem_freeobject(vm, prev, sizeof(LHSExprNode));
-
+        chain->prev = prev->prev;
         return lhsparser_exprsolve(vm, loadf, state);
     }
     case E:
     {
-        lhsparser_exprcode(vm, node);
-        state->node = prev->prev;
-
-        lhsparser_uninitexprnode(vm, prev);
-        lhsmem_freeobject(vm, prev, sizeof(LHSExprNode));
-
-        lhsparser_uninitexprnode(vm, node);
-        lhsmem_freeobject(vm, node, sizeof(LHSExprNode));
+        lhsparser_exprcode(vm, chain);
+        state->chain = prev->prev;
         return lhsparser_exprsolve(vm, loadf, state);
     }
     case N:
@@ -880,11 +873,11 @@ static int lhsparser_exprfunc(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
 
     int argn = lhsparser_exprargs(vm, loadf, state);
-    state->node->type = LHS_EXPRCALL;
-    state->node->factor.call.mark = function->mark;
-    state->node->factor.call.index = function->index;
-    state->node->factor.call.narg = argn;
-    state->node->factor.call.nret = LHS_MULTRET;
+    state->chain->type = LHS_EXPRCALL;
+    state->chain->factor.call.mark = function->mark;
+    state->chain->factor.call.index = function->index;
+    state->chain->factor.call.narg = argn;
+    state->chain->factor.call.nret = LHS_MULTRET;
 
     lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
     return LHS_TRUE;
@@ -904,15 +897,15 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     {
     case LHS_TOKENINTEGER:
     {
-        state->node->type = LHS_EXPRINT;
-        state->node->factor.i = atoll(token->buf.data);
+        state->chain->type = LHS_EXPRINT;
+        state->chain->factor.i = atoll(token->buf.data);
         lhsparser_nexttoken(vm, loadf);
         break;
     }
     case LHS_TOKENNUMBER:
     {
-        state->node->type = LHS_EXPRNUM;
-        state->node->factor.n = atof(token->buf.data);
+        state->chain->type = LHS_EXPRNUM;
+        state->chain->factor.n = atof(token->buf.data);
         lhsparser_nexttoken(vm, loadf);
         break;
     }
@@ -920,23 +913,23 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     {
         lhsvm_pushlstring(vm, token->buf.data, token->buf.usize);
         LHSVariable *constant = lhsframe_insertconstant(vm);
-        state->node->type = LHS_EXPRREF;
-        state->node->factor.ref.mark = constant->mark;
-        state->node->factor.ref.index = constant->index;
+        state->chain->type = LHS_EXPRREF;
+        state->chain->factor.ref.mark = constant->mark;
+        state->chain->factor.ref.index = constant->index;
         lhsparser_nexttoken(vm, loadf);
         break;
     }
     case LHS_TOKENTRUE:
     {
-        state->node->type = LHS_EXPRBOOLEAN;
-        state->node->factor.b = LHS_TRUE;
+        state->chain->type = LHS_EXPRBOOLEAN;
+        state->chain->factor.b = LHS_TRUE;
         lhsparser_nexttoken(vm, loadf);
         break;
     }
     case LHS_TOKENFALSE:
     {
-        state->node->type = LHS_EXPRBOOLEAN;
-        state->node->factor.b = LHS_FALSE;
+        state->chain->type = LHS_EXPRBOOLEAN;
+        state->chain->factor.b = LHS_FALSE;
         lhsparser_nexttoken(vm, loadf);
         break;
     }
@@ -966,16 +959,16 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
                     token->buf.data
                 );
             }
-            state->node->type = LHS_EXPRREF;
-            state->node->factor.ref.mark = variable->mark;
-            state->node->factor.ref.index = variable->index;
+            state->chain->type = LHS_EXPRREF;
+            state->chain->factor.ref.mark = variable->mark;
+            state->chain->factor.ref.index = variable->index;
             lhsparser_nexttoken(vm, loadf);
         }
         break;
     }
     case '(':
     {
-        state->node->type = LHS_EXPRNONE;
+        state->chain->type = LHS_EXPRNONE;
         lhsparser_nexttoken(vm, loadf);
         lhsparser_exprstate(vm, loadf);
         lhsparser_checkandnexttoken(vm, loadf, ')', "expression", ")");
@@ -987,8 +980,16 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         if (lhsparser_isunarysymbol(op))
         {
             lhsparser_nexttoken(vm, loadf);
+
+            LHSExprUnary* unary = lhsmem_newobject(vm, sizeof(LHSExprUnary));
+            unary->unary = op;
+            lhsslink_init(unary, next);
+            lhsslink_push(state, unary, unary, next);
+
+            state->chain->unary = unary;
+            ++state->chain->nunary;
+            
             lhsparser_exprfactor(vm, loadf, state);
-            lhsbuf_pushc(vm, &state->node->unarys, op);
             return LHS_TRUE;
         }
 
@@ -1021,7 +1022,6 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 static int lhsparser_exprchain(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
     /*exprchain -> exprfactor op_binary*/
-    lhsparser_nestexprnode(vm, state);
     lhsparser_exprfactor(vm, loadf, state);
     
     LHSToken* token = &lhsparser_castlex(loadf)->token;
@@ -1038,11 +1038,11 @@ static int lhsparser_exprchain(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 
     if (!lhsparser_issymbol(token->t))
     {
-        state->node->symbol = SYMBOL_NONE;
+        state->chain->symbol = SYMBOL_NONE;
     }
     else
     {
-        state->node->symbol = lhsparser_truncate(token->t);
+        state->chain->symbol = lhsparser_truncate(token->t);
         lhsparser_nexttoken(vm, loadf); 
     }
 
@@ -1052,6 +1052,8 @@ static int lhsparser_exprchain(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 static int lhsparser_exprsub(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
     /*subexpr -> {exprchain}*/
+    LHSExprChain chain;
+    lhsparser_resetexprnode(vm, &chain, state);
     lhsparser_exprchain(vm, loadf, state);
 
     if (lhsparser_exprsolve(vm, loadf, state))
@@ -1067,6 +1069,9 @@ static int lhsparser_exprstate(LHSVM* vm, LHSLoadF* loadf)
     /*exprstate -> {subexpr}*/
     LHSExprState state;
     lhsparser_initexprstate(vm, &state);
+
+    LHSExprChain chain;
+    lhsparser_resetexprnode(vm, &chain, &state);
 
     if (lhserr_protectedcallex(vm, lhsparser_exprsub, loadf, &state))
     {
@@ -1501,6 +1506,7 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
         case LHS_TOKENSTRING:
         case LHS_TOKENTRUE:
         case LHS_TOKENFALSE:
+        case '(':
         {
 syntaxerr:
             lhserr_syntaxerr

@@ -7,7 +7,7 @@
 
 static const char* markname[LHS_MARKMAX] =
 {
-	0, "v", "g", 0, 0, 0, "c", "s",
+	0, "l", "g", 0, 0, 0, "c", "s",
 };
 
 static const char* opname[OP_MAX] =
@@ -116,14 +116,6 @@ int lhscode_dmpcode(LHSVM* vm)
 			printf("%p\t%s\t%p\n", cur, opname[op], (void*)l);
 			break;
 		}
-		case OP_POPC:
-		case OP_RETURN:
-		case OP_NOP:
-		case OP_EXIT:
-		{
-			printf("%p\t%s\n", cur, opname[op]);
-			break;
-		}
 		case OP_CALL:
 		{
 			char mark = *head++;
@@ -144,20 +136,7 @@ int lhscode_dmpcode(LHSVM* vm)
 		}
 		default:
 		{
-			char mark1 = *head++;
-			int index1 = *((int*)head)++;
-			char mark2 = *head++;
-			int index2 = *((int*)head)++;
-			printf
-			(
-				"%p\t%s\t%s[%d],\t%s[%d]\n", 
-				cur, 
-				opname[op], 
-				markname[mark1], 
-				index1, 
-				markname[mark2], 
-				index2
-			);
+			printf("%p\t%s\n", cur, opname[op]);
 			break;
 		}
 		}

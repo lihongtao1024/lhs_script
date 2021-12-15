@@ -277,6 +277,74 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
     return str;
 }
 
+double lhsvm_tonumber(LHSVM* vm, int index)
+{
+    LHSValue* value = lhsvm_getvalue(vm, index);
+    switch (value->type)
+    {
+    case LHS_TINTEGER:
+    {
+        return (double)value->i;
+    }
+    case LHS_TNUMBER:
+    {
+        return value->n;
+    }
+    case LHS_TBOOLEAN:
+    {
+        return value->b;
+    }
+    case LHS_TGC:
+    {
+        if (value->gc->type != LHS_TGCSTRING)
+        {
+            break;
+        }
+        return atof(lhsvalue_caststring(value->gc)->data);
+    }
+    default:
+    {
+        break;
+    }
+    }
+
+    return 0;
+}
+
+long long lhsvm_tointeger(LHSVM* vm, int index)
+{
+    LHSValue* value = lhsvm_getvalue(vm, index);
+    switch (value->type)
+    {
+    case LHS_TINTEGER:
+    {
+        return value->i;
+    }
+    case LHS_TNUMBER:
+    {
+        return (long long)value->n;
+    }
+    case LHS_TBOOLEAN:
+    {
+        return value->b;
+    }
+    case LHS_TGC:
+    {
+        if (value->gc->type != LHS_TGCSTRING)
+        {
+            break;
+        }
+        return atoll(lhsvalue_caststring(value->gc)->data);
+    }
+    default:
+    {
+        break;
+    }
+    }
+
+    return 0;
+}
+
 LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l)
 {
     LHSShortString ss;

@@ -60,6 +60,10 @@ LHSValue* lhsvm_incrementstack(LHSVM* vm);
 
 const char* lhsvm_tostring(LHSVM* vm, int index);
 
+double lhsvm_tonumber(LHSVM* vm, int index);
+
+long long lhsvm_tointeger(LHSVM* vm, int inex);
+
 LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l);
 
 void lhsvm_destroy(LHSVM* vm);

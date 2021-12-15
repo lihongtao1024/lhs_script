@@ -5,6 +5,11 @@
 #include "lhs_error.h"
 #include "lhs_vm.h"
 
+typedef struct LHSExecValue
+{
+    LHSValue* value;
+    LHSSymbol* debug;
+}LHSExecValue;
 typedef int (*lhsexec_instruct)(LHSVM*);
 
 #define lhsexec_op(cc)                              \
@@ -44,104 +49,100 @@ static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret,
     return cc;
 }
 
+static int lhsexec_getvalue(LHSVM* vm, LHSExecValue* ev)
+{
+    LHSCallContext* cc = vm->callcontext;
+    ev->debug = 0;
+    ev->value = 0;
+
+    char mark = lhsexec_mark(cc);
+    switch (mark)
+    {
+    case LHS_MARKLOCAL:
+    case LHS_MARKGLOBAL:
+    {
+        int index = lhsexec_i(cc);
+        ev->value = lhsvector_at
+        (
+            vm,
+            mark == LHS_MARKLOCAL ?
+            &lhsframe_castcurframe(vm)->values :
+            &lhsframe_castmainframe(vm)->values,
+            index
+        );
+        ev->debug = lhsvector_at
+        (
+            vm,
+            mark == LHS_MARKLOCAL ?
+            &lhsframe_castcurframe(vm)->values :
+            &lhsframe_castmainframe(vm)->values,
+            index
+        );
+        break;
+    }
+    case LHS_MARKSTRING:
+    {
+        ev->value = lhsvector_at
+        (
+            vm,
+            &vm->conststrvalue,
+            lhsexec_i(cc)
+        );
+        break;
+    }
+    case LHS_MARKSTACK:
+    {
+        ev->value = lhsvm_getvalue(vm, lhsexec_i(cc));
+        break;
+    }
+    default:
+    {
+        lhserr_throw(vm, "unexpected byte code.");
+    }
+    }
+
+    return LHS_TRUE;
+}
+
 static int lhsexec_nop(LHSVM* vm)
 {
     return LHS_TRUE;
 }
 
+static int lhsexec_add(LHSVM* vm)
+{
+    LHSValue* lvalue = lhsvm_getvalue(vm, -2),
+        * rvalue = lhsvm_getvalue(vm, -1);
+
+    if (lvalue->type != LHS_TINTEGER &&
+        lvalue->type != LHS_TNUMBER)
+    {
+        lhserr_runtimeerr(vm, 0, "illegal arithmetic operation.");
+    }
+
+    if (rvalue->type != LHS_TINTEGER &&
+        rvalue->type != LHS_TNUMBER)
+    {
+        lhserr_runtimeerr(vm, 0, "illegal arithmetic operation.");
+    }
+
+    lvalue->type = (lvalue->type == LHS_TNUMBER || 
+                    rvalue->type == LHS_TNUMBER) ? 
+                    LHS_TNUMBER : LHS_TINTEGER;
+    (lvalue->type == LHS_TNUMBER) ? 
+    (lvalue->n = lhsvm_tonumber(vm, -2) + lhsvm_tonumber(vm, -1)) :
+    (lvalue->i = lhsvm_tointeger(vm, -2) + lhsvm_tointeger(vm, -1));
+
+    lhsvm_pop(vm, 1);
+    return LHS_TRUE;
+}
+
 static int lhsexec_mov(LHSVM* vm)
 {
-    LHSCallContext* cc = vm->callcontext;
-    char mark = lhsexec_mark(cc);
-    LHSValue* lvalue = 0, * rvalue = 0;
-    switch (mark)
-    {
-    case LHS_MARKLOCAL:
-    {
-        lvalue = lhsvector_at
-        (
-            vm,
-            &lhsframe_castcurframe(vm)->values,
-            lhsexec_i(cc)
-        );
-        break;
-    }
-    case LHS_MARKGLOBAL:
-    {
-        lvalue = lhsvector_at
-        (
-            vm,
-            &lhsframe_castmainframe(vm)->values,
-            lhsexec_i(cc)
-        );
-        break;
-    }
-    case LHS_MARKSTRING:
-    {
-        lvalue = lhsvector_at
-        (
-            vm,
-            &vm->conststrvalue,
-            lhsexec_i(cc)
-        );
-        break;
-    }
-    case LHS_MARKSTACK:
-    {
-        lvalue = lhsvm_getvalue(vm, lhsexec_i(cc));
-        break;
-    }
-    default:
-    {
-        lhserr_throw(vm, "unexpected byte code.");
-    }
-    }
-
-    mark = lhsexec_mark(cc);
-    switch (mark)
-    {
-    case LHS_MARKLOCAL:
-    {
-        rvalue = lhsvector_at
-        (
-            vm,
-            &lhsframe_castcurframe(vm)->values,
-            lhsexec_i(cc)
-        );
-        break;
-    }
-    case LHS_MARKGLOBAL:
-    {
-        rvalue = lhsvector_at
-        (
-            vm,
-            &lhsframe_castmainframe(vm)->values,
-            lhsexec_i(cc)
-        );
-        break;
-    }
-    case LHS_MARKSTRING:
-    {
-        rvalue = lhsvector_at
-        (
-            vm,
-            &vm->conststrvalue,
-            lhsexec_i(cc)
-        );
-        break;
-    }
-    case LHS_MARKSTACK:
-    {
-        rvalue = lhsvm_getvalue(vm, lhsexec_i(cc));
-        break;
-    }
-    default:
-    {
-        lhserr_throw(vm, "unexpected byte code.");
-    }
-    }
-
+    LHSValue* lvalue = lhsvm_getvalue(vm, -2),
+        * rvalue = lhsvm_getvalue(vm, -1);
     memcpy(lvalue, rvalue, sizeof(LHSValue));
+    lhsvm_pop(vm, 2);
     return LHS_TRUE;
 }
 
@@ -561,7 +562,7 @@ static int lhsexec_exit(LHSVM* vm)
 lhsexec_instruct instructions[] =
 {
     0,//OP_NONE 
-    0,//OP_ADD  
+    lhsexec_add,//OP_ADD  
     0,//OP_SUB  
     0,//OP_MUL  
     0,//OP_DIV  

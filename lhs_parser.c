@@ -194,8 +194,6 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
         );
         value->type = LHS_TGC;
         value->gc = lhsgc_castgc(frame);
-
-        lhsvm_pop(vm, 1);
     }
     else
     {
@@ -218,27 +216,27 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
         );
         framevalue->type = LHS_TGC;
         framevalue->gc = lhsgc_castgc(frame);
+    }
 
-        LHSVariable* framename = lhsframe_insertvar
+    LHSVariable* framename = lhsframe_insertvar
+    (
+        vm, 
+        lhsframe_castcurframe(vm), 
+        loadf->line, 
+        loadf->column
+    );
+    LHSValue* namevalue = lhsvalue_castvalue
+    (
+        lhsvector_at
         (
             vm, 
-            lhsframe_castcurframe(vm), 
-            loadf->line, 
-            loadf->column
-        );
-        LHSValue* namevalue = lhsvalue_castvalue
-        (
-            lhsvector_at
-            (
-                vm, 
-                &lhsframe_castcurframe(vm)->values, 
-                framename->index
-            )
-        );
-        namevalue->type = LHS_TGC;
-        namevalue->gc = lhsgc_castgc(framename->name);
-        lhsframe_castcurframe(vm)->name = framename->index;
-    }
+            &lhsframe_castcurframe(vm)->values, 
+            framename->index
+        )
+    );
+    namevalue->type = LHS_TGC;
+    namevalue->gc = lhsgc_castgc(framename->name);
+    lhsframe_castcurframe(vm)->name = framename->index;
 
     return LHS_TRUE;
 }
@@ -649,7 +647,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     {
     case L:
     {
-        lhscode_binary(vm, state->prev->symbol, LHS_MARKSTACK, -2, LHS_MARKSTACK, -1);
+        lhscode_unary(vm, state->prev->symbol);
         state->prev = state->prev->prev;
         return lhsparser_exprsolve(vm, loadf, state);
     }

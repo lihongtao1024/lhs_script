@@ -30,6 +30,7 @@ lhserr_throw                                                        \
 );
 
 typedef void (*protectedf)(void*, void*);
+typedef void (*protectedfex)(void*, void*, void*);
 typedef struct LHSError
 {
     struct LHSError* prev;
@@ -38,6 +39,8 @@ typedef struct LHSError
 } LHSError;
 
 int lhserr_protectedcall(void* vm, protectedf fn, void* udata);
+
+int lhserr_protectedcallex(void* vm, protectedfex fn, void* ud1, void* ud2);
 
 int lhserr_throw(void* vm, const char* fmt, ...);
 

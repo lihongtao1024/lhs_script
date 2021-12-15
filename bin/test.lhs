@@ -1,21 +1,4 @@
-
-
-print(test_print("aaaa", 11, 33))
-
-function test_print(x, y, z)
-{
-    y = y + 2
-    print(x, y, z)
-    test_print_ex(x, y, z)
-    test_print_ex(x, y, z)
-    test_print_ex(x, y, z)
-    test_print_ex(x, y, z)
-    test_print_ex(x, y, z)
-    return 6
-}
-
-function test_print_ex(x, y, z)
-{
-    print(x, y, z)
-    return y
-}
+aa(3)
+var global1 = "aaac"
+var global3 = 4 + -5
+var global2 = global1 + 3.5 - aa(3, "bb", (bb(10)))- (5 - 1) * 6  + 2 / 2 - 1

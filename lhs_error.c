@@ -18,6 +18,22 @@ int lhserr_protectedcall(void* vm, protectedf fn, void* udata)
     return jmp.errcode;
 }
 
+int lhserr_protectedcallex(void* vm, protectedfex fn, void* ud1, void* ud2)
+{
+    LHSError jmp;
+    jmp.prev = lhsvm_castvm(vm)->errorjmp;
+    lhsvm_castvm(vm)->errorjmp = &jmp;
+
+    jmp.errcode = setjmp(jmp.buf);
+    if (!jmp.errcode)
+    {
+        fn(vm, ud1, ud2);
+    }
+
+    lhsvm_castvm(vm)->errorjmp = jmp.prev;
+    return jmp.errcode;
+}
+
 int lhserr_throw(void* vm, const char* fmt, ...)
 {
     va_list args;

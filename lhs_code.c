@@ -16,9 +16,10 @@ static const char* opname[OP_MAX] =
 	"mod", "andb", "orb", "xorb", "l",
 	"g", "eq", "ne", "ge", "le",
 	"and", "or", "shl", "shr", "neg",
-	"not", "notb", "mov", "push", "pop",
-	"pushc", "popc", "jmp", "jz", "jnz", 
-	"nop", "call", "ret", "return", "exit"
+	"not", "notb", "mov", "movs", "push", 
+	"pop", "pushc", "popc", "jmp", "jz", 
+	"jnz", "nop", "call", "ret", "return", 
+	"exit"
 };
 
 int lhscode_dmpcode(LHSVM* vm)
@@ -31,6 +32,57 @@ int lhscode_dmpcode(LHSVM* vm)
 		char op = *head++;
 		switch (op)
 		{
+		case OP_MOV:
+		{
+			char mark1 = *head++;
+			int index1 = 0;
+			switch (mark1)
+			{
+			case LHS_MARKLOCAL:
+			case LHS_MARKGLOBAL:
+			case LHS_MARKSTRING:
+			case LHS_MARKSTACK:
+			{
+				index1 = *((int*)head)++;
+				break;
+			}
+			default:
+			{
+				lhserr_throw(vm, "unexpected byte code.");
+			}
+			}
+
+			char mark2 = *head++;
+			int index2 = 0;
+			switch (mark1)
+			{
+			case LHS_MARKLOCAL:
+			case LHS_MARKGLOBAL:
+			case LHS_MARKSTRING:
+			case LHS_MARKSTACK:
+			{
+				index2 = *((int*)head)++;
+				break;
+			}
+			default:
+			{
+				lhserr_throw(vm, "unexpected byte code.");
+			}
+			}
+
+			printf
+			(
+				"%p\t%s\t%s[%d],\t%s[%d]\n", 
+				cur, 
+				opname[op], 
+				markname[mark1], 
+				index1,
+				markname[mark2], 
+				index2
+			);
+			break;
+		}
+		case OP_MOVS:
 		case OP_NEG:
 		case OP_NOT:
 		case OP_NOTB:
@@ -121,7 +173,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			char mark = *head++;
 			int index = *((int*)head)++;
 			int argn = *((int*)head)++;
-			char retn = *head++;
+			int retn = *((int*)head)++;
 			printf
 			(
 				"%p\t%s\t%s[%d],\t%d,\t%d\n", 
@@ -130,7 +182,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				markname[mark], 
 				index,
 				argn,
-				(int)retn
+				retn
 			);
 			break;
 		}

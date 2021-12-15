@@ -31,69 +31,53 @@
 #define OP_NOT                  (20)                    //!
 #define OP_NOTB                 (21)                    //~
 #define OP_MOV                  (22)                    //=
-#define OP_PUSH                 (23)
-#define OP_POP                  (24)
-#define OP_PUSHC                (25)
-#define OP_POPC                 (26)
-#define OP_JMP                  (27)
-#define OP_JZ                   (28)
-#define OP_JNZ                  (29)
-#define OP_NOP                  (30)
-#define OP_CALL                 (31)
-#define OP_RET                  (32)
-#define OP_RETURN               (33)
-#define OP_EXIT                 (34)
-#define OP_MAX                  (35)
+#define OP_MOVS                 (23)                    
+#define OP_PUSH                 (24)
+#define OP_POP                  (25)
+#define OP_PUSHC                (26)
+#define OP_POPC                 (27)
+#define OP_JMP                  (28)
+#define OP_JZ                   (29)
+#define OP_JNZ                  (30)
+#define OP_NOP                  (31)
+#define OP_CALL                 (32)
+#define OP_RET                  (33)
+#define OP_RETURN               (34)
+#define OP_EXIT                 (35)
+#define OP_MAX                  (36)
 
-#define lhscode_unaryb(vm, s, v)                        \
+#define lhscode_boolean(vm, v)                          \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, (s));               \
     lhsbuf_pushc((vm), &(vm)->code, LHS_MARKBOOLEAN);   \
     lhsbuf_pushc((vm), &(vm)->code, (v));               \
 }
 
-#define lhscode_unaryl(vm, s, v)                        \
+#define lhscode_integer(vm, v)                          \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, (s));               \
     lhsbuf_pushc((vm), &(vm)->code, LHS_MARKINTEGER);   \
     lhsbuf_pushl((vm), &(vm)->code, (v));               \
 }
 
-#define lhscode_unaryf(vm, s, v)                        \
+#define lhscode_number(vm, v)                           \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, (s));               \
     lhsbuf_pushc((vm), &(vm)->code, LHS_MARKNUMBER);    \
     lhsbuf_pushf((vm), &(vm)->code, (v));               \
 }
 
-#define lhscode_unaryi(vm, s, m, v)                     \
+#define lhscode_ref(vm, m, v)                           \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, (s));               \
     lhsbuf_pushc((vm), &(vm)->code, (m));               \
     lhsbuf_pushi((vm), &(vm)->code, (v));               \
 }
 
-#define lhscode_unary(vm, s)                            \
+#define lhscode_op(vm, s)                               \
 {                                                       \
     lhsbuf_pushc((vm), &(vm)->code, (s));               \
 }
 
-#define lhscode_binary(vm, s, m1, v1, m2, v2)           \
+#define lhscode_index(vm, v)                            \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, (s));               \
-    lhsbuf_pushc((vm), &(vm)->code, (m1));              \
-    lhsbuf_pushi((vm), &(vm)->code, (v1));              \
-    lhsbuf_pushc((vm), &(vm)->code, (m2));              \
-    lhsbuf_pushi((vm), &(vm)->code, (v2));              \
-}
-
-#define lhscode_call(vm, m, v, an, rb)                  \
-{                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, OP_CALL);           \
-    lhsbuf_pushc((vm), &(vm)->code, (m));               \
     lhsbuf_pushi((vm), &(vm)->code, (v));               \
-    lhsbuf_pushi((vm), &(vm)->code, (an));              \
-    lhsbuf_pushc((vm), &(vm)->code, (rb));              \
 }
 
 int lhscode_dmpcode(LHSVM* vm);

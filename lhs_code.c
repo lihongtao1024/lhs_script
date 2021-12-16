@@ -19,7 +19,7 @@ static const char* opname[OP_MAX] =
 	"not", "notb", "mov", "movs", "push", 
 	"pop", "pushc", "popc", "jmp", "jz", 
 	"jnz", "nop", "call", "ret", "return", 
-	"exit"
+	"swap", "exit"
 };
 
 int lhscode_dmpcode(LHSVM* vm)

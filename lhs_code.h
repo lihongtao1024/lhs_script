@@ -43,8 +43,9 @@
 #define OP_CALL                 (32)
 #define OP_RET                  (33)
 #define OP_RETURN               (34)
-#define OP_EXIT                 (35)
-#define OP_MAX                  (36)
+#define OP_SWAP                 (35)
+#define OP_EXIT                 (36)
+#define OP_MAX                  (37)
 
 #define lhscode_boolean(vm, v)                          \
 {                                                       \

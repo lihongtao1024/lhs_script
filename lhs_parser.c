@@ -63,6 +63,7 @@ typedef struct LHSExprChain
     struct LHSExprChain* prev;
     char type;
     char symbol;
+    char swap;
     int nunary;
     LHSExprUnary* unary;
     union
@@ -660,6 +661,7 @@ static int lhsparser_resetexprnode(LHSVM* vm, LHSExprChain* chain, LHSExprState*
     state->chain = chain;
 
     chain->symbol = SYMBOL_NONE;
+    chain->swap = LHS_FALSE;
     chain->type = LHS_EXPRNONE;
     chain->nunary = 0;
     lhsslink_init(chain, unary);
@@ -1236,6 +1238,11 @@ static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
         lhscode_op(vm, chain->unary->unary);
         chain->unary = chain->unary->next;
     }
+
+    if (chain->swap)
+    {
+        lhscode_op(vm, OP_SWAP);
+    }
     return LHS_TRUE;
 }
 
@@ -1466,6 +1473,13 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     case '(':
     {
         state->chain->type = LHS_EXPRNONE;
+        for (LHSExprChain* prev = state->chain->prev; 
+            prev; 
+            prev = prev->prev)
+        {
+            prev->swap = LHS_TRUE;
+        }
+
         lhsparser_nexttoken(vm, loadf);
         lhsparser_exprstate(vm, loadf);
         lhsparser_checkandnexttoken(vm, loadf, ')', "expression", ")");

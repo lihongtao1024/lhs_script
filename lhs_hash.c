@@ -15,16 +15,16 @@ static int lhshash_rehash(LHSHashNode** nodes, size_t osize, size_t nsize)
 
     for (size_t i = 0; i < osize; ++i)
     {
-        LHSHashNode* chain = nodes[i];
+        LHSHashNode* node = nodes[i];
         nodes[i] = 0;
 
-        while (chain)
+        while (node)
         {
-            LHSHashNode* next = chain->next;
-            size_t slot = lhshash_mod(chain->hash, nsize);
-            chain->next = nodes[slot];
-            nodes[slot] = chain;
-            chain = next;
+            LHSHashNode* next = node->next;
+            size_t slot = lhshash_mod(node->hash, nsize);
+            node->next = nodes[slot];
+            nodes[slot] = node;
+            node = next;
         }
     }
     return LHS_TRUE;
@@ -68,14 +68,14 @@ static LHSHashNode* lhshash_search(LHSHashTable* hash, void *userdata,
     long long h, LHSHashNode*** output)
 {
     LHSHashNode** list = &hash->nodes[lhshash_mod(h, hash->size)];
-    for (LHSHashNode* chain = *list; chain; chain = chain->next)
+    for (LHSHashNode* node = *list; node; node = node->next)
     {
-        void* data = lhshash_castdata(chain);
-        if (chain->hash == h &&
+        void* data = lhshash_castdata(node);
+        if (node->hash == h &&
             hash->equal(userdata, data))
         {
             *output = list;
-            return chain;
+            return node;
         }
     }
 
@@ -98,11 +98,11 @@ int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata,
     long long* ohash)
 {
     long long h = hash->calc(userdata);
-    LHSHashNode** list = 0, * chain = 0;
-    chain = lhshash_search(hash, userdata, h, &list);
-    if (chain)
+    LHSHashNode** list = 0, * node = 0;
+    node = lhshash_search(hash, userdata, h, &list);
+    if (node)
     {
-        chain->data = userdata;
+        node->data = userdata;
         if (ohash)
         {
             *ohash = h;
@@ -120,17 +120,17 @@ int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata,
         list = &hash->nodes[lhshash_mod(h, hash->size)];
     }
 
-    chain = lhsmem_newobject(lhsvm_castvm(vm), sizeof(LHSHashNode));
-    chain->hash = h;
-    chain->data = userdata;
+    node = lhsmem_newobject(lhsvm_castvm(vm), sizeof(LHSHashNode));
+    node->hash = h;
+    node->data = userdata;
 
     if (ohash)
     {
         *ohash = h;
     }
     
-    chain->next = *list;
-    *list = chain;
+    node->next = *list;
+    *list = node;
 
     ++hash->usize;
     return LHS_TRUE;
@@ -139,14 +139,14 @@ int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata,
 void* lhshash_find(void* vm, LHSHashTable* hash, void* userdata)
 {
     long long h = hash->calc(userdata);
-    LHSHashNode** list = 0, * chain = 0;
-    chain = lhshash_search(hash, userdata, h, &list);
-    if (!chain)
+    LHSHashNode** list = 0, * node = 0;
+    node = lhshash_search(hash, userdata, h, &list);
+    if (!node)
     {
         return 0;
     }
 
-    return chain->data;
+    return node->data;
 }
 
 void lhshash_remove(void* vm, LHSHashTable* hash, void* userdata)
@@ -174,12 +174,12 @@ void lhshash_uninit(void* vm, LHSHashTable* hash)
 {
     for (size_t i = 0; i < hash->size; ++i)
     {
-        LHSHashNode* chain = hash->nodes[i];
-        while (chain)
+        LHSHashNode* node = hash->nodes[i];
+        while (node)
         {
-            LHSHashNode* next = chain->next;
-            lhsmem_freeobject(lhsvm_castvm(vm), chain, sizeof(LHSHashNode));
-            chain = next;
+            LHSHashNode* next = node->next;
+            lhsmem_freeobject(lhsvm_castvm(vm), node, sizeof(LHSHashNode));
+            node = next;
         }
     }
 

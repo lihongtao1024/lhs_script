@@ -93,7 +93,7 @@ int lhsvm_dofile(LHSVM* vm, const char* name)
         return LHS_FALSE;
     }
 
-    if (!lhsexec_pcall(vm, 0, LHS_MULTRET, 0))
+    //if (!lhsexec_pcall(vm, 0, LHS_MULTRET, 0))
     {
         return LHS_FALSE;
     }

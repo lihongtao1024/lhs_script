@@ -172,7 +172,7 @@ static int lhsparser_initreserved(LHSVM* vm)
 
 LHSVar* lhsparser_insertconstant(LHSVM* vm, LHSLoadF* loadf)
 {
-    LHSValue* key = lhsvm_getvalue(vm, -1);
+    const LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVarDesc* ndesc = lhsmem_newobject(vm, sizeof(LHSVarDesc));
     ndesc->chunk = 0;
     ndesc->name = lhsvalue_caststring(key->gc);
@@ -204,7 +204,7 @@ LHSVar* lhsparser_insertconstant(LHSVM* vm, LHSLoadF* loadf)
 
 LHSVar* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
 {    
-    LHSValue* key = lhsvm_getvalue(vm, -1);
+    const LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVarDesc* desc = lhsvar_castvardesc
     (
         lhsmem_newgcobject
@@ -233,7 +233,7 @@ LHSVar* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
 
 LHSVar* lhsparser_insertglobalvar(LHSVM* vm, LHSLoadF* loadf)
 {
-    LHSValue* key = lhsvm_getvalue(vm, -1);
+    const LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVarDesc* desc = lhsvar_castvardesc
     (
         lhsmem_newgcobject
@@ -262,7 +262,7 @@ LHSVar* lhsparser_insertglobalvar(LHSVM* vm, LHSLoadF* loadf)
 
 LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
 {
-    LHSValue* key = lhsvm_getvalue(vm, -1);
+    const LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVarDesc* ndesc = lhsvar_castvardesc
     (
         lhsmem_newobject(vm, sizeof(LHSVarDesc))

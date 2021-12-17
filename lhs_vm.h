@@ -52,7 +52,7 @@ int lhsvm_pushdelegate(LHSVM* vm, lhsvm_delegate delegate);
 
 int lhsvm_setglobal(LHSVM* vm, const char* name);
 
-LHSValue* lhsvm_getvalue(LHSVM* vm, int index);
+const LHSValue* lhsvm_getvalue(LHSVM* vm, int index);
 
 int lhsvm_gettop(LHSVM* vm);
 

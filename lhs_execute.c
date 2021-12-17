@@ -51,38 +51,11 @@ static int lhsexec_nop(LHSVM* vm)
 
 static int lhsexec_add(LHSVM* vm)
 {
-    LHSValue* lvalue = lhsvm_getvalue(vm, -2),
-        * rvalue = lhsvm_getvalue(vm, -1);
-
-    if (lvalue->type != LHS_TINTEGER &&
-        lvalue->type != LHS_TNUMBER)
-    {
-        lhserr_runtimeerr(vm, 0, "illegal arithmetic operation.");
-    }
-
-    if (rvalue->type != LHS_TINTEGER &&
-        rvalue->type != LHS_TNUMBER)
-    {
-        lhserr_runtimeerr(vm, 0, "illegal arithmetic operation.");
-    }
-
-    lvalue->type = (lvalue->type == LHS_TNUMBER || 
-                    rvalue->type == LHS_TNUMBER) ? 
-                    LHS_TNUMBER : LHS_TINTEGER;
-    (lvalue->type == LHS_TNUMBER) ? 
-    (lvalue->n = lhsvm_tonumber(vm, -2) + lhsvm_tonumber(vm, -1)) :
-    (lvalue->i = lhsvm_tointeger(vm, -2) + lhsvm_tointeger(vm, -1));
-
-    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_mov(LHSVM* vm)
 {
-    LHSValue* lvalue = lhsvm_getvalue(vm, -2),
-        * rvalue = lhsvm_getvalue(vm, -1);
-    memcpy(lvalue, rvalue, sizeof(LHSValue));
-    lhsvm_pop(vm, 2);
     return LHS_TRUE;
 }
 
@@ -179,7 +152,7 @@ static int lhsexec_jz(LHSVM* vm)
     long long l = lhsexec_l(cc);
 
     int result = LHS_TRUE;
-    LHSValue* value = lhsvm_getvalue(vm, -1);
+    const LHSValue* value = lhsvm_getvalue(vm, -1);
     switch (value->type)
     {
     case LHS_TNONE:
@@ -230,7 +203,7 @@ static int lhsexec_jnz(LHSVM* vm)
     long long l = lhsexec_l(cc);
 
     int result = LHS_TRUE;
-    LHSValue* value = lhsvm_getvalue(vm, -1);
+    const LHSValue* value = lhsvm_getvalue(vm, -1);
     switch (value->type)
     {
     case LHS_TNONE:
@@ -277,7 +250,7 @@ static int lhsexec_call(LHSVM* vm)
 {  
     LHSCallContext* cc = vm->callcontext; 
     int index = 0, narg = 0, nret = LHS_UNCERTAIN, rret = 0;
-    LHSValue* value = 0;
+    const LHSValue* value = 0;
 
     char mark = lhsexec_mark(cc);
     switch (mark)
@@ -370,7 +343,7 @@ static int lhsexec_ret(LHSVM* vm)
     lhserr_check(vm, index == -1, "system error.");
 
     LHSValue* retv = lhsvector_at(vm, &vm->stack, cc->base);
-    LHSValue* value = lhsvm_getvalue(vm, -1);
+    const LHSValue* value = lhsvm_getvalue(vm, -1);
     memcpy(retv, value, sizeof(LHSValue));
 
     vm->top = cc->base;
@@ -391,7 +364,7 @@ static int lhsexec_return(LHSVM* vm)
     LHSCallContext* cc = vm->callcontext;
     lhsvm_pushnil(vm);
     LHSValue* retv = lhsvector_at(vm, &vm->stack, cc->base);
-    LHSValue* value = lhsvm_getvalue(vm, -1);
+    const LHSValue* value = lhsvm_getvalue(vm, -1);
     memcpy(retv, value, sizeof(LHSValue));
 
     vm->top = cc->base;

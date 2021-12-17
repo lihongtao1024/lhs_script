@@ -133,7 +133,7 @@ int lhsvm_pushboolean(LHSVM* vm, char b)
 
 int lhsvm_pushvalue(LHSVM* vm, int index)
 {
-    LHSValue* value = lhsvm_getvalue(vm, index);
+    const LHSValue* value = lhsvm_getvalue(vm, index);
     LHSValue* top = lhsvm_incrementstack(vm);
     memcpy(top, value, sizeof(LHSValue));
     return LHS_TRUE;
@@ -192,7 +192,7 @@ int lhsvm_pushdelegate(LHSVM* vm, lhsvm_delegate delegate)
     return LHS_TRUE;
 }
 
-LHSValue* lhsvm_getvalue(LHSVM* vm, int index)
+const LHSValue* lhsvm_getvalue(LHSVM* vm, int index)
 {
     LHSValue* value = 0;
 
@@ -215,7 +215,7 @@ LHSValue* lhsvm_getvalue(LHSVM* vm, int index)
 
 const char* lhsvm_tostring(LHSVM* vm, int index)
 {
-    LHSValue* value = lhsvm_getvalue(vm, index);
+    const LHSValue* value = lhsvm_getvalue(vm, index);
 
     const char* str = 0;
     char buf[128]; size_t l;
@@ -294,7 +294,7 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
 
 double lhsvm_tonumber(LHSVM* vm, int index)
 {
-    LHSValue* value = lhsvm_getvalue(vm, index);
+    const LHSValue* value = lhsvm_getvalue(vm, index);
     switch (value->type)
     {
     case LHS_TINTEGER:
@@ -328,7 +328,7 @@ double lhsvm_tonumber(LHSVM* vm, int index)
 
 long long lhsvm_tointeger(LHSVM* vm, int index)
 {
-    LHSValue* value = lhsvm_getvalue(vm, index);
+    const LHSValue* value = lhsvm_getvalue(vm, index);
     switch (value->type)
     {
     case LHS_TINTEGER:
@@ -381,7 +381,7 @@ int lhsvm_gettop(LHSVM* vm)
 
 int lhsvm_setglobal(LHSVM* vm, const char* name)
 {
-    LHSValue* value = lhsvm_getvalue(vm, -1);
+    const LHSValue* value = lhsvm_getvalue(vm, -1);
     lhsvm_pushstring(vm, name);
 
     LHSVarDesc* ndesc = lhsvar_castvardesc

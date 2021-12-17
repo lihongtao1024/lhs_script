@@ -17,9 +17,8 @@ static const char* opname[OP_MAX] =
 	"g", "eq", "ne", "ge", "le",
 	"and", "or", "shl", "shr", "neg",
 	"not", "notb", "mov", "movs", "push", 
-	"pop", "pushc", "popc", "jmp", "jz", 
-	"jnz", "nop", "call", "ret", "ret1", 
-	"swap", "exit"
+	"pop", "jmp", "jz", "jnz", "nop", 
+	"call", "ret", "ret1", "swap", "exit"
 };
 
 int lhscode_dmpcode(LHSVM* vm)
@@ -97,7 +96,6 @@ int lhscode_dmpcode(LHSVM* vm)
 			break;
 		}
 		case OP_PUSH:
-		case OP_PUSHC:
 		{
 			char mark = *head++;
 			switch (mark)

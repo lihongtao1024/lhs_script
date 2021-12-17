@@ -1,5 +1,7 @@
 #include "lhs_error.h"
 #include "lhs_frame.h"
+#include "lhs_variable.h"
+#include "lhs_execute.h"
 #include "lhs_vm.h"
 
 int lhserr_protectedcall(void* vm, protectedf fn, void* udata)
@@ -48,8 +50,73 @@ int lhserr_throw(void* vm, const char* fmt, ...)
     return LHS_TRUE;
 }
 
-int lhserr_runtimeerr(void* vm, const char* fmt, ...)
+int lhserr_runtimeerr(void* vm, const void* desc, const char* fmt, ...)
 {
+    LHSSTRBUF buf;
+    lhsbuf_init(vm, &buf);
+    char tmp[64];
+
+    if (!desc)
+    {  
+        lhsbuf_pushs(vm, &buf, "runtime error,");
+    }                                                
+    else                                             
+    {                                               
+        lhsbuf_pushs(vm, &buf, "runtime error at:[");
+        lhsbuf_pushls
+        (
+            vm, 
+            &buf, 
+            lhsvar_castvardesc(desc)->name->data, 
+            lhsvar_castvardesc(desc)->name->length
+        );
+        lhsbuf_pushs(vm, &buf, ":");
+        sprintf(tmp, "%lld", lhsvar_castvardesc(desc)->line);
+        lhsbuf_pushs(vm, &buf, tmp);
+        lhsbuf_pushs(vm, &buf, ":");
+        sprintf(tmp, "%lld", lhsvar_castvardesc(desc)->column);
+        lhsbuf_pushs(vm, &buf, tmp);
+        lhsbuf_pushs(vm, &buf, "],"); 
+    }
+
+    va_list args;
+    va_start(args, fmt);
+    size_t l = (size_t)_vscprintf(fmt, args) + 1;
+    char* suffix = lhsmem_newobject(lhsvm_castvm(vm), l);
+    vsprintf(suffix, fmt, args);
+    lhsbuf_pushls(vm, &buf, suffix, l - 1);
+    lhsmem_freeobject(lhsvm_castvm(vm), suffix, l);
+    lhsbuf_pushs(vm, &buf, "\n");
+
+    for (LHSCallContext* cc = lhsvm_castvm(vm)->callcontext; 
+        cc; 
+        cc = cc->parent)
+    {
+        LHSVar* name = lhsvector_at
+        (
+            vm, 
+            &lhsvm_castvm(vm)->conststrs, 
+            cc->frame->name
+        );
+        lhsbuf_pushs(vm, &buf, "stack at:[");
+        lhsbuf_pushls
+        (
+            vm, 
+            &buf, 
+            name->desc->name->data, 
+            name->desc->name->length
+        );
+        lhsbuf_pushs(vm, &buf, ":");
+        sprintf(tmp, "%lld", name->desc->line);
+        lhsbuf_pushs(vm, &buf, tmp);
+        lhsbuf_pushs(vm, &buf, ":");
+        sprintf(tmp, "%lld", name->desc->column);
+        lhsbuf_pushs(vm, &buf, tmp);
+        lhsbuf_pushs(vm, &buf, "].\n");
+    }
+
+    lhsvm_pushlstring(lhsvm_castvm(vm), buf.data, buf.usize);
+    lhsbuf_uninit(vm, &buf);
     longjmp(lhsvm_castvm(vm)->errorjmp->buf, 1);
     return LHS_TRUE;
 }

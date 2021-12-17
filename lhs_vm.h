@@ -28,6 +28,7 @@ typedef struct LHSVM
     LHSVector stack;            /*execute stack*/
     LHSSTRBUF code;             /*executable byte code*/
     LHSGCObject* allgc;         /*all garbage collection*/
+    size_t ncallcontext;        /*for call layer*/
     size_t nalloc;              /*allocated memory size*/
     StkID top;                  /*position of runtime stack top*/
 } LHSVM;

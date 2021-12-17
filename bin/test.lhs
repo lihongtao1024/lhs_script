@@ -9,8 +9,7 @@ var global5 = 18 * 2 / (5 + 3) - (6 - 9) * 3 - 5
 var global = true && (3 > 5)
 var global6 = global * (5 --11) + 38*/
 
-print(test_print("aaaa", 11, 33))
-test_print("bbbb", 22, 44)
+//var aa = 1 + 2 * 3 - (5 / 6)
 
 /*function test_print(x, y, z)
 {
@@ -24,8 +23,12 @@ test_print("bbbb", 22, 44)
     return 6
 }
 */
+
+print(test_print("aaaa", 11, 33))
+test_print("bbbb", 22, 44)
+
 function test_print(x, y, z)
 {
     print(x, y, z)
-    return test_print(x, y, z)
+    test_print(x, y, z)
 }

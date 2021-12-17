@@ -1991,6 +1991,7 @@ static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
             );
         }
 
+        ++nparam;
         lhsparser_insertlocalvar(vm, loadf);
         lhsparser_nexttoken(vm, loadf);
         if (token->t != ',')

@@ -7,7 +7,6 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
 {
     lhshash_init(vm, &frame->localvars, lhsvar_hashvar, lhsvar_equalvar, 0);
     lhsvector_init(vm, &frame->localvalues, sizeof(LHSVar), 0);
-    frame->parent = 0;
     frame->entry = vm->code.usize;
     frame->name = -1;
     frame->narg = 0;
@@ -15,7 +14,7 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
     return LHS_TRUE;
 }
 
-const char* lhsframe_name(LHSVM* vm, LHSFrame* frame)
+const char* lhsframe_getname(LHSVM* vm, LHSFrame* frame)
 {
     LHSVar* var = lhsvector_at(vm, &vm->conststrs, frame->name);
     return lhsvalue_caststring(var->value.gc)->data;
@@ -23,14 +22,7 @@ const char* lhsframe_name(LHSVM* vm, LHSFrame* frame)
 
 int lhsframe_setframe(LHSVM* vm, LHSFrame* frame)
 {
-    frame->parent = vm->currentframe;
     vm->currentframe = frame;
-    return LHS_TRUE;
-}
-
-int lhsframe_resetframe(LHSVM* vm)
-{
-    vm->currentframe = lhsframe_castframe(vm->currentframe)->parent;
     return LHS_TRUE;
 }
 

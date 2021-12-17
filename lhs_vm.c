@@ -37,11 +37,12 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
     vm->mainframe = 0;
     vm->currentframe = 0;
     vm->callcontext = 0;
-    vm->allgc = 0;
     vm->top = 0;
-    vm->errorjmp = 0;
+    vm->ncallcontext = 0;
 
+    lhsslink_init(vm, allgc);
     lhsslink_push(vm, allgc, &vm->gc, next);
+    lhsslink_init(vm, errorjmp);
     lhshash_init(vm, &vm->shortstrhash, lhsvalue_hashstr, lhsvalue_equalstr, 16);
     lhshash_init(vm, &vm->conststrhash, lhsvar_hashvar, lhsvar_equalvar, 4);
     lhshash_init(vm, &vm->globalvars, lhsvar_hashvar, lhsvar_equalvar, 4);
@@ -108,7 +109,7 @@ int lhsvm_dofile(LHSVM* vm, const char* name)
         return LHS_FALSE;
     }
 
-    //if (!lhsexec_pcall(vm, 0, LHS_MULTRET, 0))
+    if (!lhsexec_pcall(vm, 0, LHS_UNCERTAIN, 0))
     {
         return LHS_FALSE;
     }

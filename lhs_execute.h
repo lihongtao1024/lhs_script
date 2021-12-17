@@ -1,5 +1,6 @@
 #pragma once
 #include "lhs_config.h"
+#include "lhs_frame.h"
 #include "lhs_vm.h"
 
 #define lhsexec_castcc(o) ((LHSCallContext*)o)
@@ -7,7 +8,8 @@
 typedef const char* IPID;
 typedef struct LHSCallContext
 {
-    struct LHSCallContext* prev;
+    struct LHSCallContext* parent;
+    LHSFrame* frame;
     StkID base;         /*base for argument*/
     StkID errfn;        /*error handler*/
     StkID top;          /*stack top for this call*/

@@ -13,7 +13,7 @@ lhserr_throw                                                        \
 (                                                                   \
     vm,                                                             \
     "syntax error at:[%s:%lld:%lld], "##fmt,                        \
-    lhsframe_name(vm, lhsframe_castmainframe(vm)),                  \
+    lhsframe_getname(vm, lhsframe_castmainframe(vm)),               \
     (lf)->line,                                                     \
     (lf)->column,                                                   \
     __VA_ARGS__                                                     \
@@ -23,7 +23,7 @@ lhserr_throw                                                        \
 (exp) || lhserr_throw                                               \
 (                                                                   \
     vm,                                                             \
-    "check '%s', runtime error: "##fmt,                            \
+    "check '%s', runtime error: "##fmt,                             \
     #exp,                                                           \
     __VA_ARGS__                                                     \
 );
@@ -43,4 +43,4 @@ int lhserr_protectedcallex(void* vm, protectedfex fn, void* ud1, void* ud2);
 
 int lhserr_throw(void* vm, const char* fmt, ...);
 
-int lhserr_runtimeerr(void* vm, const char* fmt, ...);
+int lhserr_runtimeerr(void* vm, const void* desc, const char* fmt, ...);

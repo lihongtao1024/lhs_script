@@ -19,15 +19,12 @@ typedef struct LHSFrame
     int name;               /*function name index in values*/
     int narg;
     int nret;
-    struct LHSFrame* parent;
 } LHSFrame;
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame);
 
-const char* lhsframe_name(LHSVM* vm, LHSFrame* frame);
+const char* lhsframe_getname(LHSVM* vm, LHSFrame* frame);
 
 int lhsframe_setframe(LHSVM* vm, LHSFrame* frame);
-
-int lhsframe_resetframe(LHSVM* vm);
 
 void lhsframe_uninit(LHSVM* vm, LHSFrame* frame);

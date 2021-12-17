@@ -42,6 +42,9 @@ static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret,
     cc->rp = vm->callcontext ? lhsexec_castcc(vm->callcontext)->ip : 0;
     cc->narg = narg;
     cc->nret = nret;
+    cc->line = 0;
+    cc->column = 0;
+    cc->refer = 0;
     cc->parent = vm->callcontext;
 
     vm->callcontext = cc;
@@ -514,7 +517,13 @@ static int lhsexec_execute(LHSVM* vm, void* ud)
     lhs_unused(ud);
     while (LHS_TRUE)
     {
-        char op = lhsexec_op(lhsexec_castcc(vm->callcontext));
+        LHSCallContext* cc = lhsexec_castcc(vm->callcontext);
+
+        char op = lhsexec_op(cc);
+        cc->line = lhsexec_i(cc);
+        cc->column = lhsexec_i(cc);
+        cc->refer = lhsexec_i(cc);
+
         if (!instructions[op](vm))
         {
             break;

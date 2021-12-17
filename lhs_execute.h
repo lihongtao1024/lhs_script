@@ -17,6 +17,9 @@ typedef struct LHSCallContext
     IPID rp;            /*return instruction point*/
     int narg;
     int nret;
+    int line;
+    int column;
+    int refer;
 } LHSCallContext;
 
 int lhsexec_pcall(LHSVM* vm, int narg, int nret, StkID errfn);

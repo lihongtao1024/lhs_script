@@ -24,7 +24,7 @@ var global6 = global * (5 --11) + 38*/
 }
 */
 
-print(test_print("aaaa", 11, 33))
+print(test_print("aaaa", 11 * 6, 33 * 5))
 test_print("bbbb", 22, 44)
 
 function test_print(x, y, z)

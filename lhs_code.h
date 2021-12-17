@@ -69,9 +69,20 @@
     lhsbuf_pushi((vm), &(vm)->code, (v));               \
 }
 
-#define lhscode_op(vm, s)                               \
+#define lhscode_op1(vm, s, c)                            \
 {                                                       \
     lhsbuf_pushc((vm), &(vm)->code, (s));               \
+    lhsbuf_pushi((vm), &(vm)->code, (c)->line);         \
+    lhsbuf_pushi((vm), &(vm)->code, (c)->column);       \
+    lhsbuf_pushi((vm), &(vm)->code, (c)->name);         \
+}
+
+#define lhscode_op2(vm, s, l, c, n)                     \
+{                                                       \
+    lhsbuf_pushc((vm), &(vm)->code, (s));               \
+    lhsbuf_pushi((vm), &(vm)->code, (l));               \
+    lhsbuf_pushi((vm), &(vm)->code, (c));               \
+    lhsbuf_pushi((vm), &(vm)->code, (n));               \
 }
 
 #define lhscode_index(vm, v)                            \

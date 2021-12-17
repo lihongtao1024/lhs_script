@@ -58,7 +58,7 @@ int lhserr_runtimeerr(void* vm, const void* desc, const char* fmt, ...)
 
     if (!desc)
     {  
-        lhsbuf_pushs(vm, &buf, "runtime error,");
+        lhsbuf_pushs(vm, &buf, "runtime error:");
     }                                                
     else                                             
     {                                               
@@ -71,10 +71,10 @@ int lhserr_runtimeerr(void* vm, const void* desc, const char* fmt, ...)
             lhsvar_castvardesc(desc)->name->length
         );
         lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", lhsvar_castvardesc(desc)->line);
+        sprintf(tmp, "%d", lhsvar_castvardesc(desc)->line);
         lhsbuf_pushs(vm, &buf, tmp);
         lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", lhsvar_castvardesc(desc)->column);
+        sprintf(tmp, "%d", lhsvar_castvardesc(desc)->column);
         lhsbuf_pushs(vm, &buf, tmp);
         lhsbuf_pushs(vm, &buf, "],"); 
     }
@@ -96,7 +96,7 @@ int lhserr_runtimeerr(void* vm, const void* desc, const char* fmt, ...)
         (
             vm, 
             &lhsvm_castvm(vm)->conststrs, 
-            cc->frame->name
+            cc->refer
         );
         lhsbuf_pushs(vm, &buf, "stack at:[");
         lhsbuf_pushls
@@ -107,10 +107,10 @@ int lhserr_runtimeerr(void* vm, const void* desc, const char* fmt, ...)
             name->desc->name->length
         );
         lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", name->desc->line);
+        sprintf(tmp, "%d", cc->line);
         lhsbuf_pushs(vm, &buf, tmp);
         lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", name->desc->column);
+        sprintf(tmp, "%d", cc->column);
         lhsbuf_pushs(vm, &buf, tmp);
         lhsbuf_pushs(vm, &buf, "].\n");
     }

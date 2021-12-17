@@ -21,8 +21,8 @@ typedef struct LHSVarDesc
     char mark;
     int index;    
     int chunk;
-    long long line;
-    long long column;
+    int line;
+    int column;
     LHSString *name;
 } LHSVarDesc;
 

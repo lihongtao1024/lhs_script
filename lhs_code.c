@@ -3,7 +3,20 @@
 #include "lhs_load.h"
 #include "lhs_variable.h"
 
-#define lhscode_castop(s) ((int)(s))
+#define lhscode_c(ip)								\
+(*(ip)++)
+
+#define lhscode_i(ip)                               \
+(*((int*)(ip))++)
+
+#define lhscode_l(ip)                               \
+(*((long long*)(ip))++)
+
+#define lhscode_n(ip)                               \
+(*((double*)(ip))++)
+
+#define lhscode_b(ip)                               \
+(*(ip)++)
 
 static const char* markname[LHS_MARKMAX] =
 {
@@ -28,12 +41,16 @@ int lhscode_dmpcode(LHSVM* vm)
 	while (head < tail)
 	{
 		const char* cur = head;
-		char op = *head++;
+		char op = lhscode_c(head);
+		int line = lhscode_i(head);
+		int column = lhscode_i(head);
+		LHSVar* name = lhsvector_at(vm, &vm->conststrs, lhscode_i(head));
+
 		switch (op)
 		{
 		case OP_MOV:
 		{
-			char mark1 = *head++;
+			char mark1 = lhscode_c(head);
 			int index1 = 0;
 			switch (mark1)
 			{
@@ -42,7 +59,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			case LHS_MARKSTRING:
 			case LHS_MARKSTACK:
 			{
-				index1 = *((int*)head)++;
+				index1 = lhscode_i(head);
 				break;
 			}
 			default:
@@ -51,7 +68,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			}
 			}
 
-			char mark2 = *head++;
+			char mark2 = lhscode_c(head);
 			int index2 = 0;
 			switch (mark1)
 			{
@@ -60,7 +77,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			case LHS_MARKSTRING:
 			case LHS_MARKSTACK:
 			{
-				index2 = *((int*)head)++;
+				index2 = lhscode_i(head);
 				break;
 			}
 			default:
@@ -71,33 +88,39 @@ int lhscode_dmpcode(LHSVM* vm)
 
 			printf
 			(
-				"%p\t%s\t%s[%d],\t%s[%d]\n", 
+				"%p\t%s\t%s[%d],\t%s[%d]\t\t\t;line:%d colum:%d refer:%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark1], 
 				index1,
 				markname[mark2], 
-				index2
+				index2,
+				line,
+				column,
+				name->desc->name->data
 			);
 			break;
 		}
 		case OP_MOVS:
 		{
-			char mark = *head++;
-			int index = *((int*)head)++;
+			char mark = lhscode_c(head);
+			int index = lhscode_i(head);
 			printf
 			(
-				"%p\t%s\t%s[%d]\n", 
+				"%p\t%s\t%s[%d]\t\t\t;line:%d column:%d refer:%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark], 
-				index
+				index,
+				line,
+				column,
+				name->desc->name->data
 			);
 			break;
 		}
 		case OP_PUSH:
 		{
-			char mark = *head++;
+			char mark = lhscode_c(head);
 			switch (mark)
 			{
 			case LHS_MARKLOCAL:
@@ -105,38 +128,62 @@ int lhscode_dmpcode(LHSVM* vm)
 			case LHS_MARKSTRING:
 			case LHS_MARKSTACK:
 			{
-				int index = *((int*)head)++;
+				int index = lhscode_i(head);
 				printf
 				(
-					"%p\t%s\t%s[%d]\n", 
+					"%p\t%s\t%s[%d]\t\t\t;line:%d column:%d refer:%s\n", 
 					cur, 
 					opname[op], 
 					markname[mark], 
-					index
+					index,
+					line,
+					column,
+					name->desc->name->data
 				);
 				break;
 			}
 			case LHS_MARKINTEGER:
 			{
-				long long l = *((long long*)head)++;
-				printf("%p\t%s\t%lld\n", cur, opname[op], l);
+				long long l = lhscode_l(head);
+				printf
+				(
+					"%p\t%s\t%lld\t\t\t;line:%d column:%d refer:%s\n", 
+					cur, 
+					opname[op], 
+					l,
+					line,
+					column,
+					name->desc->name->data
+				);
 				break;
 			}
 			case LHS_MARKNUMBER:
 			{
-				double n = *((double*)head)++;
-				printf("%p\t%s\t%lf\n", cur, opname[op], n);
+				double n = lhscode_n(head);
+				printf
+				(
+					"%p\t%s\t%lf\t\t\t;line:%d column:%d refer:%s\n", 
+					cur, 
+					opname[op], 
+					n,
+					line,
+					column,
+					name->desc->name->data
+				);
 				break;
 			}
 			case LHS_MARKBOOLEAN:
 			{
-				char b = *head++;
+				char b = lhscode_b(head);
 				printf
 				(
-					"%p\t%s\t%s\n", 
+					"%p\t%s\t%s\t\t\t;line:%d column:%d refer:%s\n", 
 					cur, 
 					opname[op], 
-					b ? "true" : "false"
+					b ? "true" : "false",
+					line,
+					column,
+					name->desc->name->data
 				);
 				break;
 			}
@@ -151,35 +198,56 @@ int lhscode_dmpcode(LHSVM* vm)
 		case OP_JZ:
 		case OP_JNZ:
 		{
-			long long l = *((int*)head)++;
+			long long l = lhscode_i(head);
 			l += (long long)(vm->code.data);
-			printf("%p\t%s\t%p\n", cur, opname[op], (void*)l);
+			printf
+			(
+				"%p\t%s\t%p\t;line:%d column:%d refer:%s\n", 
+				cur, 
+				opname[op], 
+				(void*)l,
+				line,
+				column,
+				name->desc->name->data
+			);
 			break;
 		}
 		case OP_CALL:
 		{
-			char mark = *head++;
-			int index = *((int*)head)++;
-			int argn = *((int*)head)++;
-			int retn = *((int*)head)++;
+			char mark = lhscode_c(head);
+			int index = lhscode_i(head);
+			int argn = lhscode_i(head);
+			int retn = lhscode_i(head);
 			printf
 			(
-				"%p\t%s\t%s[%d],\t%d,\t%d\n", 
+				"%p\t%s\t%s[%d],\t%d,\t%d\t;line:%d column:%d refer:%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark], 
 				index,
 				argn,
-				retn
+				retn,
+				line,
+				column,
+				name->desc->name->data
 			);
 			break;
 		}
 		default:
 		{
-			printf("%p\t%s\n", cur, opname[op]);
+			printf
+			(
+				"%p\t%s\t\t\t\t;line:%d column:%d refer:%s\n", 
+				cur, 
+				opname[op],
+				line,
+				column,
+				name->desc->name->data
+			);
 			break;
 		}
 		}
 	}
+
 	return LHS_TRUE;
 }

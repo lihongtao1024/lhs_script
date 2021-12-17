@@ -70,8 +70,8 @@ extern char lhsloadf_symbol[];
 typedef struct LHSLoadF
 {
     FILE* file;
-    long long line;
-    long long column;
+    int line;
+    int column;
     int current;
     void* lexical;
 } LHSLoadF;

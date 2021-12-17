@@ -342,10 +342,7 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF* loadf,
     vm->currentframe = vm->mainframe;
 
     lhsvm_pushstring(vm, fname);
-    LHSVar* var = lhsparser_insertlocalvar(vm, loadf);
-    var->value.type = LHS_TGC;
-    var->value.gc = lhsgc_castgc(var->desc->name);
-
+    LHSVar* var = lhsparser_insertconstant(vm, loadf);
     lhsframe_castmainframe(vm)->name = var->desc->index;
     return LHS_TRUE;
 }
@@ -391,10 +388,7 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
         var->value.gc = lhsgc_castgc(frame);
     }
 
-    var = lhsparser_insertlocalvar(vm, loadf);
-    var->value.type = LHS_TGC;
-    var->value.gc = lhsgc_castgc(var->desc->name);
-
+    var = lhsparser_insertconstant(vm, loadf);
     frame->name = var->desc->index;
     return LHS_TRUE;
 }

@@ -27,4 +27,5 @@ test_print("bbbb", 22, 44)
 function test_print(x, y, z)
 {
     print(x, y, z)
+    return test_print(x, y, z)
 }

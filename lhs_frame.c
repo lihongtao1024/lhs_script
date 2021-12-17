@@ -17,7 +17,7 @@ int lhsframe_init(LHSVM* vm, LHSFrame* frame)
 
 const char* lhsframe_name(LHSVM* vm, LHSFrame* frame)
 {
-    LHSVar* var = lhsvector_at(vm, &frame->localvalues, frame->name);
+    LHSVar* var = lhsvector_at(vm, &vm->conststrs, frame->name);
     return lhsvalue_caststring(var->value.gc)->data;
 }
 

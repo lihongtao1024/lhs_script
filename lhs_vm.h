@@ -21,8 +21,10 @@ typedef struct LHSVM
     void* callcontext;          /*runtime context*/
     LHSError* errorjmp;         /*error jump handler*/
     LHSHashTable shortstrhash;  /*hast table for short string*/
-    LHSVariables conststrhash;  /*hash table for constant string*/
-    LHSVector conststrvalue;    /*constant strings*/
+    LHSHashTable conststrhash;  /*hash table for constant string*/
+    LHSHashTable globalvars;    /*hash table for global variable*/
+    LHSVector conststrs;        /*constant string array*/
+    LHSVector globalvalues;     /*value array for global variable*/
     LHSVector stack;            /*execute stack*/
     LHSSTRBUF code;             /*executable byte code*/
     LHSGCObject* allgc;         /*all garbage collection*/
@@ -64,6 +66,6 @@ double lhsvm_tonumber(LHSVM* vm, int index);
 
 long long lhsvm_tointeger(LHSVM* vm, int inex);
 
-LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l);
+const LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l);
 
 void lhsvm_destroy(LHSVM* vm);

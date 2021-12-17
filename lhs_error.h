@@ -1,6 +1,5 @@
 #pragma once
 #include "lhs_config.h"
-#include "lhs_debug.h"
 
 /*error handler*/
 #define lhserr_no(fmt, ...)                                         \
@@ -44,4 +43,4 @@ int lhserr_protectedcallex(void* vm, protectedfex fn, void* ud1, void* ud2);
 
 int lhserr_throw(void* vm, const char* fmt, ...);
 
-int lhserr_runtimeerr(void* vm, LHSSymbol* dbg, const char* fmt, ...);
+int lhserr_runtimeerr(void* vm, const char* fmt, ...);

@@ -51,9 +51,6 @@
     <ClCompile Include="lhs_strbuf.c">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="lhs_debug.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="lhs_variable.c">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -111,9 +108,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="lhs_variable.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="lhs_debug.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="lhs_code.h">

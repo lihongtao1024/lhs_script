@@ -1,9 +1,9 @@
 #include "lhs_variable.h"
 #include "lhs_execute.h"
 
-long long lhsvariable_hashvar(void* data)
+long long lhsvar_hashvar(void* data)
 {
-    LHSString* name = ((LHSVariable*)data)->name;
+    LHSString* name = ((LHSVarDesc*)data)->name;
     if (!name->hash)
     {
         name->hash = lhsvalue_hashformula(name->data, name->length, 0);
@@ -11,10 +11,10 @@ long long lhsvariable_hashvar(void* data)
     return name->hash;
 }
 
-int lhsvariable_equalvar(void* data1, void* data2)
+int lhsvar_equalvar(void* data1, void* data2)
 {
-    LHSVariable* variable1 = (LHSVariable*)data1,
-        * variable2 = (LHSVariable*)data2;
+    LHSVarDesc* variable1 = (LHSVarDesc*)data1,
+        * variable2 = (LHSVarDesc*)data2;
     if (variable1->chunk != variable2->chunk)
     {
         return LHS_FALSE;

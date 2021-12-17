@@ -29,7 +29,7 @@ static void* baselib[] =
 
 int lhsreg_baselib(LHSVM* vm)
 {
-    for (int i = 0; i < _countof(baselib); ++i)
+    for (int i = 0; i < _countof(baselib); i += 2)
     {
         lhsvm_pushdelegate(vm, baselib[i + 1]);
         lhsvm_setglobal(vm, baselib[i]);

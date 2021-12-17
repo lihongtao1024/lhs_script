@@ -5,11 +5,6 @@
 #include "lhs_error.h"
 #include "lhs_vm.h"
 
-typedef struct LHSExecValue
-{
-    LHSValue* value;
-    LHSSymbol* debug;
-}LHSExecValue;
 typedef int (*lhsexec_instruct)(LHSVM*);
 
 #define lhsexec_op(cc)                              \
@@ -47,61 +42,6 @@ static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret,
     cc->prev = vm->callcontext;
     vm->callcontext = cc;
     return cc;
-}
-
-static int lhsexec_getvalue(LHSVM* vm, LHSExecValue* ev)
-{
-    LHSCallContext* cc = vm->callcontext;
-    ev->debug = 0;
-    ev->value = 0;
-
-    char mark = lhsexec_mark(cc);
-    switch (mark)
-    {
-    case LHS_MARKLOCAL:
-    case LHS_MARKGLOBAL:
-    {
-        int index = lhsexec_i(cc);
-        ev->value = lhsvector_at
-        (
-            vm,
-            mark == LHS_MARKLOCAL ?
-            &lhsframe_castcurframe(vm)->values :
-            &lhsframe_castmainframe(vm)->values,
-            index
-        );
-        ev->debug = lhsvector_at
-        (
-            vm,
-            mark == LHS_MARKLOCAL ?
-            &lhsframe_castcurframe(vm)->values :
-            &lhsframe_castmainframe(vm)->values,
-            index
-        );
-        break;
-    }
-    case LHS_MARKSTRING:
-    {
-        ev->value = lhsvector_at
-        (
-            vm,
-            &vm->conststrvalue,
-            lhsexec_i(cc)
-        );
-        break;
-    }
-    case LHS_MARKSTACK:
-    {
-        ev->value = lhsvm_getvalue(vm, lhsexec_i(cc));
-        break;
-    }
-    default:
-    {
-        lhserr_throw(vm, "unexpected byte code.");
-    }
-    }
-
-    return LHS_TRUE;
 }
 
 static int lhsexec_nop(LHSVM* vm)
@@ -157,7 +97,7 @@ static int lhsexec_push(LHSVM* vm)
         LHSValue* value = lhsvector_at
         (
             vm, 
-            &lhsframe_castcurframe(vm)->values, 
+            &lhsframe_castcurframe(vm)->localvalues, 
             lhsexec_i(cc)
         );
         memcpy(lhsvm_incrementstack(vm), value, sizeof(LHSValue));
@@ -168,7 +108,7 @@ static int lhsexec_push(LHSVM* vm)
         LHSValue* value = lhsvector_at
         (
             vm, 
-            &lhsframe_castmainframe(vm)->values, 
+            &lhsframe_castmainframe(vm)->localvalues, 
             lhsexec_i(cc)
         );
         memcpy(lhsvm_incrementstack(vm), value, sizeof(LHSValue));
@@ -179,7 +119,7 @@ static int lhsexec_push(LHSVM* vm)
         LHSValue* value = lhsvector_at
         (
             vm, 
-            &vm->conststrvalue,
+            &vm->conststrs,
             lhsexec_i(cc)
         );
         memcpy(lhsvm_incrementstack(vm), value, sizeof(LHSValue));
@@ -217,26 +157,6 @@ static int lhsexec_push(LHSVM* vm)
 static int lhsexec_pop(LHSVM* vm)
 {
     lhsvm_pop(vm, 1);
-    return LHS_TRUE;
-}
-
-static int lhsexec_pushc(LHSVM* vm)
-{
-    LHSCallContext* cc = vm->callcontext;
-    char mark = lhsexec_mark(cc);
-    long long l = lhsexec_l(cc);
-
-    LHSFrame* frame = lhsframe_castcurframe(vm);
-    LHSChunk** chunk = lhsvector_at(vm, &frame->allchunks, (size_t)l);
-    lhsframe_setchunk(vm, frame, *chunk);
-    return LHS_TRUE;
-}
-
-static int lhsexec_popc(LHSVM* vm)
-{
-    LHSCallContext* cc = vm->callcontext;
-    LHSFrame* frame = lhsframe_castcurframe(vm);
-    lhsframe_resetchunk(vm, frame);
     return LHS_TRUE;
 }
 
@@ -355,9 +275,10 @@ static int lhsexec_jnz(LHSVM* vm)
 
 static int lhsexec_call(LHSVM* vm)
 {  
-    LHSCallContext* cc = vm->callcontext;
-    LHSValue* value = 0; LHSSymbol* debug = 0; 
-    int index = 0, narg = 0, nret = LHS_MULTRET, rret = 0;
+    LHSCallContext* cc = vm->callcontext; 
+    int index = 0, narg = 0, nret = LHS_UNCERTAIN, rret = 0;
+    LHSValue* value = 0;
+
     char mark = lhsexec_mark(cc);
     switch (mark)
     {
@@ -367,13 +288,7 @@ static int lhsexec_call(LHSVM* vm)
         value = lhsvector_at
         (
             vm,
-            &lhsframe_castcurframe(vm)->values,
-            index
-        );
-        debug = lhsvector_at
-        (
-            vm,
-            &lhsframe_castcurframe(vm)->debugs.symbols,
+            &lhsframe_castcurframe(vm)->localvalues,
             index
         );
         break;
@@ -384,13 +299,7 @@ static int lhsexec_call(LHSVM* vm)
         value = lhsvector_at
         (
             vm,
-            &lhsframe_castmainframe(vm)->values,
-            index
-        );
-        debug = lhsvector_at
-        (
-            vm,
-            &lhsframe_castmainframe(vm)->debugs.symbols,
+            &lhsframe_castmainframe(vm)->localvalues,
             index
         );
         break;
@@ -402,7 +311,7 @@ static int lhsexec_call(LHSVM* vm)
     }
     default:
     {
-        lhserr_runtimeerr(vm, debug, "system error.");
+        lhserr_runtimeerr(vm, "system error.");
     }
     }
 
@@ -427,7 +336,6 @@ static int lhsexec_call(LHSVM* vm)
             lhserr_runtimeerr
             (
                 vm, 
-                debug, 
                 "the number of parameters does not match."
             );
         }
@@ -439,7 +347,6 @@ static int lhsexec_call(LHSVM* vm)
         lhserr_runtimeerr
         (
             vm, 
-            debug, 
             "expected 'function', got '%s'",
             lhsvalue_typename
             [
@@ -586,8 +493,8 @@ lhsexec_instruct instructions[] =
     lhsexec_mov,//OP_MOV  
     lhsexec_push,//OP_PUSH 
     lhsexec_pop,//OP_POP  
-    lhsexec_pushc,//OP_PUSHC
-    lhsexec_popc,//OP_POPC 
+    0,//OP_PUSHC
+    0,//OP_POPC 
     lhsexec_jmp,//OP_JMP  
     lhsexec_jz,//OP_JZ   
     lhsexec_jnz,//OP_JNZ  
@@ -615,13 +522,6 @@ static int lhsexec_execute(LHSVM* vm, void* ud)
 
 static int lhsexec_reset(LHSVM* vm)
 {
-    LHSFrame* frame = vm->currentframe;
-    while (frame)
-    {
-        frame->curchunk = 0;
-        frame = frame->parent;
-    }
-
     LHSCallContext* cc = vm->callcontext;
     while (cc)
     {

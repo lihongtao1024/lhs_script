@@ -7,26 +7,8 @@
 #include "lhs_baselib.h"
 #include "lhs_execute.h"
 
-#define lhsvm_gettopstring(vm)                                              \
+#define lhsvm_gettopstring(vm)                                                  \
 (lhsvalue_caststring(lhsvm_gettopvalue(vm)->gc))
-
-static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
-{
-    vm->falloc = fn;
-    vm->mainframe = 0;
-    vm->currentframe = 0;
-    vm->callcontext = 0;
-    vm->allgc = 0;
-    vm->top = 0;
-    vm->errorjmp = 0;
-
-    lhsslink_push(vm, allgc, &vm->gc, next);
-    lhshash_init(vm, &vm->shortstrhash, lhsvalue_hashstr, lhsvalue_equalstr, 16);
-    lhshash_init(vm, &vm->conststrhash, lhsvariable_hashvar, lhsvariable_equalvar, 16);
-    lhsvector_init(vm, &vm->conststrvalue, sizeof(LHSValue), 16);
-    lhsvector_init(vm, &vm->stack, sizeof(LHSValue), 128);
-    lhsbuf_init(vm, &vm->code);
-}
 
 static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
 {
@@ -47,6 +29,26 @@ static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
     }
 
     lhsmem_freeobject(vm, o, o->size);
+}
+
+static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
+{
+    vm->falloc = fn;
+    vm->mainframe = 0;
+    vm->currentframe = 0;
+    vm->callcontext = 0;
+    vm->allgc = 0;
+    vm->top = 0;
+    vm->errorjmp = 0;
+
+    lhsslink_push(vm, allgc, &vm->gc, next);
+    lhshash_init(vm, &vm->shortstrhash, lhsvalue_hashstr, lhsvalue_equalstr, 16);
+    lhshash_init(vm, &vm->conststrhash, lhsvar_hashvar, lhsvar_equalvar, 4);
+    lhshash_init(vm, &vm->globalvars, lhsvar_hashvar, lhsvar_equalvar, 4);
+    lhsvector_init(vm, &vm->conststrs, sizeof(LHSVar), 4);
+    lhsvector_init(vm, &vm->globalvalues, sizeof(LHSVar), 4);
+    lhsvector_init(vm, &vm->stack, sizeof(LHSValue), 32);
+    lhsbuf_init(vm, &vm->code);
 }
 
 LHSValue* lhsvm_incrementstack(LHSVM* vm)
@@ -81,14 +83,27 @@ LHSVM* lhsvm_create(lhsmem_new fn)
     return vm;
 }
 
+
+void lhsvm_destroy(LHSVM* vm)
+{
+    lhshash_uninit(vm, &vm->conststrhash);
+    lhshash_uninit(vm, &vm->shortstrhash);
+    lhsvector_uninit(vm, &vm->conststrs);
+    lhshash_uninit(vm, &vm->globalvars);
+    lhsvector_uninit(vm, &vm->globalvalues);
+    lhsvector_uninit(vm, &vm->stack);
+    lhsbuf_uninit(vm, &vm->code);
+    lhsslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree, 0);
+}
+
 int lhsvm_dofile(LHSVM* vm, const char* name)
 {
-    if (!lhsparser_loadfile(vm, name))
+    if (!lhsreg_baselib(vm))
     {
         return LHS_FALSE;
     }
 
-    if (!lhsreg_baselib(vm))
+    if (!lhsparser_loadfile(vm, name))
     {
         return LHS_FALSE;
     }
@@ -126,10 +141,10 @@ int lhsvm_pushvalue(LHSVM* vm, int index)
 
 int lhsvm_pushlstring(LHSVM* vm, const char* str, size_t l)
 {
-    LHSString* string = 0;
+    const LHSString* string = 0;
     if (l < LHS_SHORTSTRLEN)
     {
-        LHSString* ostring = lhsvm_findshort(vm, (void*)str, l);
+        const LHSString* ostring = lhsvm_findshort(vm, (void*)str, l);
         if (ostring)
         {
             string = ostring;
@@ -345,7 +360,7 @@ long long lhsvm_tointeger(LHSVM* vm, int index)
     return 0;
 }
 
-LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l)
+const LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l)
 {
     LHSShortString ss;
     ss.length = (int)l;
@@ -366,29 +381,44 @@ int lhsvm_gettop(LHSVM* vm)
 
 int lhsvm_setglobal(LHSVM* vm, const char* name)
 {
+    LHSValue* value = lhsvm_getvalue(vm, -1);
     lhsvm_pushstring(vm, name);
-    lhsvm_pushvalue(vm, -1);
-    LHSVariable *variable = lhsframe_getvariable(vm, vm->mainframe);
-    if (variable)
-    {
-        lhsvm_pop(vm, 1);
-        variable->chunk = 0;
-        variable->mark = LHS_MARKGLOBAL;
-    }
-    else
-    {
-        variable = lhsframe_insertglobal(vm, vm->mainframe, 0, 0);
-    }
 
-    LHSValue* value = lhsvector_at
+    LHSVarDesc* ndesc = lhsvar_castvardesc
     (
-        vm, 
-        &lhsframe_castmainframe(vm)->values, 
-        variable->index
+        lhsmem_newobject
+        (
+            vm, 
+            sizeof(LHSVarDesc)
+        )
     );
-    memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
+    ndesc->chunk = 0;
+    ndesc->name = lhsvalue_caststring(lhsvm_getvalue(vm, -1)->gc);
 
-    lhsvm_pop(vm, 1);
+    LHSVarDesc* odesc = lhshash_find(vm, &vm->globalvars, ndesc);
+    if (odesc)
+    {
+        lhsmem_freeobject(vm, ndesc, sizeof(LHSVarDesc));
+        LHSVar* var = lhsvector_at(vm, &vm->globalvalues, odesc->index);
+        memcpy(&var->value, value, sizeof(LHSValue));
+        lhsvm_pop(vm, 2);
+        return LHS_TRUE;
+    }
+
+    lhsmem_initgc(&ndesc->gc, LHS_TGCFULLDATA, sizeof(LHSVarDesc));
+    lhsslink_push(vm, allgc, &ndesc->gc, next);
+
+    LHSVar *var = lhsvector_increment(vm, &vm->globalvalues);
+    memcpy(&var->value, value, sizeof(LHSValue));
+    var->desc = ndesc;
+
+    ndesc->line = 0;
+    ndesc->column = 0;  
+    ndesc->index = (int)lhsvector_length(vm, &vm->globalvalues) - 1;
+    ndesc->mark = LHS_MARKGLOBAL;
+
+    lhshash_insert(vm, &vm->globalvars, ndesc, 0);
+    lhsvm_pop(vm, 2);
     return LHS_TRUE;
 }
 
@@ -401,14 +431,4 @@ int lhsvm_pop(LHSVM* vm, size_t n)
     
     vm->top -= n;
     return LHS_TRUE;
-}
-
-void lhsvm_destroy(LHSVM* vm)
-{
-    lhshash_uninit(vm, &vm->conststrhash);
-    lhshash_uninit(vm, &vm->shortstrhash);
-    lhsvector_uninit(vm, &vm->conststrvalue);
-    lhsvector_uninit(vm, &vm->stack);
-    lhsbuf_uninit(vm, &vm->code);
-    lhsslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree, 0);
 }

@@ -20,9 +20,6 @@
 #define LHS_EXPRCALL              (5)
 #define LHS_EXPRRAW(t)            ((t) & (LHS_EXPRIMMED - 1) - 1)
 
-#define lhsparser_castlex(lf)                                       \
-((LHSLexical*)(lf)->lexical)
-
 #define lhsparser_issymbol(t)                                       \
 (((t) & ~UCHAR_MAX) ?                                               \
  ((t) > LHS_TOKENSYMBOLBEGIN &&                                     \
@@ -38,10 +35,6 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 
 #define lhsparser_islbracket(lf)                                    \
 (lhsparser_castlex(lf)->token.t == '(')
-
-#define lhsparser_resetframe(vm, n)                                 \
-lhsframe_castcurframe(vm)->narg = n;                                \
-(vm)->currentframe = (vm)->mainframe
 
 #define lhsparser_truncate(t)                                       \
 (((t) & ~UCHAR_MAX) ?                                               \
@@ -177,7 +170,166 @@ static int lhsparser_initreserved(LHSVM* vm)
     return LHS_TRUE;
 }
 
-static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname)
+LHSVar* lhsparser_insertconstant(LHSVM* vm, LHSLoadF* loadf)
+{
+    LHSValue* key = lhsvm_getvalue(vm, -1);
+    LHSVarDesc* ndesc = lhsmem_newobject(vm, sizeof(LHSVarDesc));
+    ndesc->chunk = 0;
+    ndesc->name = lhsvalue_caststring(key->gc);
+
+    LHSVarDesc* odesc = lhshash_find(vm, &vm->conststrhash, ndesc);
+    if (odesc)
+    {
+        lhsmem_freeobject(vm, ndesc, sizeof(LHSVarDesc));
+        lhsvm_pop(vm, 1);
+        return lhsvector_at(vm, &vm->conststrs, odesc->index);
+    }
+
+    lhsmem_initgc(lhsgc_castgc(&ndesc->gc), LHS_TGCFULLDATA, sizeof(LHSVarDesc));
+    lhsslink_push(lhsvm_castvm(vm), allgc, lhsgc_castgc(&ndesc->gc), next);
+    lhshash_insert(vm, &vm->conststrhash, ndesc, 0);
+
+    LHSVar* var = lhsvector_increment(vm, &vm->conststrs);
+    memcpy(&var->value, key, sizeof(LHSValue));
+    var->desc = ndesc;
+
+    ndesc->line = loadf->line;
+    ndesc->column = loadf->column;
+    ndesc->index = (int)lhsvector_length(vm, &vm->conststrs) - 1;
+    ndesc->mark = LHS_MARKSTRING;
+
+    lhsvm_pop(vm, 1);
+    return var;
+}
+
+LHSVar* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
+{    
+    LHSValue* key = lhsvm_getvalue(vm, -1);
+    LHSVarDesc* desc = lhsvar_castvardesc
+    (
+        lhsmem_newgcobject
+        (
+            vm, 
+            sizeof(LHSVarDesc), 
+            LHS_TGCFULLDATA
+        )
+    );
+    desc->chunk = lhsparser_castlex(lhsloadf_castlf(loadf))->curchunk->index;
+    desc->name = lhsvalue_caststring(key->gc);
+    lhshash_insert(vm, &lhsframe_castcurframe(vm)->localvars, desc, 0);
+
+    LHSVar *var = lhsvector_increment(vm, &lhsframe_castcurframe(vm)->localvalues);
+    var->value.type = LHS_TNONE;
+    var->desc = desc;
+
+    desc->line = loadf->line;
+    desc->column = loadf->column;
+    desc->index = (int)lhsvector_length(vm, &lhsframe_castcurframe(vm)->localvalues) - 1;
+    desc->mark = LHS_MARKLOCAL;
+    
+    lhsvm_pop(vm, 1);
+    return var;
+}
+
+LHSVar* lhsparser_insertglobalvar(LHSVM* vm, LHSLoadF* loadf)
+{
+    LHSValue* key = lhsvm_getvalue(vm, -1);
+    LHSVarDesc* desc = lhsvar_castvardesc
+    (
+        lhsmem_newgcobject
+        (
+            vm, 
+            sizeof(LHSVarDesc), 
+            LHS_TGCFULLDATA
+        )
+    );
+    desc->chunk = 0;
+    desc->name = lhsvalue_caststring(key->gc);
+    lhshash_insert(vm, &vm->globalvars, desc, 0);
+
+    LHSVar *var = lhsvector_increment(vm, &vm->globalvalues);
+    var->value.type = LHS_TNONE;
+    var->desc = desc;
+
+    desc->line = loadf->line;
+    desc->column = loadf->column;    
+    desc->index = (int)lhsvector_length(vm, &vm->globalvalues) - 1;
+    desc->mark = LHS_MARKGLOBAL;
+
+    lhsvm_pop(vm, 1);
+    return var;
+}
+
+LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
+{
+    LHSValue* key = lhsvm_getvalue(vm, -1);
+    LHSVarDesc* ndesc = lhsvar_castvardesc
+    (
+        lhsmem_newobject(vm, sizeof(LHSVarDesc))
+    );
+    ndesc->chunk = lhsparser_castlex(lhsloadf_castlf(loadf))->curchunk->index;
+    ndesc->name = lhsvalue_caststring(key->gc);
+
+    const LHSVarDesc* odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, ndesc);
+    if (!odesc)
+    {
+        for (LHSChunk* chunk = lhsparser_castlex(lhsloadf_castlf(loadf))->curchunk->parent; 
+            chunk; 
+            chunk = chunk->parent)
+        {
+            ndesc->chunk = chunk->index;
+            odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, ndesc);
+            if (odesc)
+            {
+                break;
+            }
+        }
+
+        if (!odesc)
+        {
+            ndesc->chunk = 0;
+            odesc = lhshash_find(vm, &vm->globalvars, ndesc);
+        }
+    }
+
+    lhsmem_freeobject(vm, ndesc, sizeof(LHSVarDesc));
+    lhsvm_pop(vm, 1);
+
+    if (!odesc)
+    {
+        return 0;
+    }
+
+    LHSVar* var = 0;
+    switch (odesc->mark)
+    {
+    case LHS_MARKLOCAL:
+    {
+        var = lhsvector_at(vm, &lhsframe_castcurframe(vm)->localvalues, odesc->index);
+        break;
+    }
+    case LHS_MARKGLOBAL:
+    {
+        var = lhsvector_at(vm, &vm->globalvalues, odesc->index);
+        break;
+    }
+    default:
+    {
+        lhserr_syntaxerr
+        (
+            vm, 
+            loadf, 
+            "recursion find var '%s' fail, system error.",
+            odesc->name->data
+        );
+    }
+    }
+
+    return var;
+}
+
+static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF* loadf, 
+    const char* fname)
 {
     vm->mainframe = lhsmem_newgcobject
     (
@@ -187,29 +339,14 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF *loadf, const char* fname
     );
 
     lhsframe_init(vm, vm->mainframe);
-    lhsframe_enterchunk(vm, vm->mainframe, loadf);
     vm->currentframe = vm->mainframe;
 
     lhsvm_pushstring(vm, fname);
-    LHSVariable* variable = lhsframe_insertvar
-    (
-        vm, 
-        lhsframe_castmainframe(vm), 
-        0, 
-        0
-    );
-    LHSValue* value = lhsvalue_castvalue
-    (
-        lhsvector_at
-        (
-            vm, 
-            &lhsframe_castmainframe(vm)->values, 
-            variable->index
-        )
-    );
-    value->type = LHS_TGC;
-    value->gc = lhsgc_castgc(variable->name);
-    lhsframe_castmainframe(vm)->name = variable->index;
+    LHSVar* var = lhsparser_insertlocalvar(vm, loadf);
+    var->value.type = LHS_TGC;
+    var->value.gc = lhsgc_castgc(var->desc->name);
+
+    lhsframe_castmainframe(vm)->name = var->desc->index;
     return LHS_TRUE;
 }
 
@@ -226,68 +363,39 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     );
 
     lhsframe_init(vm, frame);
-    lhsframe_enterchunk(vm, frame, loadf);
     vm->currentframe = frame;
 
     lhsvm_pushvalue(vm, -1);
-    LHSVariable* variable = lhsframe_getvariable(vm, lhsframe_castmainframe(vm));
-    if (variable)
+    LHSVar* var = lhsparser_recursionfindvar(vm, loadf);
+    if (var)
     {
-        variable->chunk = 0;
-        variable->mark = LHS_MARKGLOBAL;
+        if (var->desc->mark != LHS_MARKGLOBAL)
+        {
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf, 
+                "variable duplicate definition '%s'.",
+                var->desc->name->data
+            );
+        }
 
-        LHSValue* value = lhsvector_at
-        (
-            vm,
-            &lhsframe_castmainframe(vm)->values,
-            variable->index
-        );
-        value->type = LHS_TGC;
-        value->gc = lhsgc_castgc(frame);
+        var->value.type = LHS_TGC;
+        var->value.gc = lhsgc_castgc(frame);
     }
     else
     {
         lhsvm_pushvalue(vm, -1);
-        LHSVariable* framebody = lhsframe_insertglobal
-        (
-            vm, 
-            lhsframe_castmainframe(vm), 
-            loadf->line, 
-            loadf->column
-        );
-        LHSValue* framevalue = lhsvalue_castvalue
-        (
-            lhsvector_at
-            (
-                vm, 
-                &lhsframe_castmainframe(vm)->values,
-                framebody->index
-            )
-        );
-        framevalue->type = LHS_TGC;
-        framevalue->gc = lhsgc_castgc(frame);
+        var = lhsparser_insertglobalvar(vm, loadf);
+        var->value.type = LHS_TGC;
+        var->value.gc = lhsgc_castgc(frame);
     }
 
-    LHSVariable* framename = lhsframe_insertvar
-    (
-        vm, 
-        lhsframe_castcurframe(vm), 
-        loadf->line, 
-        loadf->column
-    );
-    LHSValue* namevalue = lhsvalue_castvalue
-    (
-        lhsvector_at
-        (
-            vm, 
-            &lhsframe_castcurframe(vm)->values, 
-            framename->index
-        )
-    );
-    namevalue->type = LHS_TGC;
-    namevalue->gc = lhsgc_castgc(framename->name);
-    lhsframe_castcurframe(vm)->name = framename->index;
+    var = lhsparser_insertlocalvar(vm, loadf);
+    var->value.type = LHS_TGC;
+    var->value.gc = lhsgc_castgc(var->desc->name);
 
+    frame->name = var->desc->index;
     return LHS_TRUE;
 }
 
@@ -306,11 +414,32 @@ static int lhsparser_uninitjmp(LHSLexical* lex, LHSJmp* jmp, LHSVM *vm)
     return LHS_TRUE;
 }
 
+static int lhsparser_resetchunk(LHSVM* vm, LHSChunk* chunk)
+{
+    chunk->index = 0;
+    lhsslink_init(chunk, next);
+    lhsslink_init(chunk, parent);
+    return LHS_TRUE;
+}
+
+static int lhsparser_uninitchunk(LHSLexical* lex, LHSChunk* chunk, LHSVM* vm)
+{
+    lhs_unused(lex);
+    lhsmem_freeobject(vm, chunk, sizeof(LHSChunk));
+    return LHS_TRUE;
+}
+
 static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 {
     lex->token.t = LHS_TOKENEOF;
     lex->lookahead.t = LHS_TOKENEOF;
-    lex->alljmp = 0;
+
+    lhsslink_init(lex, alljmp);
+    lhsslink_init(lex, allchunk);
+    lex->curchunk = lhsmem_newobject(vm, sizeof(LHSChunk));
+    lhsparser_resetchunk(vm, lex->curchunk);
+    lhsslink_push(lex, allchunk, lex->curchunk, next);
+
     lhsparser_castlex(loadf) = lex;
 
     lhsbuf_init(vm, &lex->token.buf);
@@ -320,8 +449,8 @@ static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 
 static int lhsparser_jmpsolve(LHSLexical* lex, LHSJmp* jmp, LHSVM* vm)
 {
-    long long* addr = (long long*)(vm->code.data + jmp->pos - sizeof(long long));
-    *addr = jmp->pos + jmp->len;
+    int* addr = (int*)(vm->code.data + jmp->pos - sizeof(int));
+    *addr = (int)(jmp->pos + jmp->len);
     return LHS_TRUE;
 }
 
@@ -340,6 +469,15 @@ static int lhsparser_uninitlexical(LHSVM* vm, LHSLoadF* loadf)
         alljmp, 
         next, 
         lhsparser_uninitjmp, 
+        vm
+    );
+    lhsslink_foreach
+    (
+        LHSChunk,
+        lhsparser_castlex(loadf),
+        allchunk,
+        next,
+        lhsparser_uninitchunk,
         vm
     );
     lhsbuf_uninit(vm, &lhsparser_castlex(loadf)->token.buf);
@@ -511,7 +649,8 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
                 lhsloadf_saveidentifier(vm, loadf, buf);
                 if (lhsbuf_isshort(vm, buf))
                 {
-                    LHSString* str = lhsvm_findshort(vm, buf->data, buf->usize);
+                    const LHSString* str = lhsvm_findshort(vm, 
+                        buf->data, buf->usize);
                     if (str && str->reserved)
                     {
                         return str->reserved;
@@ -1358,30 +1497,34 @@ static int lhsparser_exprfunc(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     /*exprfunc -> LHS_TOKENIDENTIFIER '(' [exprargs] ')'*/
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENIDENTIFIER, "function", "<identifier>");
     lhsvm_pushvalue(vm, -1);
-    LHSVariable* function = lhsframe_getvariable(vm, lhsframe_castcurframe(vm));
-    if (!function)
+    LHSVar* var = lhsparser_recursionfindvar(vm, loadf);
+    if (!var)
     {
-        function = lhsframe_insertglobal
-        (
-            vm,
-            lhsframe_castmainframe(vm),
-            loadf->line,
-            loadf->column
-        );
+        var = lhsparser_insertglobalvar(vm, loadf);
     }
     else
     {
         lhsvm_pop(vm, 1);
+        if (var->desc->mark != LHS_MARKGLOBAL)
+        {
+            lhserr_syntaxerr
+            (
+                vm, 
+                loadf, 
+                "function '%s' was defined as local variable.",
+                var->desc->name->data
+            );
+        }
     }
 
     lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
 
     int argn = lhsparser_exprargs(vm, loadf, state);
     state->chain->type = LHS_EXPRCALL;
-    state->chain->factor.call.mark = function->mark;
-    state->chain->factor.call.index = function->index;
+    state->chain->factor.call.mark = var->desc->mark;
+    state->chain->factor.call.index = var->desc->index;
     state->chain->factor.call.narg = argn;
-    state->chain->factor.call.nret = LHS_MULTRET;
+    state->chain->factor.call.nret = LHS_UNCERTAIN;
 
     lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
     return LHS_TRUE;
@@ -1416,10 +1559,10 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     case LHS_TOKENSTRING:
     {
         lhsvm_pushlstring(vm, token->buf.data, token->buf.usize);
-        LHSVariable *constant = lhsframe_insertconstant(vm);
+        LHSVar* var = lhsparser_insertconstant(vm, loadf);
         state->chain->type = LHS_EXPRSTR;
-        state->chain->factor.ref.mark = constant->mark;
-        state->chain->factor.ref.index = constant->index;
+        state->chain->factor.ref.mark = var->desc->mark;
+        state->chain->factor.ref.index = var->desc->index;
         lhsparser_nexttoken(vm, loadf);
         break;
     }
@@ -1452,8 +1595,8 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         }
         else
         {
-            LHSVariable* variable = lhsframe_getvariable(vm, lhsframe_castcurframe(vm));
-            if (!variable)
+            LHSVar* var = lhsparser_recursionfindvar(vm, loadf);
+            if (!var)
             {
                 lhserr_syntaxerr
                 (
@@ -1464,8 +1607,8 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
                 );
             }
             state->chain->type = LHS_EXPRREF;
-            state->chain->factor.ref.mark = variable->mark;
-            state->chain->factor.ref.index = variable->index;
+            state->chain->factor.ref.mark = var->desc->mark;
+            state->chain->factor.ref.index = var->desc->index;
             lhsparser_nexttoken(vm, loadf);
         }
         break;
@@ -1618,7 +1761,7 @@ static int lhsparser_localstate(LHSVM* vm, LHSLoadF* loadf)
         );
 
         lhsvm_pushvalue(vm, -1);
-        if (lhsframe_getvariable(vm, lhsframe_castcurframe(vm)))
+        if (lhsparser_recursionfindvar(vm, loadf))
         {
             lhsvm_pop(vm, 1);
             lhserr_syntaxerr
@@ -1630,13 +1773,7 @@ static int lhsparser_localstate(LHSVM* vm, LHSLoadF* loadf)
             );
         }
 
-        LHSVariable* variable = lhsframe_insertvar
-        (
-            vm, 
-            lhsframe_castcurframe(vm), 
-            loadf->line, 
-            loadf->column
-        );
+        lhsparser_insertlocalvar(vm, loadf);
 
         lhsparser_lookaheadtoken(vm, loadf);
         if (lhsparser_castlex(loadf)->lookahead.t == ',')
@@ -1685,7 +1822,7 @@ static int lhsparser_globalstate(LHSVM* vm, LHSLoadF* loadf)
         );
 
         lhsvm_pushvalue(vm, -1);
-        if (lhsframe_getvariable(vm, lhsframe_castcurframe(vm)))
+        if (lhsparser_recursionfindvar(vm, loadf))
         {
             lhsvm_pop(vm, 1);
             lhserr_syntaxerr
@@ -1697,13 +1834,7 @@ static int lhsparser_globalstate(LHSVM* vm, LHSLoadF* loadf)
             );
         }
 
-        LHSVariable* variable = lhsframe_insertglobal
-        (
-            vm, 
-            lhsframe_castcurframe(vm), 
-            loadf->line, 
-            loadf->column
-        );
+        lhsparser_insertglobalvar(vm, loadf);
 
         lhsparser_lookaheadtoken(vm, loadf);
         if (lhsparser_castlex(loadf)->lookahead.t == ',')
@@ -1741,7 +1872,6 @@ static int lhsparser_blockstate(LHSVM* vm, LHSLoadF* loadf)
     }
 
     lhsparser_statement(vm, loadf, LHS_TRUE);
-
     lhsparser_checkandnexttoken(vm, loadf, '}', "block", "}");
     return LHS_TRUE;
 }
@@ -1751,9 +1881,7 @@ int lhsparser_iftrue(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
     /*iftrue -> blockstate*/
     state->branch->pos = vm->code.usize;
     
-    lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), loadf);
     lhsparser_blockstate(vm, loadf);
-    lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), loadf);
 
     state->finish->pos = vm->code.usize;
     return LHS_TRUE;
@@ -1764,9 +1892,7 @@ int lhsparser_iffalse(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
     /*iffalse -> blockstate*/
     state->branch->len = vm->code.usize - state->branch->pos;
 
-    lhsframe_enterchunk(vm, lhsframe_castcurframe(vm), loadf);
     lhsparser_blockstate(vm, loadf);
-    lhsframe_leavechunk(vm, lhsframe_castcurframe(vm), loadf);
 
     state->finish->len = vm->code.usize - state->finish->pos;
     return LHS_TRUE;
@@ -1859,7 +1985,7 @@ static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
             "function", "<identifier>");
         lhsvm_pushlstring(vm, token->buf.data, token->buf.usize);
         lhsvm_pushvalue(vm, -1);
-        if (lhsframe_getvariable(vm, lhsframe_castcurframe(vm)))
+        if (lhsparser_recursionfindvar(vm, loadf))
         {
             lhsvm_pop(vm, 1);
             lhserr_syntaxerr
@@ -1871,16 +1997,7 @@ static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
             );
         }
 
-        LHSVariable* param = lhsframe_insertparam
-        (
-            vm,
-            lhsframe_castcurframe(vm),
-            loadf->line,
-            loadf->column
-        );
-        param->mark = LHS_MARKSTACK;
-        param->index = ++nparam;
-
+        lhsparser_insertlocalvar(vm, loadf);
         lhsparser_nexttoken(vm, loadf);
         if (token->t != ',')
         {
@@ -1913,6 +2030,8 @@ static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
         lhsparser_nexttoken(vm, loadf);
     }
 
+    lhscode_op(vm, OP_JMP);
+    lhscode_index(vm, 0);
     state.finish->pos = vm->code.usize;
 
     lhsparser_insertframe(vm, loadf);
@@ -1920,9 +2039,16 @@ static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
     lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
 
     lhsparser_blockstate(vm, loadf);
+
+    lhsframe_castcurframe(vm)->narg = narg;
+    if (lhsframe_castcurframe(vm)->nret == LHS_UNCERTAIN)
+    {
+        lhsframe_castcurframe(vm)->nret = LHS_VOID;
+        lhscode_op(vm, OP_RET);
+    }
+    vm->currentframe = vm->mainframe;
     state.finish->len = vm->code.usize - state.finish->pos;
 
-    lhsparser_resetframe(vm, narg);
     return LHS_TRUE;
 }
 
@@ -1940,20 +2066,20 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
             lhserr_syntaxerr(vm, loadf, "incorrect function return.");
         }
 
-        frame->curchunk = 0;
-        frame->nret = LHS_VOIDRET;
+        frame->nret = LHS_VOID;
+        lhscode_op(vm, OP_RET);
         return LHS_TRUE;
     }
 
-    if (frame->nret == LHS_VOIDRET)
+    if (frame->nret == LHS_VOID)
     {
         lhserr_syntaxerr(vm, loadf, "incorrect function return.");
     }
 
     lhsparser_exprstate(vm, loadf);
 
-    frame->curchunk = 0;
     frame->nret = LHS_RETSULT;
+    lhscode_op(vm, OP_RET1);
     lhsparser_checktoken(vm, loadf, '}', "return", "}");
     return LHS_TRUE;
 }
@@ -2084,8 +2210,8 @@ int lhsparser_loadfile(LHSVM* vm, const char* fname)
     }
     else
     {
-        lhsframe_castmainframe(vm)->curchunk = 0;
         lhsparser_lexicalsolve(vm, &lexical);
+        lhscode_op(vm, OP_EXIT);
         lhscode_dmpcode(vm);
     }
     

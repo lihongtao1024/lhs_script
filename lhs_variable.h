@@ -13,19 +13,25 @@
 #define LHS_MARKSTRING            (6)
 #define LHS_MARKSTACK             (7)
 #define LHS_MARKMAX               (8)
-#define lhsvariable_castvar(ud)   ((LHSVariable*)(ud))
+#define lhsvar_castvardesc(ud)    ((LHSVarDesc*)(ud))
 
-typedef struct LHSVariable
+typedef struct LHSVarDesc
 {
     LHSGCObject gc;
     char mark;
     int index;    
     int chunk;
+    long long line;
+    long long column;
     LHSString *name;
-} LHSVariable;
+} LHSVarDesc;
 
-typedef LHSHashTable LHSVariables;
+typedef struct LHSVar
+{
+    LHSValue value;
+    const LHSVarDesc* desc;
+} LHSVar;
 
-long long lhsvariable_hashvar(void* data);
+long long lhsvar_hashvar(void* data);
 
-int lhsvariable_equalvar(void* data1, void* data2);
+int lhsvar_equalvar(void* data1, void* data2);

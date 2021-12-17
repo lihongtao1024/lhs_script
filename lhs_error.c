@@ -48,57 +48,8 @@ int lhserr_throw(void* vm, const char* fmt, ...)
     return LHS_TRUE;
 }
 
-int lhserr_runtimeerr(void* vm, LHSSymbol* dbg, const char* fmt, ...)
+int lhserr_runtimeerr(void* vm, const char* fmt, ...)
 {
-    LHSSTRBUF buf;
-    lhsbuf_init(vm, &buf);
-    char tmp[64];
-
-    if (dbg)                                         
-    {  
-        lhsbuf_pushs(vm, &buf, "runtime error at:[");
-        lhsbuf_pushls(vm, &buf, dbg->identifier->data, dbg->identifier->length);
-        lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", dbg->line);
-        lhsbuf_pushs(vm, &buf, tmp);
-        lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", dbg->column);
-        lhsbuf_pushs(vm, &buf, tmp);
-        lhsbuf_pushs(vm, &buf, "],");
-    }                                                
-    else                                             
-    {                                                
-        lhsbuf_pushs(vm, &buf, "runtime error,");
-    }
-
-    va_list args;
-    va_start(args, fmt);
-    size_t l = (size_t)_vscprintf(fmt, args) + 1;
-    char* suffix = lhsmem_newobject(lhsvm_castvm(vm), l);
-    vsprintf(suffix, fmt, args);
-    lhsbuf_pushls(vm, &buf, suffix, l - 1);
-    lhsmem_freeobject(lhsvm_castvm(vm), suffix, l);
-    lhsbuf_pushs(vm, &buf, "\n");
-    
-    LHSFrame* frame = lhsvm_castvm(vm)->currentframe;
-    while (frame)
-    {
-        LHSSymbol* stack = lhsdebug_at(vm, &frame->debugs, frame->name);
-        lhsbuf_pushs(vm, &buf, "stack at:[");
-        lhsbuf_pushls(vm, &buf, stack->identifier->data, stack->identifier->length);
-        lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", stack->line);
-        lhsbuf_pushs(vm, &buf, tmp);
-        lhsbuf_pushs(vm, &buf, ":");
-        sprintf(tmp, "%lld", stack->column);
-        lhsbuf_pushs(vm, &buf, tmp);
-        lhsbuf_pushs(vm, &buf, "].\n");
-        frame = frame->parent;
-    }
-
-    lhsvm_pushlstring(lhsvm_castvm(vm), buf.data, buf.usize);
-    lhsbuf_uninit(vm, &buf);
-
     longjmp(lhsvm_castvm(vm)->errorjmp->buf, 1);
     return LHS_TRUE;
 }

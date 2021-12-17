@@ -4,8 +4,8 @@
 #include "lhs_strbuf.h"
 #include "lhs_vm.h"
 
-#define LHS_MULTRET             (-1)
-#define LHS_VOIDRET             (0)
+#define LHS_UNCERTAIN           (-1)
+#define LHS_VOID                (0)
 #define LHS_RETSULT             (1)
 
 #define OP_NONE                 (0)
@@ -42,7 +42,7 @@
 #define OP_NOP                  (31)
 #define OP_CALL                 (32)
 #define OP_RET                  (33)
-#define OP_RETURN               (34)
+#define OP_RET1                 (34)
 #define OP_SWAP                 (35)
 #define OP_EXIT                 (36)
 #define OP_MAX                  (37)

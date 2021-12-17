@@ -18,7 +18,7 @@ static const char* opname[OP_MAX] =
 	"and", "or", "shl", "shr", "neg",
 	"not", "notb", "mov", "movs", "push", 
 	"pop", "pushc", "popc", "jmp", "jz", 
-	"jnz", "nop", "call", "ret", "return", 
+	"jnz", "nop", "call", "ret", "ret1", 
 	"swap", "exit"
 };
 
@@ -83,7 +83,6 @@ int lhscode_dmpcode(LHSVM* vm)
 			break;
 		}
 		case OP_MOVS:
-		case OP_RET:
 		{
 			char mark = *head++;
 			int index = *((int*)head)++;
@@ -154,13 +153,7 @@ int lhscode_dmpcode(LHSVM* vm)
 		case OP_JZ:
 		case OP_JNZ:
 		{
-			char mark = *head++;
-			if (mark != LHS_MARKINTEGER)
-			{
-				lhserr_throw(vm, "unexpected byte code.");
-			}
-
-			long long l = *((long long*)head)++;
+			long long l = *((int*)head)++;
 			l += (long long)(vm->code.data);
 			printf("%p\t%s\t%p\n", cur, opname[op], (void*)l);
 			break;

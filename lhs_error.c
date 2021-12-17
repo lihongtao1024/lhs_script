@@ -89,8 +89,8 @@ int lhserr_runtimeerr(void* vm, const void* desc, const char* fmt, ...)
     lhsbuf_pushs(vm, &buf, "\n");
 
     for (LHSCallContext* cc = lhsvm_castvm(vm)->callcontext; 
-        cc; 
-        cc = cc->parent)
+         cc; 
+         cc = cc->parent)
     {
         LHSVar* name = lhsvector_at
         (

@@ -794,7 +794,7 @@ static int lhsparser_lookaheadtoken(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-static int lhsparser_resetexprnode(LHSVM* vm, LHSExprChain* chain, LHSExprState* state)
+static int lhsparser_resetexprchain(LHSVM* vm, LHSExprChain* chain, LHSExprState* state)
 {
     chain->prev = state->chain;
     state->chain = chain;
@@ -1495,9 +1495,9 @@ static int lhsparser_exprargs(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     return narg;
 }
 
-static int lhsparser_exprfunc(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
+static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
-    /*exprfunc -> LHS_TOKENIDENTIFIER '(' [exprargs] ')'*/
+    /*exprcall -> LHS_TOKENIDENTIFIER '(' [exprargs] ')'*/
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENIDENTIFIER, "function", "<identifier>");
 
     lhsvm_pushvalue(vm, -1);
@@ -1611,7 +1611,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 
         if (lookahead->t == '(')
         {
-            lhsparser_exprfunc(vm, loadf, state);            
+            lhsparser_exprcall(vm, loadf, state);            
         }
         else
         {
@@ -1642,8 +1642,8 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     {
         state->chain->type = LHS_EXPRNONE;
         for (LHSExprChain* prev = state->chain->prev; 
-            prev; 
-            prev = prev->prev)
+             prev; 
+             prev = prev->prev)
         {
             prev->swap = LHS_TRUE;
         }
@@ -1732,7 +1732,7 @@ static int lhsparser_exprsub(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
     /*subexpr -> {exprchain}*/
     LHSExprChain chain;
-    lhsparser_resetexprnode(vm, &chain, state);
+    lhsparser_resetexprchain(vm, &chain, state);
     lhsparser_exprchain(vm, loadf, state);
 
     if (lhsparser_exprsolve(vm, loadf, state))
@@ -1750,7 +1750,7 @@ static int lhsparser_exprstate(LHSVM* vm, LHSLoadF* loadf)
     lhsparser_initexprstate(vm, &state);
 
     LHSExprChain chain;
-    lhsparser_resetexprnode(vm, &chain, &state);
+    lhsparser_resetexprchain(vm, &chain, &state);
 
     if (lhserr_protectedcallex(vm, lhsparser_exprsub, loadf, &state))
     {

@@ -33,9 +33,6 @@
 #define SYMBOL_MAX                         (26)
 #define SYMBOL_ERROR                       SYMBOL_MAX
 
-#define lhsloadf_castlf(ud)                         \
-((LHSLoadF*)ud)
-
 #define lhsloadf_getc(lf)                           \
 (lf)->current = getc((lf)->file);++(lf)->column
 

@@ -217,7 +217,7 @@ LHSVar* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
             LHS_TGCFULLDATA
         )
     );
-    desc->chunk = lhsparser_castlex(lhsloadf_castlf(loadf))->curchunk->index;
+    desc->chunk = lhsparser_castlex(loadf)->curchunk->index;
     desc->name = lhsvalue_caststring(key->gc);
     lhshash_insert(vm, &lhsframe_castcurframe(vm)->localvars, desc, 0);
 
@@ -270,15 +270,15 @@ LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
     (
         lhsmem_newobject(vm, sizeof(LHSVarDesc))
     );
-    ndesc->chunk = lhsparser_castlex(lhsloadf_castlf(loadf))->curchunk->index;
+    ndesc->chunk = lhsparser_castlex(loadf)->curchunk->index;
     ndesc->name = lhsvalue_caststring(key->gc);
 
     const LHSVarDesc* odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, ndesc);
     if (!odesc)
     {
-        for (LHSChunk* chunk = lhsparser_castlex(lhsloadf_castlf(loadf))->curchunk->parent; 
-            chunk; 
-            chunk = chunk->parent)
+        for (LHSChunk* chunk = lhsparser_castlex(loadf)->curchunk->parent; 
+             chunk; 
+             chunk = chunk->parent)
         {
             ndesc->chunk = chunk->index;
             odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, ndesc);

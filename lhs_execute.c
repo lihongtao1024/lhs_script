@@ -4,27 +4,32 @@
 #include "lhs_code.h"
 #include "lhs_error.h"
 #include "lhs_link.h"
+#include "lhs_parser.h"
 #include "lhs_vm.h"
 
 typedef int (*lhsexec_instruct)(LHSVM*);
+typedef int (*lhsexec_opr)(LHSVM*, LHSValue*, const LHSValue*, char);
 
-#define lhsexec_op(cc)                              \
+#define lhsexec_op(cc)                                              \
 (*((cc)->ip)++)
 
-#define lhsexec_mark(cc)                            \
+#define lhsexec_mark(cc)                                            \
 (*((cc)->ip)++)
 
-#define lhsexec_i(cc)                               \
+#define lhsexec_i(cc)                                               \
 (*((int*)(cc)->ip)++)
 
-#define lhsexec_l(cc)                               \
+#define lhsexec_l(cc)                                               \
 (*((long long*)(cc)->ip)++)
 
-#define lhsexec_n(cc)                               \
+#define lhsexec_n(cc)                                               \
 (*((double*)(cc)->ip)++)
 
-#define lhsexec_b(cc)                               \
+#define lhsexec_b(cc)                                               \
 (*((cc)->ip)++)
+
+#define lhsexec_valuetype(v)                                        \
+((v)->type == LHS_TGC ? LHS_TGC + (v)->gc->type : v->type)
 
 static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret, 
     StkID errfn, IPID ip)
@@ -52,151 +57,905 @@ static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret,
     return cc;
 }
 
-#define LHS_TNONE               (0)
-#define LHS_TINTEGER            (1)
-#define LHS_TNUMBER             (2)
-#define LHS_TBOOLEAN            (3)
-#define LHS_TDELEGATE           (4)
-#define LHS_TGC                 (5)
+static int lhsexec_oprnone(LHSVM* vm, LHSValue* lvalue, 
+    const LHSValue* rvalue, char op)
+{
+    if (lvalue->type == LHS_TNONE)
+    {
+        lhserr_runtime
+        (
+            vm, 
+            0, 
+            "illegal operation with symbol '%s', left value is n/a.",
+            lhsparser_symbols[op]
+        );
+    }
+
+    if (rvalue->type == LHS_TNONE)
+    {
+        lhserr_runtime
+        (
+            vm, 
+            0, 
+            "illegal operation with symbol '%s', right value is n/a.",
+            lhsparser_symbols[op]
+        );
+    }
+
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprll(LHSVM* vm, LHSValue* lvalue, 
+    const LHSValue* rvalue, char op)
+{
+    long long rl = rvalue->i;
+    switch (op)
+    {
+    case OP_ADD:
+    {
+        lvalue->i += rl;
+        break;
+    }
+    case OP_SUB:
+    {
+        lvalue->i -= rl;
+        break;
+    }
+    case OP_MUL:
+    {
+        lvalue->i *= rl;
+        break;
+    }
+    case OP_DIV:
+    {
+        if (lvalue->i % rl)
+        {
+            lvalue->type = LHS_TNUMBER;
+            lvalue->n = (double)lvalue->i / rl;
+        }
+        else
+        {
+            lvalue->i /= rl;
+        }
+        
+        break;
+    }
+    case OP_MOD:
+    {
+        lvalue->i %= rl;
+        break;
+    }
+    case OP_ANDB:
+    {
+        lvalue->i &= rl;
+        break;
+    }
+    case OP_ORB:
+    {
+        lvalue->i |= rl;
+        break;
+    }
+    case OP_XORB:
+    {
+        lvalue->i ^= rl;
+        break;
+    }
+    case OP_L:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->i < rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_G:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->i > rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_E:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->i == rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_NE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->i != rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_GE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->i >= rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_LE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->i <= rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_SHL:
+    {
+        lvalue->i <<= rl;
+        break;
+    }
+    case OP_SHR:
+    {
+        lvalue->i >>= rl;
+        break;
+    }
+    default:
+    {
+        lhserr_runtime
+        (
+            vm, 
+            0, 
+            "illegal operation symbol '%s'.",
+            lhsparser_symbols[op]
+        );
+    }
+    }
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprln(LHSVM* vm, LHSValue* lvalue, 
+    const LHSValue* rvalue, char op)
+{
+    long long ll = lvalue->i; double rn = rvalue->n;
+    switch (op)
+    {
+    case OP_ADD:
+    {
+        lvalue->type = LHS_TNUMBER;
+        lvalue->n = ll + rn;
+        break;
+    }
+    case OP_SUB:
+    {
+        lvalue->type = LHS_TNUMBER;
+        lvalue->n = ll - rn;
+        break;
+    }
+    case OP_MUL:
+    {
+        lvalue->type = LHS_TNUMBER;
+        lvalue->n = ll * rn;
+        break;
+    }
+    case OP_DIV:
+    {
+        lvalue->type = LHS_TNUMBER;
+        lvalue->n = ll / rn;
+        break;
+    }
+    case OP_L:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ll < rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_G:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ll > rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_E:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ll == rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_NE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ll != rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_GE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ll >= rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_LE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ll <= rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    default:
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "illegal operation symbol '%s'.",
+            lhsparser_symbols[op]
+        );
+    }
+    }
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprnl(LHSVM* vm, LHSValue* lvalue, 
+    const LHSValue* rvalue, char op)
+{
+    double ln = lvalue->n; long long rl = rvalue->i;
+    switch (op)
+    {
+    case OP_ADD:
+    {
+        lvalue->n = ln + rl;
+        break;
+    }
+    case OP_SUB:
+    {
+        lvalue->n = ln - rl;
+        break;
+    }
+    case OP_MUL:
+    {
+        lvalue->n = ln * rl;
+        break;
+    }
+    case OP_DIV:
+    {
+        lvalue->n = ln / rl;
+        break;
+    }
+    case OP_L:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ln < rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_G:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ln > rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_E:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ln == rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_NE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ln != rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_GE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ln >= rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_LE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (ln <= rl) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    default:
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "illegal operation symbol '%s'.",
+            lhsparser_symbols[op]
+        );
+    }
+    }
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprnn(LHSVM* vm, LHSValue* lvalue, 
+    const LHSValue* rvalue, char op)
+{
+    double rn = rvalue->n;
+    switch (op)
+    {
+    case OP_ADD:
+    {
+        lvalue->n += rn;
+        break;
+    }
+    case OP_SUB:
+    {
+        lvalue->n -= rn;
+        break;
+    }
+    case OP_MUL:
+    {
+        lvalue->n *= rn;
+        break;
+    }
+    case OP_DIV:
+    {
+        lvalue->n /= rn;
+        break;
+    }
+    case OP_L:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->n < rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_G:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->n > rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_E:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->n == rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_NE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->n != rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_GE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->n >= rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_LE:
+    {
+        lvalue->type = LHS_TBOOLEAN;
+        lvalue->b = (lvalue->n <= rn) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    default:
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "illegal operation symbol '%s'.",
+            lhsparser_symbols[op]
+        );
+    }
+    }
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprbb(LHSVM* vm, LHSValue* lvalue, 
+    const LHSValue* rvalue, char op)
+{
+    char rb = rvalue->b;
+    switch (op)
+    {
+    case OP_E:
+    {
+        lvalue->b = (lvalue->b == rb) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_NE:
+    {
+        lvalue->b = (lvalue->b != rb) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_AND:
+    {
+        lvalue->b = (lvalue->b && rb) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    case OP_OR:
+    {
+        lvalue->b = (lvalue->b || rb) ? LHS_TRUE : LHS_FALSE;
+        break;
+    }
+    default:
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "illegal operation symbol '%s'.",
+            lhsparser_symbols[op]
+        );
+    }
+    }
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprerr(LHSVM* vm, LHSValue* lvalue, 
+    const LHSValue* rvalue, char op)
+{
+    lhserr_runtime
+    (
+        vm,
+        0,
+        "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+        lhsvalue_typename[lhsexec_valuetype(lvalue)],
+        lhsvalue_typename[lhsexec_valuetype(rvalue)],
+        lhsparser_symbols[op]
+    );
+    return LHS_TRUE;
+}
+
+static lhsexec_opr lhsexec_operations[][6] =
+{
+    {lhsexec_oprnone, lhsexec_oprnone, lhsexec_oprnone, 
+    lhsexec_oprnone, lhsexec_oprnone, lhsexec_oprnone},
+    {lhsexec_oprnone, lhsexec_oprll,   lhsexec_oprln, 
+    lhsexec_oprerr, lhsexec_oprerr, lhsexec_oprerr},
+    {lhsexec_oprnone, lhsexec_oprnl,   lhsexec_oprnn, 
+    lhsexec_oprerr, lhsexec_oprerr, lhsexec_oprerr},
+    {lhsexec_oprnone, lhsexec_oprerr,  lhsexec_oprerr, 
+    lhsexec_oprbb, lhsexec_oprerr, lhsexec_oprerr},
+    {lhsexec_oprnone, lhsexec_oprerr,  lhsexec_oprerr, 
+    lhsexec_oprerr, lhsexec_oprerr, lhsexec_oprerr},
+    {lhsexec_oprnone, lhsexec_oprerr,  lhsexec_oprerr, 
+    lhsexec_oprerr, lhsexec_oprerr, lhsexec_oprerr}
+};
 
 static int lhsexec_add(LHSVM* vm)
 {
     const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
     const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
-
-    lhserr_throw(vm, "aaaa");
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm, 
+        (LHSValue*)lvalue, 
+        rvalue, 
+        OP_ADD
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_sub(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_SUB
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 } 
 
 static int lhsexec_mul(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_MUL
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_div(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_DIV
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_mod(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_MOD
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_andb(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_ANDB
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_orb(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_ORB
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_xorb(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_XORB
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_less(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_L
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_great(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_G
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_equal(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_E
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_ne(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_NE
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_ge(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_GE
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_le(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_LE
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_and(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_AND
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_or(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_OR
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_shl(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_SHL
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_shr(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm,
+        (LHSValue*)lvalue,
+        rvalue,
+        OP_SHR
+    );
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_neg(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    LHSValue* lvalue = (LHSValue*)lhsvm_getvalue(vm, -1);
+    switch (lvalue->type)
+    {
+    case LHS_TINTEGER:
+    {
+        lvalue->i = 0 - lvalue->i;
+        break;
+    }
+    case LHS_TNUMBER:
+    {
+        lvalue->n = 0 - lvalue->n;
+        break;
+    }
+    default:
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "illegal operation symbol '%s'.",
+            lhsparser_symbols[OP_NEG]
+        );
+    }
+    }
     return LHS_TRUE;
 }
 
 static int lhsexec_not(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    LHSValue* lvalue = (LHSValue*)lhsvm_getvalue(vm, -1);
+    if (lvalue->type != LHS_TBOOLEAN)
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "illegal operation symbol '%s'.",
+            lhsparser_symbols[OP_NOT]
+        );
+    }
+    lvalue->b = !lvalue->b;
     return LHS_TRUE;
 }
 
 static int lhsexec_notb(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    LHSValue* lvalue = (LHSValue*)lhsvm_getvalue(vm, -1);
+    if (lvalue->type != LHS_TINTEGER)
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "illegal operation symbol '%s'.",
+            lhsparser_symbols[OP_NOT]
+        );
+    }
+    lvalue->i = ~lvalue->i;
     return LHS_TRUE;
 }
 
 static int lhsexec_mov(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    LHSCallContext* cc = vm->callcontext;
+
+    LHSValue* lvalue = 0;
+    char lmark = lhsexec_mark(cc);
+    switch (lmark)
+    {
+    case LHS_MARKLOCAL:
+    {
+        lvalue = lhsvector_at
+        (
+            vm,
+            &lhsframe_castcurframe(vm)->localvalues,
+            lhsexec_i(cc)
+        );
+        break;
+    }
+    case LHS_MARKGLOBAL:
+    {
+        lvalue = lhsvector_at
+        (
+            vm,
+            &vm->globalvalues,
+            lhsexec_i(cc)
+        );
+        break;
+    }
+    case LHS_MARKSTACK:
+    {
+        lvalue = (LHSValue*)lhsvm_getvalue(vm, lhsexec_i(cc));
+        break;
+    }
+    default:
+    {
+        lhserr_runtime(vm, 0, "illegal assignment operation.");
+    }
+    }
+
+    LHSValue* rvalue = 0;
+    char rmark = lhsexec_mark(cc);
+    switch (rmark)
+    {
+    case LHS_MARKLOCAL:
+    {
+        rvalue = lhsvector_at
+        (
+            vm,
+            &lhsframe_castcurframe(vm)->localvalues,
+            lhsexec_i(cc)
+        );
+        break;
+    }
+    case LHS_MARKGLOBAL:
+    {
+        rvalue = lhsvector_at
+        (
+            vm,
+            &vm->globalvalues,
+            lhsexec_i(cc)
+        );
+        break;
+    }
+    case LHS_MARKSTACK:
+    {
+        rvalue = (LHSValue*)lhsvm_getvalue(vm, lhsexec_i(cc));
+        break;
+    }
+    default:
+    {
+        lhserr_runtime(vm, 0, "illegal assignment operation.");
+    }
+    }
+
+    memcpy(lvalue, rvalue, sizeof(LHSValue));
     return LHS_TRUE;
 }
 
 static int lhsexec_movs(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    LHSCallContext* cc = vm->callcontext;
+
+    LHSValue* lvalue = 0;
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    char mark = lhsexec_mark(cc);
+    switch (mark)
+    {
+    case LHS_MARKLOCAL:
+    {
+        lvalue = lhsvector_at
+        (
+            vm,
+            &lhsframe_castcurframe(vm)->localvalues,
+            lhsexec_i(cc)
+        );
+        break;
+    }
+    case LHS_MARKGLOBAL:
+    {
+        lvalue = lhsvector_at
+        (
+            vm,
+            &vm->globalvalues,
+            lhsexec_i(cc)
+        );
+        break;
+    }
+    case LHS_MARKSTACK:
+    {
+        lvalue = (LHSValue*)lhsvm_getvalue(vm, lhsexec_i(cc));
+        break;
+    }
+    default:
+    {
+        lhserr_runtime(vm, 0, "illegal assignment operation.");
+    }
+    }
+
+    memcpy(lvalue, rvalue, sizeof(LHSValue));
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 

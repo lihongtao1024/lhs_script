@@ -68,4 +68,6 @@ typedef struct LHSLexical
     LHSChunk* allchunk;
 } LHSLexical;
 
+extern const char* lhsparser_symbols[];
+
 int lhsparser_loadfile(LHSVM* vm, const char* fname);

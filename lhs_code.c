@@ -88,7 +88,7 @@ int lhscode_dmpcode(LHSVM* vm)
 
 			printf
 			(
-				"%p\t%s\t%s[%d],\t%s[%d]\t\t\t;line:%d colum:%d refer:%s\n", 
+				"%p\t%s\t%s[%d],\t%s[%d]\t\t;l:%d c:%d ->%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark1], 
@@ -107,7 +107,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			int index = lhscode_i(head);
 			printf
 			(
-				"%p\t%s\t%s[%d]\t\t\t;line:%d column:%d refer:%s\n", 
+				"%p\t%s\t%s[%d]\t\t\t;l:%d c:%d ->%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark], 
@@ -131,7 +131,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				int index = lhscode_i(head);
 				printf
 				(
-					"%p\t%s\t%s[%d]\t\t\t;line:%d column:%d refer:%s\n", 
+					"%p\t%s\t%s[%d]\t\t\t;l:%d c:%d ->%s\n", 
 					cur, 
 					opname[op], 
 					markname[mark], 
@@ -147,7 +147,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				long long l = lhscode_l(head);
 				printf
 				(
-					"%p\t%s\t%lld\t\t\t;line:%d column:%d refer:%s\n", 
+					"%p\t%s\t%lld\t\t\t;l:%d c:%d ->%s\n", 
 					cur, 
 					opname[op], 
 					l,
@@ -162,7 +162,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				double n = lhscode_n(head);
 				printf
 				(
-					"%p\t%s\t%lf\t\t\t;line:%d column:%d refer:%s\n", 
+					"%p\t%s\t%lf\t\t;l:%d c:%d ->%s\n", 
 					cur, 
 					opname[op], 
 					n,
@@ -177,7 +177,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				char b = lhscode_b(head);
 				printf
 				(
-					"%p\t%s\t%s\t\t\t;line:%d column:%d refer:%s\n", 
+					"%p\t%s\t%s\t\t\t;l:%d c:%d ->%s\n", 
 					cur, 
 					opname[op], 
 					b ? "true" : "false",
@@ -202,7 +202,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			l += (long long)(vm->code.data);
 			printf
 			(
-				"%p\t%s\t%p\t;line:%d column:%d refer:%s\n", 
+				"%p\t%s\t%p\t;l:%d c:%d ->%s\n", 
 				cur, 
 				opname[op], 
 				(void*)l,
@@ -220,7 +220,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			int retn = lhscode_i(head);
 			printf
 			(
-				"%p\t%s\t%s[%d],\t%d,\t%d\t;line:%d column:%d refer:%s\n", 
+				"%p\t%s\t%s[%d],\t%d,\t%d\t;l:%d c:%d ->%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark], 
@@ -237,7 +237,7 @@ int lhscode_dmpcode(LHSVM* vm)
 		{
 			printf
 			(
-				"%p\t%s\t\t\t\t;line:%d column:%d refer:%s\n", 
+				"%p\t%s\t\t\t\t;l:%d c:%d ->%s\n", 
 				cur, 
 				opname[op],
 				line,

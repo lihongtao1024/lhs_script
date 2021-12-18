@@ -107,17 +107,17 @@ static int lhsparser_uninitexprstate(LHSVM* vm, LHSExprState* state);
 static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested);
 static int lhsparser_exprsub(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state);
 
+const char* lhsparser_symbols[] =
+{
+    "n/a", "+", "-", "*", "/", "%", "&", "|", "^", "<", ">", "==",
+    "!=", ">=", "<=", "&&", "||", "<<", ">>", "-", "!", "~", "="
+};
+
 static const char* reserveds[] =
 {
     "", "set", "var", "function", "for", 
     "while", "if", "else", "do", "break", 
     "continue", "true", "false", "return"
-};
-
-static const char* symbols[] =
-{
-    "n/a", "+", "-", "*", "/", "%", "&", "|", "^", "<", ">", "==", 
-    "!=", ">=", "<=", "&&", "||", "<<", ">>", "-", "!", "~", "="
 };
 
 static const char priorities[][SYMBOL_END] =
@@ -915,7 +915,7 @@ static lhsparser_exprunary(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 
 illegalunary:
     lhserr_syntax(vm, loadf, "illegal unary symbol '%s'.", 
-        symbols[chain->symbol]);
+        lhsparser_symbols[chain->symbol]);
     return LHS_FALSE;
 }
 
@@ -944,7 +944,15 @@ static lhsparser_exproprll(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     case SYMBOL_DIV:
     {
-        chain->factor.i = prev->factor.i / chain->factor.i;
+        if (prev->factor.i % chain->factor.i)
+        {
+            chain->type = LHS_EXPRNUM;
+            chain->factor.n = (double)prev->factor.i / chain->factor.i;
+        }
+        else
+        {
+            chain->factor.i = prev->factor.i / chain->factor.i;
+        }
         break;
     }
     case SYMBOL_MOD:
@@ -1022,7 +1030,7 @@ static lhsparser_exproprll(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     default:
     {
         lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            symbols[prev->symbol]);
+            lhsparser_symbols[prev->symbol]);
     }
     }
 
@@ -1102,7 +1110,7 @@ static lhsparser_exproprln(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     default:
     {
         lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            symbols[prev->symbol]);
+            lhsparser_symbols[prev->symbol]);
     }
     }
 
@@ -1186,7 +1194,7 @@ static lhsparser_exproprnl(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     default:
     {
         lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            symbols[prev->symbol]);
+            lhsparser_symbols[prev->symbol]);
     }
     }
 
@@ -1266,7 +1274,7 @@ static lhsparser_exproprnn(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     default:
     {
         lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            symbols[prev->symbol]);
+            lhsparser_symbols[prev->symbol]);
     }
     }
 
@@ -1308,7 +1316,7 @@ static lhsparser_exproprbb(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     default:
     {
         lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            symbols[prev->symbol]);
+            lhsparser_symbols[prev->symbol]);
     }
     }
 
@@ -1318,7 +1326,7 @@ static lhsparser_exproprbb(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 static lhsparser_exproprerr(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 {
     lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-        symbols[chain->prev->symbol]);
+        lhsparser_symbols[chain->prev->symbol]);
 }
 
 static lhsparser_expropr lhsparser_exproperations[][3] =

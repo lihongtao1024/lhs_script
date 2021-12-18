@@ -57,11 +57,11 @@ int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
 
     if (!desc)
     {  
-        lhsbuf_pushs(vm, &buf, "runtime error:");
+        lhsbuf_pushs(vm, &buf, "runtime error: ");
     }                                                
     else                                             
     {                                               
-        lhsbuf_pushs(vm, &buf, "runtime error at:[");
+        lhsbuf_pushs(vm, &buf, "runtime error at: [");
         lhsbuf_pushls
         (
             vm, 
@@ -93,16 +93,22 @@ int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
     {
         LHSVar* name = lhsvector_at
         (
+            vm,
+            &lhsvm_castvm(vm)->conststrs,
+            cc->frame->name
+        );
+        LHSVar* refer = lhsvector_at
+        (
             vm, 
             &lhsvm_castvm(vm)->conststrs, 
             cc->refer
         );
-        lhsbuf_pushs(vm, &buf, "stack at:[");
+        lhsbuf_pushs(vm, &buf, "stack at: [");
         lhsbuf_pushls
         (
-            vm, 
-            &buf, 
-            name->desc->name->data, 
+            vm,
+            &buf,
+            name->desc->name->data,
             name->desc->name->length
         );
         lhsbuf_pushs(vm, &buf, ":");
@@ -111,6 +117,14 @@ int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
         lhsbuf_pushs(vm, &buf, ":");
         sprintf(tmp, "%d", cc->column);
         lhsbuf_pushs(vm, &buf, tmp);
+        lhsbuf_pushs(vm, &buf, "->");
+        lhsbuf_pushls
+        (
+            vm,
+            &buf,
+            refer->desc->name->data,
+            refer->desc->name->length
+        );
         lhsbuf_pushs(vm, &buf, "].\n");
     }
 

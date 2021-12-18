@@ -18,7 +18,7 @@ void* lhsmem_alloc(void* vm, void* original, size_t osize,
 
 void* lhsmem_newobject(void* vm, size_t size)
 {
-    void* data = lhsvm_castvm(vm)->falloc(vm, 0, 0, size);
+    void* data = lhsvm_castvm(vm)->alloc(vm, 0, 0, size);
     if (data)
     {
         lhsvm_castvm(vm)->nalloc += size;
@@ -29,7 +29,7 @@ void* lhsmem_newobject(void* vm, size_t size)
 
 void* lhsmem_renewobject(void* vm, void* original, size_t osize, size_t nsize)
 {
-    void* data = lhsvm_castvm(vm)->falloc(vm, original, osize, nsize);
+    void* data = lhsvm_castvm(vm)->alloc(vm, original, osize, nsize);
     if (data)
     {
         lhsvm_castvm(vm)->nalloc = lhsvm_castvm(vm)->nalloc - osize + nsize;
@@ -40,7 +40,7 @@ void* lhsmem_renewobject(void* vm, void* original, size_t osize, size_t nsize)
 
 void lhsmem_freeobject(void* vm, void* data, size_t size)
 {
-    if (!lhsvm_castvm(vm)->falloc(vm, data, size, 0))
+    if (!lhsvm_castvm(vm)->alloc(vm, data, size, 0))
     {
         lhsvm_castvm(vm)->nalloc -= size;
     }

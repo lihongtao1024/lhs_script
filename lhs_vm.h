@@ -15,11 +15,9 @@ typedef size_t StkID;
 typedef struct LHSVM
 {
     LHSGCObject gc;             /*garbage collect handle*/
-    lhsmem_new falloc;          /*memory handler*/
-    void* mainframe;            /*main function frame*/
-    void* currentframe;         /*current function frame*/
-    void* callcontext;          /*runtime context*/
-    LHSError* errorjmp;         /*error jump handler*/
+    StkID top;                  /*position of runtime stack top*/
+    size_t nalloc;              /*allocated memory size*/
+    size_t ncallcontext;        /*for call layers*/
     LHSHashTable shortstrhash;  /*hast table for short string*/
     LHSHashTable conststrhash;  /*hash table for constant string*/
     LHSHashTable globalvars;    /*hash table for global variable*/
@@ -27,10 +25,12 @@ typedef struct LHSVM
     LHSVector globalvalues;     /*value array for global variable*/
     LHSVector stack;            /*execute stack*/
     LHSSTRBUF code;             /*executable byte code*/
+    void* mainframe;            /*main function frame*/
+    void* currentframe;         /*current function frame*/
+    void* callcontext;          /*runtime context*/
+    LHSError* errorjmp;         /*error jump handler*/
+    lhsmem_new alloc;           /*memory handler*/
     LHSGCObject* allgc;         /*all garbage collection*/
-    size_t ncallcontext;        /*for call layer*/
-    size_t nalloc;              /*allocated memory size*/
-    StkID top;                  /*position of runtime stack top*/
 } LHSVM;
 
 LHSVM* lhsvm_create(lhsmem_new fn);

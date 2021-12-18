@@ -15,18 +15,18 @@
 typedef struct LHSString
 {
     LHSGCObject gc;
-    long long hash;
     int length;
     int reserved;
+    long long hash;
     char data[0];
 } LHSString;
 
 typedef struct LHSShortString
 {
     LHSGCObject gc;
-    long long hash;
     int length;
     int reserved;
+    long long hash;
     char data[LHS_SHORTSTRLEN];
 } LHSShortString;
 
@@ -36,8 +36,8 @@ typedef struct LHSValue
     union
     {
         char b;
-        long long i;
         double n;
+        long long i;        
         LHSGCObject* gc;
         lhsvm_delegate dg;
     };

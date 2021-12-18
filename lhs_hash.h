@@ -6,18 +6,18 @@ typedef long long (*lhshash_calc)(void*);
 
 typedef struct LHSHashNode
 {
-    struct LHSHashNode* next;
     long long hash;
     void* data;
+    struct LHSHashNode* next;
 } LHSHashNode;
 
 typedef struct LHSHashTable
 {
-    LHSHashNode** nodes;
+    size_t size;
+    size_t usize;
     lhshash_calc calc;
     lhshash_equal equal;
-    size_t size;
-    size_t usize;    
+    LHSHashNode** nodes;
 } LHSHashTable;
 
 int lhshash_init(void* vm, LHSHashTable* hash, lhshash_calc calc, 

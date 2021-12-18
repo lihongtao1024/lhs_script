@@ -8,8 +8,6 @@
 typedef const char* IPID;
 typedef struct LHSCallContext
 {
-    struct LHSCallContext* parent;
-    LHSFrame* frame;
     StkID base;         /*base for argument*/
     StkID errfn;        /*error handler*/
     StkID top;          /*stack top for this call*/
@@ -20,6 +18,8 @@ typedef struct LHSCallContext
     int line;
     int column;
     int refer;
+    LHSFrame* frame;
+    struct LHSCallContext* parent;
 } LHSCallContext;
 
 int lhsexec_pcall(LHSVM* vm, int narg, int nret, StkID errfn);

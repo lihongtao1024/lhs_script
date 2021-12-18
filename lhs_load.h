@@ -64,10 +64,10 @@
 
 typedef struct LHSLoadF
 {
-    FILE* file;
     int line;
     int column;
     int current;
+    FILE* file;
     void* lexical;
 } LHSLoadF;
 

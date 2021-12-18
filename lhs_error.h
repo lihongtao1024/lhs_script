@@ -12,7 +12,7 @@ printf("%s\n", s)
 lhserr_throw                                                        \
 (                                                                   \
     vm,                                                             \
-    "syntax error at:[%s:%lld:%lld], "##fmt,                        \
+    "syntax error at:[%s:%d:%d], "##fmt,                            \
     lhsframe_getname(vm, lhsframe_castmainframe(vm)),               \
     (lf)->line,                                                     \
     (lf)->column,                                                   \
@@ -33,9 +33,9 @@ typedef void (*protectedfex)(void*, void*, void*);
 
 typedef struct LHSError
 {
-    struct LHSError* prev;
-    jmp_buf buf;
     int errcode;
+    jmp_buf buf;
+    struct LHSError* prev;
 } LHSError;
 
 int lhserr_protectedcall(void* vm, protectedf fn, void* udata);

@@ -13,12 +13,12 @@
 typedef struct LHSFrame
 {
     LHSGCObject gc;         /*garbage collection handle*/
-    LHSHashTable localvars; /*hash table for local variables*/     
-    LHSVector localvalues;  /*value array for local variables*/
-    size_t entry;           /*ip entry*/
     int name;               /*function name index in values*/
     int narg;
     int nret;
+    size_t entry;           /*ip entry*/
+    LHSHashTable localvars; /*hash table for local variables*/     
+    LHSVector localvalues;  /*value array for local variables*/
 } LHSFrame;
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame);

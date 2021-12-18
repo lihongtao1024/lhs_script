@@ -31,7 +31,7 @@ static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
 
 static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
 {
-    vm->falloc = fn;
+    vm->alloc = fn;
     vm->mainframe = 0;
     vm->currentframe = 0;
     vm->callcontext = 0;

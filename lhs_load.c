@@ -151,21 +151,84 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
 
     do
     {
-        lhsbuf_pushc(vm, buf, (char)loadf->current);
-        lhsloadf_getc(loadf);
-        if (loadf->current == '\n')
+        if (loadf->current == '\\')
         {
-            lhsloadf_newline(loadf);
+            lhsbuf_pushc(vm, buf, (char)loadf->current);
+            lhsloadf_getc(loadf);
+            
+            switch (loadf->current)
+            {
+            case 'n':
+            {
+                buf->usize--;
+                lhsbuf_pushc(vm, buf, '\n');
+                lhsloadf_getc(loadf);
+                break;
+            }
+            case 'r':
+            {
+                buf->usize--;
+                lhsbuf_pushc(vm, buf, '\r');
+                lhsloadf_getc(loadf);
+                break;
+            }
+            case 't':
+            {
+                buf->usize--;
+                lhsbuf_pushc(vm, buf, '\t');
+                lhsloadf_getc(loadf);
+                break;
+            }
+            case 'f':
+            {
+                buf->usize--;
+                lhsbuf_pushc(vm, buf, '\f');
+                lhsloadf_getc(loadf);
+                break;
+            }
+            case 'v':
+            {
+                buf->usize--;
+                lhsbuf_pushc(vm, buf, '\v');
+                lhsloadf_getc(loadf);
+                break;
+            }
+            case '"':
+            {
+                buf->usize--;
+                lhsbuf_pushc(vm, buf, '\"');
+                lhsloadf_getc(loadf);
+                break;
+            }
+            case '\\':
+            {
+                buf->usize--;
+                lhsbuf_pushc(vm, buf, '\\');
+                lhsloadf_getc(loadf);
+                break;
+            }
+            default:
+            {
+                break;
+            }
+            }
         }
-        else if (lhsloadf_iseof(loadf))
+        else
+        {
+            lhsbuf_pushc(vm, buf, (char)loadf->current);
+            lhsloadf_getc(loadf);
+        }
+        
+        if (loadf->current == '\n' ||
+            lhsloadf_iseof(loadf))
         {
             lhserr_syntax
             (
                 vm, 
                 loadf, 
-                "<string> unexpected end of file."
+                "<string> unexpected end."
             );
-        }
+        } 
     } while (!lhsloadf_isquote(loadf));
     lhsloadf_getc(loadf);
     return LHS_TRUE;

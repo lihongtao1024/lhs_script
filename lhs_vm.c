@@ -14,7 +14,7 @@ static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
 {
     if ((void*)vm == (void*)o)
     {
-        printf("memory leak:[%llu] bytes\n", vm->nalloc - o->size);
+        printf("memory leak:[%llu] bytes.\n", vm->nalloc - o->size);
     }
 
     switch (o->type)

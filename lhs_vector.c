@@ -1,9 +1,10 @@
 #include "lhs_vector.h"
 #include "lhs_vm.h"
 
-#define LHS_VECTORSIZE           4
-#define lhsvector_castsize(v, x) ((x) * (v)->esize)
-#define lhsvector_castat(v, x)   ((char*)((v)->nodes) + lhsvector_castsize(v, x))
+#define LHS_VECTORSIZE                              4
+#define lhsvector_castsize(v, x)                    ((x) * (v)->esize)
+#define lhsvector_castat(v, x)                                       \
+((char*)((v)->nodes) + lhsvector_castsize(v, x))
 
 static int lhsvector_grow(void* vm, LHSVector* vector, 
     size_t osize, size_t nsize)

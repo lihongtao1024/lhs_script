@@ -47,13 +47,12 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 
 typedef struct LHSExprUnary
 {
-    struct LHSExprUnary* next;
     char unary;
+    struct LHSExprUnary* next;
 } LHSExprUnary;
 
 typedef struct LHSExprChain
 {
-    struct LHSExprChain* prev;
     char type;
     char symbol;
     char swap;
@@ -61,7 +60,6 @@ typedef struct LHSExprChain
     int column;
     int name;
     int nunary;
-    LHSExprUnary* unary;
     union
     {
         struct
@@ -77,15 +75,17 @@ typedef struct LHSExprChain
             int nret;
         } call;
         char b;
-        long long i;
         double n;
+        long long i;        
     } factor;
+    LHSExprUnary* unary;
+    struct LHSExprChain* prev;
 } LHSExprChain;
 
 typedef struct LHSExprState
 {
-    LHSExprChain* chain;
     LHSExprUnary* unary;
+    LHSExprChain* chain;
 } LHSExprState;
 
 typedef struct LHSIfState

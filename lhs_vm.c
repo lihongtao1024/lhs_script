@@ -12,8 +12,6 @@
 
 static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
 {
-    lhs_unused(ud);
-
     if ((void*)vm == (void*)o)
     {
         printf("memory leak:[%llu] bytes\n", vm->nalloc - o->size);
@@ -40,9 +38,9 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
     vm->top = 0;
     vm->ncallcontext = 0;
 
-    lhsslink_init(vm, allgc);
-    lhsslink_push(vm, allgc, &vm->gc, next);
-    lhsslink_init(vm, errorjmp);
+    lhslink_init(vm, allgc);
+    lhslink_forward(vm, allgc, &vm->gc, next);
+    lhslink_init(vm, errorjmp);
     lhshash_init(vm, &vm->shortstrhash, lhsvalue_hashstr, lhsvalue_equalstr, 16);
     lhshash_init(vm, &vm->conststrhash, lhsvar_hashvar, lhsvar_equalvar, 4);
     lhshash_init(vm, &vm->globalvars, lhsvar_hashvar, lhsvar_equalvar, 4);
@@ -100,7 +98,7 @@ LHSVM* lhsvm_create(lhsmem_new fn)
 {
     if (!fn)
     {
-        fn = lhsmem_default;
+        fn = lhsmem_alloc;
     }
 
     size_t size = sizeof(LHSVM);
@@ -122,7 +120,7 @@ void lhsvm_destroy(LHSVM* vm)
     lhsvector_uninit(vm, &vm->globalvalues);
     lhsvector_uninit(vm, &vm->stack);
     lhsbuf_uninit(vm, &vm->code);
-    lhsslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree, 0);
+    lhslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree, 0);
 }
 
 int lhsvm_dofile(LHSVM* vm, const char* name)
@@ -437,7 +435,7 @@ int lhsvm_setglobal(LHSVM* vm, const char* name)
 
     desc->line = 0;
     desc->column = 0;  
-    desc->index = (int)lhsvector_length(vm, &vm->globalvalues) - 1;
+    desc->index = (int)vm->globalvalues.usize - 1;
     desc->mark = LHS_MARKGLOBAL;
 
     lhshash_insert(vm, &vm->globalvars, desc, 0);

@@ -1,6 +1,5 @@
 #include "lhs_load.h"
 #include "lhs_frame.h"
-#include "lhs_execute.h"
 #include "lhs_error.h"
 
 char lhsloadf_symbol[] =
@@ -89,7 +88,7 @@ int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf)
         }
         else if (loadf->current == LHS_TOKENEOF)
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf,
@@ -119,7 +118,7 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double,
     lhsbuf_reset(vm, buf);
 
     int dot = 0;
-    *is_double = 0;
+    *is_double = LHS_FALSE;
     do
     {
         lhsbuf_pushc(vm, buf, (char)loadf->current);
@@ -130,23 +129,18 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double,
         }
     } while (lhsloadf_isdigit(loadf));
 
-    if (dot)
+    if (dot > 1)
     {
-        if (dot > 1)
-        {
-            lhserr_syntaxerr
-            (
-                vm, 
-                loadf,
-                "solving decimal '%s'.",
-                buf->data
-            );
-        }
-        else
-        {
-            *is_double = 1;
-        }
+        lhserr_syntax
+        (
+            vm, 
+            loadf,
+            "solving decimal '%s'.",
+            buf->data
+        );
     }
+
+    *is_double = dot ? LHS_TRUE : LHS_FALSE;
     return LHS_TRUE;
 };
 
@@ -159,9 +153,13 @@ int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
     {
         lhsbuf_pushc(vm, buf, (char)loadf->current);
         lhsloadf_getc(loadf);
-        if (lhsloadf_iseof(loadf))
+        if (loadf->current == '\n')
         {
-            lhserr_syntaxerr
+            lhsloadf_newline(loadf);
+        }
+        else if (lhsloadf_iseof(loadf))
+        {
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -204,8 +202,6 @@ int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname)
 
 void lhsloadf_uninit(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhs_unused(vm);
-
     if (loadf->file)
     {
         fclose(loadf->file);

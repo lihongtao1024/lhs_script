@@ -10,8 +10,7 @@
 #define LHS_TGC                 (5)
 #define LHS_SHORTSTRLEN         (48)
 #define lhsvalue_castvalue(ud)  ((LHSValue*)(ud))
-#define lhsvalue_caststring(ud) ((LHSString*)lhsgc_castgc((ud)))
-#define lhsvalue_isshortstr(s)  ((s)->length < LHS_SHORTSTRLEN)
+#define lhsvalue_caststring(ud) ((LHSString*)(ud))
 
 typedef struct LHSString
 {

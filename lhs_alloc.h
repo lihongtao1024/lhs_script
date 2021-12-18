@@ -7,7 +7,7 @@
 
 typedef void* (*lhsmem_new)(void*, void*, size_t, size_t);
 
-void* lhsmem_default(void* vm, void* original, size_t osize, 
+void* lhsmem_alloc(void* vm, void* original, size_t osize, 
     size_t nsize);
 
 void* lhsmem_newobject(void* vm, size_t size);

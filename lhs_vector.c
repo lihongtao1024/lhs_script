@@ -122,11 +122,6 @@ void* lhsvector_back(void* vm, LHSVector* vector)
     return lhsvector_castat(vector, vector->usize - 1);
 }
 
-size_t lhsvector_length(void* vm, LHSVector* vector)
-{
-    return vector->usize;
-}
-
 void lhsvector_foreach(void* vm, LHSVector* vector, 
     lhsvector_iterator iterator)
 {

@@ -8,7 +8,7 @@ printf(fmt##", description: %s.\n", __VA_ARGS__, strerror(errno))
 #define lhserr_msg(s)                                               \
 printf("%s\n", s)
 
-#define lhserr_syntaxerr(vm, lf, fmt, ...)                          \
+#define lhserr_syntax(vm, lf, fmt, ...)                             \
 lhserr_throw                                                        \
 (                                                                   \
     vm,                                                             \
@@ -30,6 +30,7 @@ lhserr_throw                                                        \
 
 typedef void (*protectedf)(void*, void*);
 typedef void (*protectedfex)(void*, void*, void*);
+
 typedef struct LHSError
 {
     struct LHSError* prev;
@@ -43,4 +44,4 @@ int lhserr_protectedcallex(void* vm, protectedfex fn, void* ud1, void* ud2);
 
 int lhserr_throw(void* vm, const char* fmt, ...);
 
-int lhserr_runtimeerr(void* vm, const void* desc, const char* fmt, ...);
+int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...);

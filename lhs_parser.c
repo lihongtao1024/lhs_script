@@ -199,7 +199,7 @@ LHSVar* lhsparser_insertconstant(LHSVM* vm, LHSLoadF* loadf)
 
     desc->line = loadf->line;
     desc->column = loadf->column;
-    desc->index = (int)lhsvector_length(vm, &vm->conststrs) - 1;
+    desc->index = (int)vm->conststrs.usize - 1;
     desc->mark = LHS_MARKSTRING;
 
     lhsvm_pop(vm, 1);
@@ -228,7 +228,7 @@ LHSVar* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
 
     desc->line = loadf->line;
     desc->column = loadf->column;
-    desc->index = (int)lhsvector_length(vm, &lhsframe_castcurframe(vm)->localvalues) - 1;
+    desc->index = (int)lhsframe_castcurframe(vm)->localvalues.usize - 1;
     desc->mark = LHS_MARKLOCAL;
     
     lhsvm_pop(vm, 1);
@@ -257,7 +257,7 @@ LHSVar* lhsparser_insertglobalvar(LHSVM* vm, LHSLoadF* loadf)
 
     desc->line = loadf->line;
     desc->column = loadf->column;    
-    desc->index = (int)lhsvector_length(vm, &vm->globalvalues) - 1;
+    desc->index = (int)vm->globalvalues.usize - 1;
     desc->mark = LHS_MARKGLOBAL;
 
     lhsvm_pop(vm, 1);
@@ -316,7 +316,7 @@ LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
     }
     default:
     {
-        lhserr_syntaxerr
+        lhserr_syntax
         (
             vm, 
             loadf, 
@@ -369,7 +369,7 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     {
         if (var->desc->mark != LHS_MARKGLOBAL)
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -407,7 +407,6 @@ static int lhsparser_initjmp(LHSVM* vm, LHSJmp* jmp)
 
 static int lhsparser_uninitjmp(LHSLexical* lex, LHSJmp* jmp, LHSVM *vm)
 {
-    lhs_unused(lex);
     lhsmem_freeobject(vm, jmp, sizeof(LHSJmp));
     return LHS_TRUE;
 }
@@ -415,14 +414,13 @@ static int lhsparser_uninitjmp(LHSLexical* lex, LHSJmp* jmp, LHSVM *vm)
 static int lhsparser_resetchunk(LHSVM* vm, LHSChunk* chunk)
 {
     chunk->index = 0;
-    lhsslink_init(chunk, next);
-    lhsslink_init(chunk, parent);
+    lhslink_init(chunk, next);
+    lhslink_init(chunk, parent);
     return LHS_TRUE;
 }
 
 static int lhsparser_uninitchunk(LHSLexical* lex, LHSChunk* chunk, LHSVM* vm)
 {
-    lhs_unused(lex);
     lhsmem_freeobject(vm, chunk, sizeof(LHSChunk));
     return LHS_TRUE;
 }
@@ -432,11 +430,11 @@ static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
     lex->token.t = LHS_TOKENEOF;
     lex->lookahead.t = LHS_TOKENEOF;
 
-    lhsslink_init(lex, alljmp);
-    lhsslink_init(lex, allchunk);
+    lhslink_init(lex, alljmp);
+    lhslink_init(lex, allchunk);
     lex->curchunk = lhsmem_newobject(vm, sizeof(LHSChunk));
     lhsparser_resetchunk(vm, lex->curchunk);
-    lhsslink_push(lex, allchunk, lex->curchunk, next);
+    lhslink_forward(lex, allchunk, lex->curchunk, next);
 
     lhsparser_castlex(loadf) = lex;
 
@@ -454,13 +452,13 @@ static int lhsparser_jmpsolve(LHSLexical* lex, LHSJmp* jmp, LHSVM* vm)
 
 static int lhsparser_lexicalsolve(LHSVM* vm, LHSLexical* lex)
 {
-    lhsslink_foreach(LHSJmp, lex, alljmp, next, lhsparser_jmpsolve, vm);
+    lhslink_foreach(LHSJmp, lex, alljmp, next, lhsparser_jmpsolve, vm);
     return LHS_TRUE;
 }
 
 static int lhsparser_uninitlexical(LHSVM* vm, LHSLoadF* loadf)
 {
-    lhsslink_foreach
+    lhslink_foreach
     (
         LHSJmp, 
         lhsparser_castlex(loadf), 
@@ -469,7 +467,7 @@ static int lhsparser_uninitlexical(LHSVM* vm, LHSLoadF* loadf)
         lhsparser_uninitjmp, 
         vm
     );
-    lhsslink_foreach
+    lhslink_foreach
     (
         LHSChunk,
         lhsparser_castlex(loadf),
@@ -664,7 +662,7 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
                 return LHS_TOKENEOF;
             }
 
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf,
@@ -709,7 +707,7 @@ static int lhsparser_checktoken(LHSVM* vm, LHSLoadF* loadf,
     {
         if (lhsparser_castlex(loadf)->token.t == LHS_TOKENEOF)
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -720,7 +718,7 @@ static int lhsparser_checktoken(LHSVM* vm, LHSLoadF* loadf,
         }
         else
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -741,7 +739,7 @@ static int lhsparser_checklookahead(LHSVM* vm, LHSLoadF* loadf,
     {
         if (lhsparser_castlex(loadf)->lookahead.t == LHS_TOKENEOF)
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -752,7 +750,7 @@ static int lhsparser_checklookahead(LHSVM* vm, LHSLoadF* loadf,
         }
         else
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -806,14 +804,14 @@ static int lhsparser_resetexprchain(LHSVM* vm, LHSExprChain* chain, LHSExprState
     chain->column = 0;
     chain->name = 0;
     chain->nunary = 0;
-    lhsslink_init(chain, unary);
+    lhslink_init(chain, unary);
     return LHS_TRUE;
 }
 
 static int lhsparser_initexprstate(LHSVM* vm, LHSExprState* state)
 {
     state->chain = 0;
-    lhsslink_init(state, unary);
+    lhslink_init(state, unary);
     return LHS_TRUE;
 }
 
@@ -825,7 +823,7 @@ static int lhsparser_uninitexprunary(LHSExprState* state, LHSExprUnary* unary, L
 
 static int lhsparser_uninitexprstate(LHSVM* vm, LHSExprState* state)
 {
-    lhsslink_foreach(LHSExprUnary, state, unary, next, lhsparser_uninitexprunary, vm);
+    lhslink_foreach(LHSExprUnary, state, unary, next, lhsparser_uninitexprunary, vm);
     return LHS_TRUE;
 }
 
@@ -833,11 +831,11 @@ static int lhsparser_resetifstate(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
 {
     state->branch = lhsmem_newobject(vm, sizeof(LHSJmp));
     lhsparser_initjmp(vm, state->branch);
-    lhsslink_push(lhsparser_castlex(loadf), alljmp, state->branch, next);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, state->branch, next);
 
     state->finish = lhsmem_newobject(vm, sizeof(LHSJmp));
     lhsparser_initjmp(vm, state->finish);
-    lhsslink_push(lhsparser_castlex(loadf), alljmp, state->finish, next);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, state->finish, next);
     return LHS_TRUE;
 }
 
@@ -845,11 +843,11 @@ static int lhsparser_resetfuncstate(LHSVM* vm, LHSLoadF* loadf, LHSFuncState* st
 {
     state->leave = 0;/* lhsmem_newobject(vm, sizeof(LHSJmp));
     lhsparser_initjmp(vm, state->leave);
-    lhsslink_push(lhsparser_castlex(loadf), alljmp, state->leave, next);*/
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, state->leave, next);*/
 
     state->finish = lhsmem_newobject(vm, sizeof(LHSJmp));
     lhsparser_initjmp(vm, state->finish);
-    lhsslink_push(lhsparser_castlex(loadf), alljmp, state->finish, next);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, state->finish, next);
     return LHS_TRUE;
 }
 
@@ -917,7 +915,7 @@ static lhsparser_exprunary(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     return LHS_TRUE;
 
 illegalunary:
-    lhserr_syntaxerr(vm, loadf, "illegal unary symbol '%s'.", 
+    lhserr_syntax(vm, loadf, "illegal unary symbol '%s'.", 
         symbols[chain->symbol]);
     return LHS_FALSE;
 }
@@ -1024,7 +1022,7 @@ static lhsparser_exproprll(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntaxerr(vm, loadf, "illegal expression symbol '%s'.", 
+        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
             symbols[prev->symbol]);
     }
     }
@@ -1104,7 +1102,7 @@ static lhsparser_exproprln(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntaxerr(vm, loadf, "illegal expression symbol '%s'.", 
+        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
             symbols[prev->symbol]);
     }
     }
@@ -1188,7 +1186,7 @@ static lhsparser_exproprnl(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntaxerr(vm, loadf, "illegal expression symbol '%s'.", 
+        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
             symbols[prev->symbol]);
     }
     }
@@ -1268,7 +1266,7 @@ static lhsparser_exproprnn(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntaxerr(vm, loadf, "illegal expression symbol '%s'.", 
+        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
             symbols[prev->symbol]);
     }
     }
@@ -1310,7 +1308,7 @@ static lhsparser_exproprbb(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntaxerr(vm, loadf, "illegal expression symbol '%s'.", 
+        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
             symbols[prev->symbol]);
     }
     }
@@ -1320,7 +1318,7 @@ static lhsparser_exproprbb(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 
 static lhsparser_exproprerr(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 {
-    lhserr_syntaxerr(vm, loadf, "illegal expression symbol '%s'.", 
+    lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
         symbols[chain->prev->symbol]);
 }
 
@@ -1333,7 +1331,6 @@ static lhsparser_expropr lhsparser_exproperations[][3] =
 
 static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 {
-    lhs_unused(loadf);
     switch (chain->type)
     {
     case LHS_EXPRINT:
@@ -1454,7 +1451,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     }
     case N:
     {
-        lhserr_syntaxerr
+        lhserr_syntax
         (
             vm,
             loadf,
@@ -1513,7 +1510,7 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         lhsvm_pop(vm, 1);
         if (var->desc->mark != LHS_MARKGLOBAL)
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -1620,7 +1617,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             LHSVar* var = lhsparser_recursionfindvar(vm, loadf);
             if (!var)
             {
-                lhserr_syntaxerr
+                lhserr_syntax
                 (
                     vm, 
                     loadf, 
@@ -1662,8 +1659,8 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 
             LHSExprUnary* unary = lhsmem_newobject(vm, sizeof(LHSExprUnary));
             unary->unary = op;
-            lhsslink_init(unary, next);
-            lhsslink_push(state, unary, unary, next);
+            lhslink_init(unary, next);
+            lhslink_forward(state, unary, unary, next);
 
             state->chain->unary = unary;
             state->chain->nunary++;
@@ -1674,7 +1671,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 
         if (token->t == LHS_TOKENEOF)
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -1684,7 +1681,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         }
         else
         {
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 
@@ -1706,7 +1703,7 @@ static int lhsparser_exprchain(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     LHSToken* token = &lhsparser_castlex(loadf)->token;
     if (lhsparser_isunarysymbol(token->t))
     {
-        lhserr_syntaxerr
+        lhserr_syntax
         (
             vm, 
             loadf, 
@@ -1789,7 +1786,7 @@ static int lhsparser_localstate(LHSVM* vm, LHSLoadF* loadf)
         if (lhsparser_recursionfindvar(vm, loadf))
         {
             lhsvm_pop(vm, 1);
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf,
@@ -1850,7 +1847,7 @@ static int lhsparser_globalstate(LHSVM* vm, LHSLoadF* loadf)
         if (lhsparser_recursionfindvar(vm, loadf))
         {
             lhsvm_pop(vm, 1);
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf,
@@ -2013,7 +2010,7 @@ static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
         if (lhsparser_recursionfindvar(vm, loadf))
         {
             lhsvm_pop(vm, 1);
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf,
@@ -2091,7 +2088,7 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
     {
         if (frame->nret == LHS_RETSULT)
         {
-            lhserr_syntaxerr(vm, loadf, "incorrect function return.");
+            lhserr_syntax(vm, loadf, "incorrect function return.");
         }
 
         frame->nret = LHS_VOID;
@@ -2101,7 +2098,7 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
 
     if (frame->nret == LHS_VOID)
     {
-        lhserr_syntaxerr(vm, loadf, "incorrect function return.");
+        lhserr_syntax(vm, loadf, "incorrect function return.");
     }
 
     lhsparser_exprstate(vm, loadf);
@@ -2176,7 +2173,7 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
         case '(':
         {
 syntaxerr:
-            lhserr_syntaxerr
+            lhserr_syntax
             (
                 vm, 
                 loadf, 

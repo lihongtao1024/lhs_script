@@ -4,12 +4,9 @@
 #include "lhs_value.h"
 #include "lhs_link.h"
 
-void* lhsmem_default(void* vm, void* original, size_t osize, 
+void* lhsmem_alloc(void* vm, void* original, size_t osize, 
     size_t nsize)
 {
-    lhs_unused(vm);
-    lhs_unused(osize);
-
     if (!nsize)
     {
         free(original);
@@ -53,6 +50,6 @@ LHSGCObject* lhsmem_newgcobject(void* vm, size_t size, int type)
 {
     LHSGCObject* o = lhsgc_castgc(lhsmem_newobject(lhsvm_castvm(vm), size));
     lhsmem_initgc(o, type, size); 
-    lhsslink_push(lhsvm_castvm(vm), allgc, o, next);
+    lhslink_forward(lhsvm_castvm(vm), allgc, o, next);
     return o;
 }

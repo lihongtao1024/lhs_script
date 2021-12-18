@@ -30,7 +30,7 @@ static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret,
 {
     if (vm->ncallcontext >= LHS_MAXCALLLAYER)
     {
-        lhserr_runtimeerr(vm, 0, "stack layer overflow.");
+        lhserr_runtime(vm, 0, "stack layer overflow.");
     }
 
     LHSCallContext* cc = lhsmem_newobject(vm, sizeof(LHSCallContext));
@@ -332,7 +332,7 @@ static int lhsexec_callframe(LHSVM* vm, LHSFrame* frame, int narg, int nret,
 {
     if (frame->narg != narg)
     {
-        lhserr_runtimeerr
+        lhserr_runtime
         (
             vm,
             desc,
@@ -404,7 +404,7 @@ static int lhsexec_call(LHSVM* vm)
     }
     default:
     {
-        lhserr_runtimeerr(vm, 0, "unexpected byte code.");
+        lhserr_runtime(vm, 0, "unexpected byte code.");
     }
     }
 
@@ -426,7 +426,7 @@ static int lhsexec_call(LHSVM* vm)
     }
     else
     {
-        lhserr_runtimeerr
+        lhserr_runtime
         (
             vm,
             desc,
@@ -514,7 +514,6 @@ lhsexec_instruct instructions[] =
 
 static int lhsexec_execute(LHSVM* vm, void* ud)
 {
-    lhs_unused(ud);
     while (LHS_TRUE)
     {
         LHSCallContext* cc = lhsexec_castcc(vm->callcontext);

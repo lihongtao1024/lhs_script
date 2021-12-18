@@ -46,11 +46,11 @@
 ++(lf)->line; (lf)->column = 0
 
 #define lhsloadf_isletter(lf)                       \
-(lhsloadf_symbol[(unsigned char)                  \
+(lhsloadf_symbol[(unsigned char)                    \
 ((lf)->current)] == SYMBOL_LETTER)
 
 #define lhsloadf_isdigit(lf)                        \
-(lhsloadf_symbol[(unsigned char)                  \
+(lhsloadf_symbol[(unsigned char)                    \
 ((lf)->current)] == SYMBOL_DIGIT)
 
 #define lhsloadf_isidentifier(lf)                   \
@@ -62,8 +62,6 @@
 #define lhsloadf_isright(lf)                        \
 ((lf)->lexical->token == LHS_TOKENIDENTIFIER)
 
-extern char lhsloadf_symbol[];
-
 typedef struct LHSLoadF
 {
     FILE* file;
@@ -72,6 +70,8 @@ typedef struct LHSLoadF
     int current;
     void* lexical;
 } LHSLoadF;
+
+extern char lhsloadf_symbol[];
 
 int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname);
 

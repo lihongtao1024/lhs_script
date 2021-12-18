@@ -27,8 +27,6 @@ void* lhsvector_increment(void* vm, LHSVector* vector);
 
 void* lhsvector_back(void* vm, LHSVector* vector);
 
-size_t lhsvector_length(void* vm, LHSVector* vector);
-
 void lhsvector_foreach(void* vm, LHSVector* vector, 
     lhsvector_iterator iterator);
 

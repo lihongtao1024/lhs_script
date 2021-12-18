@@ -567,6 +567,12 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
                 lhsloadf_getc(loadf);
                 return LHS_TOKENBLSHIFT;
             }
+            else if (loadf->current == '=')
+            {
+                lhsloadf_addsymbol(vm, loadf, buf);
+                lhsloadf_getc(loadf);
+                return LHS_TOKENLESSEQUAL;
+            }
             return '<';
         }
         case '>':
@@ -578,6 +584,12 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
                 lhsloadf_addsymbol(vm, loadf, buf);
                 lhsloadf_getc(loadf);
                 return LHS_TOKENBRSHIFT;
+            }
+            else if (loadf->current == '=')
+            {
+                lhsloadf_addsymbol(vm, loadf, buf);
+                lhsloadf_getc(loadf);
+                return LHS_TOKENGREATEQUAL;
             }
             return '>';
         }

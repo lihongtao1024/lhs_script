@@ -25,7 +25,7 @@ var global6 = global * (5 --11) + 38*/
 */
 
 set cc = 3.14
-print("\ttest\n\"¹þ¹þ¹þ\"\n")
+print("\ttest\n\"AAAA\"\n")
 
 print(test_print("aa'\"aa'\n\n", 12 / 6, 33 / 5))
 test_print("bbbb", 22, 44)
@@ -38,3 +38,10 @@ function test_print(x, y, z)
     //test_print(x, y, z)
     return xx
 }
+
+function fibonacci(x)
+{
+    print(x, x - -1)
+}
+
+fibonacci(50)

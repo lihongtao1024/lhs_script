@@ -401,7 +401,7 @@ static int lhsparser_initjmp(LHSVM* vm, LHSJmp* jmp)
 {
     jmp->pos = 0;
     jmp->len = 0;
-    jmp->next = 0;
+    lhslink_init(jmp, next);
     return LHS_TRUE;
 }
 
@@ -794,8 +794,7 @@ static int lhsparser_lookaheadtoken(LHSVM* vm, LHSLoadF* loadf)
 
 static int lhsparser_resetexprchain(LHSVM* vm, LHSExprChain* chain, LHSExprState* state)
 {
-    chain->prev = state->chain;
-    state->chain = chain;
+    lhslink_forward(state, chain, chain, prev);
 
     chain->symbol = SYMBOL_NONE;
     chain->swap = LHS_FALSE;

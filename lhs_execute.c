@@ -3,6 +3,7 @@
 #include "lhs_frame.h"
 #include "lhs_code.h"
 #include "lhs_error.h"
+#include "lhs_link.h"
 #include "lhs_vm.h"
 
 typedef int (*lhsexec_instruct)(LHSVM*);
@@ -30,7 +31,7 @@ static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret,
 {
     if (vm->ncallcontext >= LHS_MAXCALLLAYER)
     {
-        lhserr_runtime(vm, 0, "stack layer overflow.");
+        lhserr_runtime(vm, 0, "stack layers overflow.");
     }
 
     LHSCallContext* cc = lhsmem_newobject(vm, sizeof(LHSCallContext));
@@ -45,15 +46,24 @@ static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret,
     cc->line = 0;
     cc->column = 0;
     cc->refer = 0;
-    cc->parent = vm->callcontext;
 
-    vm->callcontext = cc;
+    lhslink_forward(vm, callcontext, cc, parent);
     vm->ncallcontext++;
     return cc;
 }
 
+#define LHS_TNONE               (0)
+#define LHS_TINTEGER            (1)
+#define LHS_TNUMBER             (2)
+#define LHS_TBOOLEAN            (3)
+#define LHS_TDELEGATE           (4)
+#define LHS_TGC                 (5)
+
 static int lhsexec_add(LHSVM* vm)
 {
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+
     lhserr_throw(vm, "aaaa");
     return LHS_TRUE;
 }
@@ -269,7 +279,7 @@ static int lhsexec_jmp(LHSVM* vm)
 {
     LHSCallContext* cc = vm->callcontext;
 
-    int i = lhsexec_i(cc);
+    long long i = lhsexec_i(cc);
     cc->ip = vm->code.data + i;
     return LHS_TRUE;
 }
@@ -319,9 +329,8 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg,
     vm->top = cc->base;
     cc->top = vm->top + 1;
 
-    LHSCallContext* prev = cc->parent;
-    prev->top = cc->top;
-    vm->callcontext = prev;
+    lhslink_back(vm, callcontext, cc, parent);
+    lhsexec_castcc(vm->callcontext)->top = cc->top;
 
     lhsmem_freeobject(vm, cc, sizeof(LHSCallContext));
     return LHS_TRUE;
@@ -443,47 +452,51 @@ static int lhsexec_call(LHSVM* vm)
 
 static int lhsexec_ret(LHSVM* vm)
 {
-    LHSCallContext* ccc = vm->callcontext;
+    LHSCallContext* cc = vm->callcontext;
 
-    LHSValue* result = lhsvector_at(vm, &vm->stack, ccc->base);
+    LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base);
     result->type = LHS_TNONE;
 
-    vm->top = ccc->base;
-    ccc->top = vm->top + 1;
+    vm->top = cc->base;
+    cc->top = vm->top + 1;
 
-    LHSCallContext* pcc = ccc->parent;
-    pcc->top = ccc->top;
-    pcc->ip = ccc->rp;
-    vm->callcontext = pcc;
+    lhslink_back(vm, callcontext, cc, parent);
+    lhsexec_castcc(vm->callcontext)->top = cc->top;
+    lhsexec_castcc(vm->callcontext)->ip = cc->rp;
 
-    lhsmem_freeobject(vm, ccc, sizeof(LHSCallContext));
-    lhsframe_setframe(vm, pcc->frame);
+    lhsmem_freeobject(vm, cc, sizeof(LHSCallContext));
+    lhsframe_setframe(vm, lhsexec_castcc(vm->callcontext)->frame);
     return LHS_TRUE;
 }
 
 static int lhsexec_ret1(LHSVM* vm)
 {
-    LHSCallContext* ccc = vm->callcontext;
+    LHSCallContext* cc = vm->callcontext;
 
-    LHSValue* result = lhsvector_at(vm, &vm->stack, ccc->base);
+    LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base);
     memcpy(result, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
 
-    vm->top = ccc->base;
-    ccc->top = vm->top + 1;
+    vm->top = cc->base;
+    cc->top = vm->top + 1;
 
-    LHSCallContext* pcc = ccc->parent;
-    pcc->top = ccc->top;
-    pcc->ip = ccc->rp;
-    vm->callcontext = pcc;
+    lhslink_back(vm, callcontext, cc, parent);
+    lhsexec_castcc(vm->callcontext)->top = cc->top;
+    lhsexec_castcc(vm->callcontext)->ip = cc->rp;
 
-    lhsmem_freeobject(vm, ccc, sizeof(LHSCallContext));
-    lhsframe_setframe(vm, pcc->frame);
+    lhsmem_freeobject(vm, cc, sizeof(LHSCallContext));
+    lhsframe_setframe(vm, lhsexec_castcc(vm->callcontext)->frame);
     return LHS_TRUE;
 }
 
 static int lhsexec_swap(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+
+    LHSValue value;
+    memcpy(&value, lvalue, sizeof(LHSValue));
+    memcpy((void*)lvalue, rvalue, sizeof(LHSValue));
+    memcpy((void*)rvalue, &value, sizeof(LHSValue));
     return LHS_TRUE;
 }
 

@@ -1199,10 +1199,7 @@ static int lhsexec_call(LHSVM* vm)
             vm,
             desc,
             "expected 'function', got '%s'",
-            lhsvalue_typename
-            [
-                func->type == LHS_TGC ? LHS_TGC + func->gc->type : func->type
-            ]
+            lhsvalue_typename[lhsexec_valuetype(func)]
         );
     }
 

@@ -109,9 +109,9 @@ static int lhsparser_exprsub(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state);
 
 static const char* reserveds[] =
 {
-    "", "set", "var", "function", "for", "while",
-    "if", "else", "switch", "case", "default", 
-    "break", "continue", "true", "false", "return"
+    "", "set", "var", "function", "for", 
+    "while", "if", "else", "do", "break", 
+    "continue", "true", "false", "return"
 };
 
 static const char* symbols[] =

@@ -67,6 +67,7 @@ double lhsvm_tonumber(LHSVM* vm, int index);
 
 long long lhsvm_tointeger(LHSVM* vm, int inex);
 
-const LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l);
-
 void lhsvm_destroy(LHSVM* vm);
+
+const LHSString* lhsvm_insertshortstr(LHSVM* vm, const char* str,
+    size_t l, int reserved);

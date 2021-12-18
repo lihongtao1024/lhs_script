@@ -52,41 +52,7 @@ void lhsmem_freeobject(void* vm, void* data, size_t size)
 LHSGCObject* lhsmem_newgcobject(void* vm, size_t size, int type)
 {
     LHSGCObject* o = lhsgc_castgc(lhsmem_newobject(lhsvm_castvm(vm), size));
-    lhsmem_initgc(o, type, size);   
-
+    lhsmem_initgc(o, type, size); 
     lhsslink_push(lhsvm_castvm(vm), allgc, o, next);
     return o;
-}
-
-LHSGCObject* lhsmem_newgclstring(void* vm, void* data, size_t l, int extra)
-{
-    int is_short = (l < LHS_SHORTSTRLEN);
-    LHSString* str = 0;
-    if (is_short)
-    {
-        str = lhsvalue_caststring
-        (
-            lhsmem_newgcobject(vm, sizeof(LHSShortString), LHS_TGCSTRING)
-        );     
-    }
-    else
-    {
-        str = lhsvalue_caststring
-        (
-            lhsmem_newgcobject(vm, sizeof(LHSString) + l + 1, LHS_TGCSTRING)
-        );
-    }
-
-    str->reserved = extra;
-    str->data[l] = 0;
-    str->length = (int)l;
-    str->hash = 0;
-    memcpy(str->data, data, l);
-
-    if (is_short)
-    {
-        lhshash_insert(vm, &lhsvm_castvm(vm)->shortstrhash, str, &str->hash);
-    }
-
-    return lhsgc_castgc(str);
 }

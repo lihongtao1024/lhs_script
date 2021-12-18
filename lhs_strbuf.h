@@ -51,8 +51,4 @@ int lhsbuf_topfp(void* vm, LHSSTRBUF* buf, double** n);
 
 int lhsbuf_popf(void* vm, LHSSTRBUF* buf, double* n);
 
-int lhsbuf_isshort(void* vm, LHSSTRBUF* buf);
-
-int lhsbuf_isempty(void* vm, LHSSTRBUF* buf);
-
 void lhsbuf_uninit(void* vm, LHSSTRBUF* buf);

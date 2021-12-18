@@ -8,7 +8,7 @@
 #define LHS_TBOOLEAN            (3)
 #define LHS_TDELEGATE           (4)
 #define LHS_TGC                 (5)
-#define LHS_SHORTSTRLEN         (40)
+#define LHS_SHORTSTRLEN         (48)
 #define lhsvalue_castvalue(ud)  ((LHSValue*)(ud))
 #define lhsvalue_caststring(ud) ((LHSString*)lhsgc_castgc((ud)))
 #define lhsvalue_isshortstr(s)  ((s)->length < LHS_SHORTSTRLEN)

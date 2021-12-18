@@ -218,16 +218,6 @@ int lhsbuf_popf(void* vm, LHSSTRBUF* buf, double* n)
     return LHS_TRUE;
 }
 
-int lhsbuf_isshort(void* vm, LHSSTRBUF* buf)
-{
-    return buf->usize < LHS_SHORTSTRLEN;
-}
-
-int lhsbuf_isempty(void* vm, LHSSTRBUF* buf)
-{
-    return !buf->usize;
-}
-
 void lhsbuf_uninit(void* vm, LHSSTRBUF* buf)
 {
     if (buf->data != buf->buf)

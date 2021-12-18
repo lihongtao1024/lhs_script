@@ -158,16 +158,13 @@ static int lhsparser_initreserved(LHSVM* vm)
 {
     for (int i = 0; i < _countof(reserveds); ++i)
     {
-        LHSString* str = lhsvalue_caststring
+        lhsvm_insertshortstr
         (
-            lhsmem_newgcstring
-            (
-                vm, 
-                (void*)reserveds[i], 
-                i + LHS_TOKENRESERVEDBEGIN
-            )
+            vm, 
+            reserveds[i], 
+            strlen(reserveds[i]), 
+            i + LHS_TOKENRESERVEDBEGIN
         );
-        lhshash_insert(vm, &vm->shortstrhash, str, &str->hash);
     }
 
     return LHS_TRUE;
@@ -176,30 +173,34 @@ static int lhsparser_initreserved(LHSVM* vm)
 LHSVar* lhsparser_insertconstant(LHSVM* vm, LHSLoadF* loadf)
 {
     const LHSValue* key = lhsvm_getvalue(vm, -1);
-    LHSVarDesc* ndesc = lhsmem_newobject(vm, sizeof(LHSVarDesc));
-    ndesc->chunk = 0;
-    ndesc->name = lhsvalue_caststring(key->gc);
 
-    LHSVarDesc* odesc = lhshash_find(vm, &vm->conststrhash, ndesc);
+    LHSVarDesc fdesc;
+    fdesc.chunk = 0;
+    fdesc.name = lhsvalue_caststring(key->gc);
+
+    LHSVarDesc* odesc = lhshash_find(vm, &vm->conststrhash, &fdesc);
     if (odesc)
     {
-        lhsmem_freeobject(vm, ndesc, sizeof(LHSVarDesc));
         lhsvm_pop(vm, 1);
         return lhsvector_at(vm, &vm->conststrs, odesc->index);
     }
 
-    lhsmem_initgc(lhsgc_castgc(&ndesc->gc), LHS_TGCFULLDATA, sizeof(LHSVarDesc));
-    lhsslink_push(lhsvm_castvm(vm), allgc, lhsgc_castgc(&ndesc->gc), next);
-    lhshash_insert(vm, &vm->conststrhash, ndesc, 0);
+    LHSVarDesc* desc = lhsvar_castvardesc
+    (
+        lhsmem_newgcobject(vm, sizeof(LHSVarDesc), LHS_TGCFULLDATA)
+    );
+    desc->chunk = fdesc.chunk;
+    desc->name = fdesc.name;
+    lhshash_insert(vm, &vm->conststrhash, desc, 0);
 
     LHSVar* var = lhsvector_increment(vm, &vm->conststrs);
     memcpy(&var->value, key, sizeof(LHSValue));
-    var->desc = ndesc;
+    var->desc = desc;
 
-    ndesc->line = loadf->line;
-    ndesc->column = loadf->column;
-    ndesc->index = (int)lhsvector_length(vm, &vm->conststrs) - 1;
-    ndesc->mark = LHS_MARKSTRING;
+    desc->line = loadf->line;
+    desc->column = loadf->column;
+    desc->index = (int)lhsvector_length(vm, &vm->conststrs) - 1;
+    desc->mark = LHS_MARKSTRING;
 
     lhsvm_pop(vm, 1);
     return var;
@@ -266,22 +267,20 @@ LHSVar* lhsparser_insertglobalvar(LHSVM* vm, LHSLoadF* loadf)
 LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
 {
     const LHSValue* key = lhsvm_getvalue(vm, -1);
-    LHSVarDesc* ndesc = lhsvar_castvardesc
-    (
-        lhsmem_newobject(vm, sizeof(LHSVarDesc))
-    );
-    ndesc->chunk = lhsparser_castlex(loadf)->curchunk->index;
-    ndesc->name = lhsvalue_caststring(key->gc);
 
-    const LHSVarDesc* odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, ndesc);
+    LHSVarDesc fdesc;
+    fdesc.chunk = lhsparser_castlex(loadf)->curchunk->index;
+    fdesc.name = lhsvalue_caststring(key->gc);
+
+    const LHSVarDesc* odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, &fdesc);
     if (!odesc)
     {
         for (LHSChunk* chunk = lhsparser_castlex(loadf)->curchunk->parent; 
              chunk; 
              chunk = chunk->parent)
         {
-            ndesc->chunk = chunk->index;
-            odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, ndesc);
+            fdesc.chunk = chunk->index;
+            odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, &fdesc);
             if (odesc)
             {
                 break;
@@ -290,12 +289,11 @@ LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
 
         if (!odesc)
         {
-            ndesc->chunk = 0;
-            odesc = lhshash_find(vm, &vm->globalvars, ndesc);
+            fdesc.chunk = 0;
+            odesc = lhshash_find(vm, &vm->globalvars, &fdesc);
         }
     }
 
-    lhsmem_freeobject(vm, ndesc, sizeof(LHSVarDesc));
     lhsvm_pop(vm, 1);
 
     if (!odesc)
@@ -647,14 +645,16 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
             if (lhsloadf_isletter(loadf))
             {
                 lhsloadf_saveidentifier(vm, loadf, buf);
-                if (lhsbuf_isshort(vm, buf))
+                if (buf->usize < LHS_SHORTSTRLEN)
                 {
-                    const LHSString* str = lhsvm_findshort(vm, 
-                        buf->data, buf->usize);
-                    if (str && str->reserved)
-                    {
-                        return str->reserved;
-                    }
+                    const LHSString* str = lhsvm_insertshortstr
+                    (
+                        vm, 
+                        buf->data, 
+                        buf->usize, 
+                        0
+                    );
+                    return str->reserved ? str->reserved : LHS_TOKENIDENTIFIER;
                 }
                 return LHS_TOKENIDENTIFIER;
             }

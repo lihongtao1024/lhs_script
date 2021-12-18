@@ -48,8 +48,36 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
     lhshash_init(vm, &vm->globalvars, lhsvar_hashvar, lhsvar_equalvar, 4);
     lhsvector_init(vm, &vm->conststrs, sizeof(LHSVar), 4);
     lhsvector_init(vm, &vm->globalvalues, sizeof(LHSVar), 4);
-    lhsvector_init(vm, &vm->stack, sizeof(LHSValue), 32);
+    lhsvector_init(vm, &vm->stack, sizeof(LHSValue), 16);
     lhsbuf_init(vm, &vm->code);
+}
+
+const LHSString* lhsvm_insertshortstr(LHSVM* vm, const char* str, 
+    size_t l, int reserved)
+{
+    lhserr_check(vm, l < LHS_SHORTSTRLEN, "illegal size of short string.");
+
+    LHSShortString fs;
+    memcpy(fs.data, str, l);
+    fs.data[l] = 0;
+    fs.length = (int)l;  
+
+    LHSString* ss = lhshash_find(vm, &vm->shortstrhash, &fs);
+    if (ss)
+    {
+        return ss;
+    }
+
+    ss = lhsvalue_caststring
+    (
+        lhsmem_newgcobject(vm, sizeof(LHSShortString), LHS_TGCSTRING)
+    );
+    memcpy(ss->data, str, l);
+    ss->data[l] = 0;
+    ss->length = (int)l;
+    ss->reserved = reserved;    
+    lhshash_insert(vm, &vm->shortstrhash, ss, &ss->hash);
+    return ss;
 }
 
 LHSValue* lhsvm_incrementstack(LHSVM* vm)
@@ -142,22 +170,29 @@ int lhsvm_pushvalue(LHSVM* vm, int index)
 
 int lhsvm_pushlstring(LHSVM* vm, const char* str, size_t l)
 {
-    const LHSString* string = 0;
+    LHSString* string = 0;
     if (l < LHS_SHORTSTRLEN)
-    {
-        const LHSString* ostring = lhsvm_findshort(vm, (void*)str, l);
-        if (ostring)
-        {
-            string = ostring;
-        }
-    }
-    
-    if (!string)
     {
         string = lhsvalue_caststring
         (
-            lhsmem_newgclstring(vm, (void*)str, l, 0)
+            lhsvm_insertshortstr(vm, (void*)str, (char)l, 0)
         );
+    }
+    else
+    {
+        string = lhsvalue_caststring
+        (
+            lhsmem_newgcobject
+            (
+                vm, 
+                sizeof(LHSString) + l + sizeof(char), 
+                LHS_TGCSTRING
+            )
+        );
+        memcpy(string->data, str, l);
+        string->data[l] = 0;
+        string->length = (int)l;
+        string->reserved = 0;
     }
 
     LHSValue* value = lhsvm_incrementstack(vm);
@@ -361,15 +396,6 @@ long long lhsvm_tointeger(LHSVM* vm, int index)
     return 0;
 }
 
-const LHSString* lhsvm_findshort(LHSVM* vm, void* data, size_t l)
-{
-    LHSShortString ss;
-    ss.length = (int)l;
-    memcpy(ss.data, data, l);
-
-    return lhshash_find(vm, &vm->shortstrhash, &ss);
-}
-
 int lhsvm_gettop(LHSVM* vm)
 {
     if (!vm->callcontext)
@@ -385,40 +411,36 @@ int lhsvm_setglobal(LHSVM* vm, const char* name)
     const LHSValue* value = lhsvm_getvalue(vm, -1);
     lhsvm_pushstring(vm, name);
 
-    LHSVarDesc* ndesc = lhsvar_castvardesc
-    (
-        lhsmem_newobject
-        (
-            vm, 
-            sizeof(LHSVarDesc)
-        )
-    );
-    ndesc->chunk = 0;
-    ndesc->name = lhsvalue_caststring(lhsvm_getvalue(vm, -1)->gc);
+    LHSVarDesc fdesc;
+    fdesc.chunk = 0;
+    fdesc.name = lhsvalue_caststring(lhsvm_getvalue(vm, -1)->gc);
 
-    LHSVarDesc* odesc = lhshash_find(vm, &vm->globalvars, ndesc);
-    if (odesc)
+    LHSVarDesc* desc = lhshash_find(vm, &vm->globalvars, &fdesc);
+    if (desc)
     {
-        lhsmem_freeobject(vm, ndesc, sizeof(LHSVarDesc));
-        LHSVar* var = lhsvector_at(vm, &vm->globalvalues, odesc->index);
+        LHSVar* var = lhsvector_at(vm, &vm->globalvalues, desc->index);
         memcpy(&var->value, value, sizeof(LHSValue));
         lhsvm_pop(vm, 2);
         return LHS_TRUE;
     }
 
-    lhsmem_initgc(&ndesc->gc, LHS_TGCFULLDATA, sizeof(LHSVarDesc));
-    lhsslink_push(vm, allgc, &ndesc->gc, next);
+    desc = lhsvar_castvardesc
+    (
+        lhsmem_newgcobject(vm, sizeof(LHSVarDesc), LHS_TGCFULLDATA)
+    );
+    desc->chunk = fdesc.chunk;
+    desc->name = fdesc.name;
 
     LHSVar *var = lhsvector_increment(vm, &vm->globalvalues);
     memcpy(&var->value, value, sizeof(LHSValue));
-    var->desc = ndesc;
+    var->desc = desc;
 
-    ndesc->line = 0;
-    ndesc->column = 0;  
-    ndesc->index = (int)lhsvector_length(vm, &vm->globalvalues) - 1;
-    ndesc->mark = LHS_MARKGLOBAL;
+    desc->line = 0;
+    desc->column = 0;  
+    desc->index = (int)lhsvector_length(vm, &vm->globalvalues) - 1;
+    desc->mark = LHS_MARKGLOBAL;
 
-    lhshash_insert(vm, &vm->globalvars, ndesc, 0);
+    lhshash_insert(vm, &vm->globalvars, desc, 0);
     lhsvm_pop(vm, 2);
     return LHS_TRUE;
 }

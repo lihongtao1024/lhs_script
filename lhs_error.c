@@ -2,13 +2,13 @@
 #include "lhs_frame.h"
 #include "lhs_variable.h"
 #include "lhs_execute.h"
+#include "lhs_link.h"
 #include "lhs_vm.h"
 
 int lhserr_protectedcall(void* vm, protectedf fn, void* udata)
 {
     LHSError jmp;
-    jmp.prev = lhsvm_castvm(vm)->errorjmp;
-    lhsvm_castvm(vm)->errorjmp = &jmp;
+    lhslink_forward(lhsvm_castvm(vm), errorjmp, &jmp, prev);
 
     jmp.errcode = setjmp(jmp.buf);
     if (!jmp.errcode)
@@ -16,15 +16,14 @@ int lhserr_protectedcall(void* vm, protectedf fn, void* udata)
         fn(vm, udata);
     }
 
-    lhsvm_castvm(vm)->errorjmp = jmp.prev;
+    lhslink_back(lhsvm_castvm(vm), errorjmp, &jmp, prev);
     return jmp.errcode;
 }
 
 int lhserr_protectedcallex(void* vm, protectedfex fn, void* ud1, void* ud2)
 {
     LHSError jmp;
-    jmp.prev = lhsvm_castvm(vm)->errorjmp;
-    lhsvm_castvm(vm)->errorjmp = &jmp;
+    lhslink_forward(lhsvm_castvm(vm), errorjmp, &jmp, prev);
 
     jmp.errcode = setjmp(jmp.buf);
     if (!jmp.errcode)
@@ -32,7 +31,7 @@ int lhserr_protectedcallex(void* vm, protectedfex fn, void* ud1, void* ud2)
         fn(vm, ud1, ud2);
     }
 
-    lhsvm_castvm(vm)->errorjmp = jmp.prev;
+    lhslink_back(lhsvm_castvm(vm), errorjmp, &jmp, prev);
     return jmp.errcode;
 }
 

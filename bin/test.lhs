@@ -23,7 +23,7 @@ var global6 = global * (5 --11) + 38*/
     return 6
 }
 */
-
+/*
 set cc = 3.14
 print("\ttest\n\"AAAA\"\n")
 
@@ -38,10 +38,44 @@ function test_print(x, y, z)
     //test_print(x, y, z)
     return xx
 }
-
+*/
+/*
 function fibonacci(x)
 {
-    print(x, x - -1)
+    if (x)
+    {
+        return 1
+    }
+    
+    return fibonacci(x - 1) + fibonacci(x - 2)
 }
 
-fibonacci(50)
+print(fibonacci(0))
+print(fibonacci(1))
+print(fibonacci(2))
+print(fibonacci(3))
+print(fibonacci(4))
+*/
+
+function test(x)
+{
+    x = x + 5
+    if (x > 5)
+    {
+        print(x, ">5")
+    }
+    else if (x > 3)
+    {
+        print(x, ">3")
+    }
+    else
+    {
+        print(x)
+    }
+
+    x = x / 5
+}
+
+test(0)
+test(3)
+test(-5)

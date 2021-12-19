@@ -44,7 +44,8 @@ int lhscode_dmpcode(LHSVM* vm)
 		char op = lhscode_c(head);
 		int line = lhscode_i(head);
 		int column = lhscode_i(head);
-		LHSVar* name = lhsvector_at(vm, &vm->conststrs, lhscode_i(head));
+		int name = lhscode_i(head);
+		LHSVar* refer = lhsvector_at(vm, &vm->conststrs, name);
 
 		switch (op)
 		{
@@ -97,7 +98,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				index2,
 				line,
 				column,
-				name->desc->name->data
+				refer->desc->name->data
 			);
 			break;
 		}
@@ -114,7 +115,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				index,
 				line,
 				column,
-				name->desc->name->data
+				refer->desc->name->data
 			);
 			break;
 		}
@@ -138,7 +139,7 @@ int lhscode_dmpcode(LHSVM* vm)
 					index,
 					line,
 					column,
-					name->desc->name->data
+					refer->desc->name->data
 				);
 				break;
 			}
@@ -153,7 +154,7 @@ int lhscode_dmpcode(LHSVM* vm)
 					l,
 					line,
 					column,
-					name->desc->name->data
+					refer->desc->name->data
 				);
 				break;
 			}
@@ -168,7 +169,7 @@ int lhscode_dmpcode(LHSVM* vm)
 					n,
 					line,
 					column,
-					name->desc->name->data
+					refer->desc->name->data
 				);
 				break;
 			}
@@ -183,7 +184,7 @@ int lhscode_dmpcode(LHSVM* vm)
 					b ? "true" : "false",
 					line,
 					column,
-					name->desc->name->data
+					refer->desc->name->data
 				);
 				break;
 			}
@@ -208,7 +209,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				(void*)l,
 				line,
 				column,
-				name->desc->name->data
+				refer->desc->name->data
 			);
 			break;
 		}
@@ -229,7 +230,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				retn,
 				line,
 				column,
-				name->desc->name->data
+				refer->desc->name->data
 			);
 			break;
 		}
@@ -242,12 +243,12 @@ int lhscode_dmpcode(LHSVM* vm)
 				opname[op],
 				line,
 				column,
-				name->desc->name->data
+				refer->desc->name->data
 			);
 			break;
 		}
 		}
 	}
-
+	printf("\n\n\n");
 	return LHS_TRUE;
 }

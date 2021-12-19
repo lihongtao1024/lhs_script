@@ -61,6 +61,7 @@ typedef struct LHSChunk
 
 typedef struct LHSLexical
 {
+    int chunkid;
     LHSToken token;
     LHSToken lookahead;
     LHSJmp* alljmp;

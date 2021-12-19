@@ -6,44 +6,56 @@
 #include "lhs_code.h"
 #include "lhs_error.h"
 
-#define G                         (1)
-#define L                         (0)
-#define N                         (-1)
-#define E                         (2)
-#define LHS_EXPRIMMED             (16)
-#define LHS_EXPRREF               (32)
-#define LHS_EXPRNONE              (0)
-#define LHS_EXPRINT               (1 | LHS_EXPRIMMED)
-#define LHS_EXPRNUM               (2 | LHS_EXPRIMMED)
-#define LHS_EXPRBOOLEAN           (3 | LHS_EXPRIMMED)
-#define LHS_EXPRSTR               (4 | LHS_EXPRREF)
-#define LHS_EXPRCALL              (5)
-#define LHS_EXPRRAW(t)            ((t) & (LHS_EXPRIMMED - 1) - 1)
+#define G                                     (1)
+#define L                                     (0)
+#define N                                     (-1)
+#define E                                     (2)
+#define LHS_EXPRIMMED                         (16)
+#define LHS_EXPRREF                           (32)
+#define LHS_EXPRNONE                          (0)
+#define LHS_EXPRINT                           (1 | LHS_EXPRIMMED)
+#define LHS_EXPRNUM                           (2 | LHS_EXPRIMMED)
+#define LHS_EXPRBOOLEAN                       (3 | LHS_EXPRIMMED)
+#define LHS_EXPRSTR                           (4 | LHS_EXPRREF)
+#define LHS_EXPRCALL                          (5)
+#define LHS_EXPRRAW(t)                        ((t) & (LHS_EXPRIMMED - 1) - 1)
 
-#define lhsparser_issymbol(t)                                       \
-(((t) & ~UCHAR_MAX) ?                                               \
- ((t) > LHS_TOKENSYMBOLBEGIN &&                                     \
-  (t) < LHS_TOKENSYMBOLEND) :                                       \
-(lhsloadf_symbol[(t)] > SYMBOL_BEGIN &&                             \
+#define lhsparser_issymbol(t)                                               \
+(((t) & ~UCHAR_MAX) ?                                                       \
+ ((t) > LHS_TOKENSYMBOLBEGIN &&                                             \
+  (t) < LHS_TOKENSYMBOLEND) :                                               \
+(lhsloadf_symbol[(t)] > SYMBOL_BEGIN &&                                     \
  lhsloadf_symbol[(t)] < SYMBOL_END))
 
-#define lhsparser_istokensymbol(lf)                                 \
+#define lhsparser_istokensymbol(lf)                                         \
 lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 
-#define lhsparser_isunarysymbol(s)                                  \
+#define lhsparser_isunarysymbol(s)                                          \
 ((s) == SYMBOL_NOT || (s) == SYMBOL_NOTB || (s) == SYMBOL_MINUS)
 
-#define lhsparser_islbracket(lf)                                    \
+#define lhsparser_islbracket(lf)                                            \
 (lhsparser_castlex(lf)->token.t == '(')
 
-#define lhsparser_truncate(t)                                       \
-(((t) & ~UCHAR_MAX) ?                                               \
- ((t) & UCHAR_MAX) :                                                \
+#define lhsparser_truncate(t)                                               \
+(((t) & ~UCHAR_MAX) ?                                                       \
+ ((t) & UCHAR_MAX) :                                                        \
  lhsloadf_symbol[t])
 
-#define lhsparser_isyield(lf, n)                                    \
-(lhsparser_castlex(lf)->token.t == LHS_TOKENEOF ||                  \
+#define lhsparser_isyield(lf, n)                                            \
+(lhsparser_castlex(lf)->token.t == LHS_TOKENEOF ||                          \
  ((n) && lhsparser_castlex(lf)->token.t == '}'))
+
+#define lhsparser_chunkforward(vm, lf)                                      \
+{                                                                           \
+    LHSChunk* chunk = lhsmem_newobject((vm), sizeof(LHSChunk));             \
+    lhsparser_resetchunk((vm), lf, chunk);                                  \
+    lhslink_forward(lhsparser_castlex(lf), curchunk, chunk, parent);        \
+    lhslink_forward(lhsparser_castlex(lf), allchunk, chunk, next);          \
+}
+
+#define lhsparser_chunkback(vm, lf)                                         \
+lhslink_back(lhsparser_castlex(lf), curchunk,                               \
+    lhsparser_castlex(lf)->curchunk, parent)
 
 typedef struct LHSExprUnary
 {
@@ -411,9 +423,9 @@ static int lhsparser_uninitjmp(LHSLexical* lex, LHSJmp* jmp, LHSVM *vm)
     return LHS_TRUE;
 }
 
-static int lhsparser_resetchunk(LHSVM* vm, LHSChunk* chunk)
+static int lhsparser_resetchunk(LHSVM* vm, LHSLoadF* loadf, LHSChunk* chunk)
 {
-    chunk->index = 0;
+    chunk->index = ++lhsparser_castlex(loadf)->chunkid;
     lhslink_init(chunk, next);
     lhslink_init(chunk, parent);
     return LHS_TRUE;
@@ -427,16 +439,16 @@ static int lhsparser_uninitchunk(LHSLexical* lex, LHSChunk* chunk, LHSVM* vm)
 
 static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 {
+    lhsparser_castlex(loadf) = lex;
+
+    lex->chunkid = 0;
     lex->token.t = LHS_TOKENEOF;
     lex->lookahead.t = LHS_TOKENEOF;
 
     lhslink_init(lex, alljmp);
+    lhslink_init(lex, curchunk);
     lhslink_init(lex, allchunk);
-    lex->curchunk = lhsmem_newobject(vm, sizeof(LHSChunk));
-    lhsparser_resetchunk(vm, lex->curchunk);
-    lhslink_forward(lex, allchunk, lex->curchunk, next);
-
-    lhsparser_castlex(loadf) = lex;
+    lhsparser_chunkforward(vm, loadf);
 
     lhsbuf_init(vm, &lex->token.buf);
     lhsbuf_init(vm, &lex->lookahead.buf);
@@ -1912,7 +1924,10 @@ static int lhsparser_blockstate(LHSVM* vm, LHSLoadF* loadf)
         return LHS_TRUE;
     }
 
+    lhsparser_chunkforward(vm, loadf);
     lhsparser_statement(vm, loadf, LHS_TRUE);
+    lhsparser_chunkback(vm, loadf);
+
     lhsparser_checkandnexttoken(vm, loadf, '}', "block", "}");
     return LHS_TRUE;
 }
@@ -1920,10 +1935,16 @@ static int lhsparser_blockstate(LHSVM* vm, LHSLoadF* loadf)
 int lhsparser_iftrue(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
 {
     /*iftrue -> blockstate*/
+    lhscode_op2(vm, OP_JZ, loadf->line, loadf->column, 
+        lhsframe_castcurframe(vm)->name);
+    lhscode_index(vm, 0);
     state->branch->pos = vm->code.usize;
     
     lhsparser_blockstate(vm, loadf);
 
+    lhscode_op2(vm, OP_JMP, loadf->line, loadf->column,
+        lhsframe_castcurframe(vm)->name);
+    lhscode_index(vm, 0);
     state->finish->pos = vm->code.usize;
     return LHS_TRUE;
 }

@@ -69,7 +69,7 @@
     lhsbuf_pushi((vm), &(vm)->code, (v));               \
 }
 
-#define lhscode_op1(vm, s, c)                            \
+#define lhscode_op1(vm, s, c)                           \
 {                                                       \
     lhsbuf_pushc((vm), &(vm)->code, (s));               \
     lhsbuf_pushi((vm), &(vm)->code, (c)->line);         \

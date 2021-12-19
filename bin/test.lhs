@@ -62,15 +62,30 @@ function test(x)
     x = x + 5
     if (x > 5)
     {
-        print(x, ">5")
+        var y = 10
+        print(x + y, ">5")
     }
     else if (x > 3)
     {
-        print(x, ">3")
+        var y = "aaa"
+        print(x, y, ">3")
+        if (x > 10)
+        {
+            print(">10")
+        }
+        else
+        {
+            print("<10")
+        }
+        print("step")
     }
     else
     {
         print(x)
+        if (x == 0)
+        {
+            print("==0")
+        }
     }
 
     x = x / 5

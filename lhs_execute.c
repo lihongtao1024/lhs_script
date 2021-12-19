@@ -904,6 +904,16 @@ static int lhsexec_mov(LHSVM* vm)
         rvalue = (LHSValue*)lhsvm_getvalue(vm, lhsexec_i(cc));
         break;
     }
+    case LHS_MARKSTRING:
+    {
+        rvalue = lhsvector_at
+        (
+            vm,
+            &vm->conststrs,
+            lhsexec_i(cc)
+        );
+        break;
+    }
     default:
     {
         lhserr_runtime(vm, 0, "illegal assignment operation.");
@@ -1043,15 +1053,71 @@ static int lhsexec_jmp(LHSVM* vm)
     return LHS_TRUE;
 }
 
+static int lhsexec_istrue(const LHSValue* value)
+{
+    int istrue = LHS_TRUE;
+    switch (value->type)
+    {
+    case LHS_TINTEGER:
+    {
+        istrue = !!value->i;
+        break;
+    }
+    case LHS_TNUMBER:
+    {
+        istrue = !!value->n;
+        break;
+    }
+    case LHS_TBOOLEAN:
+    {
+        istrue = !!value->b;
+        break;
+    }
+    case LHS_TNONE:
+    {
+        istrue = LHS_FALSE;
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
+
+    return istrue;
+}
+
 static int lhsexec_jz(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    LHSCallContext* cc = vm->callcontext;
+
+    long long i = lhsexec_i(cc);
+    const LHSValue* value = lhsvm_getvalue(vm, -1);
+    if (lhsexec_istrue(value))
+    {
+        lhsvm_pop(vm, 1);
+        return LHS_TRUE;
+    }
+
+    cc->ip = vm->code.data + i;
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
 static int lhsexec_jnz(LHSVM* vm)
 {
-    lhserr_throw(vm, "aaaa");
+    LHSCallContext* cc = vm->callcontext;
+
+    long long i = lhsexec_i(cc);
+    const LHSValue* value = lhsvm_getvalue(vm, -1);
+    if (!lhsexec_istrue(value))
+    {
+        lhsvm_pop(vm, 1);
+        return LHS_TRUE;
+    }
+
+    cc->ip = vm->code.data + i;
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 

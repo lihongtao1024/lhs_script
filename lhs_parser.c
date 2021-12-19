@@ -17,7 +17,6 @@
 #define LHS_EXPRNUM                           (2 | LHS_EXPRIMMED)
 #define LHS_EXPRBOOLEAN                       (3 | LHS_EXPRIMMED)
 #define LHS_EXPRSTR                           (4 | LHS_EXPRREF)
-#define LHS_EXPRCALL                          (5)
 #define LHS_EXPRRAW(t)                        ((t) & (LHS_EXPRIMMED - 1) - 1)
 
 #define lhsparser_issymbol(t)                                               \
@@ -1392,14 +1391,6 @@ static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
         lhscode_ref(vm, chain->factor.ref.mark, chain->factor.ref.index);
         break;
     }
-    case LHS_EXPRCALL:
-    {
-        lhscode_op1(vm, OP_CALL, chain);
-        lhscode_ref(vm, chain->factor.call.mark, chain->factor.call.index);
-        lhscode_index(vm, chain->factor.call.narg);
-        lhscode_index(vm, chain->factor.call.nret);
-        break;
-    }
     default:
     {
         return LHS_TRUE;
@@ -1556,7 +1547,7 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 
     lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
 
-    state->chain->type = LHS_EXPRCALL;
+    state->chain->type = LHS_EXPRNONE;
     state->chain->line = loadf->line;
     state->chain->column = loadf->column;
     state->chain->name = name->desc->index;
@@ -1564,6 +1555,11 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     state->chain->factor.call.index = var->desc->index;
     state->chain->factor.call.nret = LHS_UNCERTAIN;
     state->chain->factor.call.narg = lhsparser_exprargs(vm, loadf, state);
+
+    lhscode_op1(vm, OP_CALL, state->chain);
+    lhscode_ref(vm, state->chain->factor.call.mark, state->chain->factor.call.index);
+    lhscode_index(vm, state->chain->factor.call.narg);
+    lhscode_index(vm, state->chain->factor.call.nret);
 
     lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
     return LHS_TRUE;
@@ -1966,6 +1962,12 @@ int lhsparser_iffalse(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
     return LHS_TRUE;
 }
 
+int lhsparser_ifnfalse(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
+{
+    state->branch->len = vm->code.usize - state->branch->pos;
+    return LHS_TRUE;
+}
+
 static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf)
 {
     /*ifstate -> if '(' exprstate ')' ifstrue [{ifstrue}] [iffalse]*/
@@ -1986,6 +1988,7 @@ static int lhsparser_ifstate(LHSVM* vm, LHSLoadF* loadf)
 
         if (token->t != LHS_TOKENELSE)
         {
+            lhsparser_ifnfalse(vm, loadf, state);
             break;
         }
 

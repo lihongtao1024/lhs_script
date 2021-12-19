@@ -42,21 +42,21 @@ function test_print(x, y, z)
 /*
 function fibonacci(x)
 {
-    if (x)
+    if (x < 2)
     {
         return 1
     }
     
     return fibonacci(x - 1) + fibonacci(x - 2)
 }
-
-print(fibonacci(0))
-print(fibonacci(1))
-print(fibonacci(2))
-print(fibonacci(3))
-print(fibonacci(4))
 */
+//print(fibonacci(0))
+//print(fibonacci(1))
+//print(fibonacci(2))
+//print(fibonacci(3))
+//print(fibonacci(4))
 
+/*
 function test(x)
 {
     x = x + 5
@@ -91,6 +91,33 @@ function test(x)
     x = x / 5
 }
 
-test(0)
-test(3)
-test(-5)
+//test(0)
+//test(3)
+//test(-5)*/
+//var expr = 8 + -(-(-3 + 4)) * 6
+//int aa = 8 + ~(-3 + 4) * 6;
+//call(5)
+
+/*
+8+   -(    -3+    4)   *   6
+8+   -(    1)     *    6
+8+   -1*   6
+8+   -6
+2
+*/
+
+/*
+var a = 0
+if (a < 2)
+{
+    a = 2
+}
+*/
+
+function echo(x)
+{
+    return x * 0.1
+}
+
+print(echo(1))
+print(echo(2))

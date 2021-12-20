@@ -40,9 +40,7 @@ static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFrame* frame,
     }
 
     LHSCallContext* cc = lhsmem_newobject(vm, sizeof(LHSCallContext));
-    cc->function = lhsmem_newobject(vm, sizeof(LHSFunction));
-    lhsfunction_init(vm, cc->function, vm->currentframe);
-
+    cc->frame = frame;
     cc->base = vm->top - narg;
     cc->errfn = errfn;
     cc->top = vm->top;
@@ -66,7 +64,6 @@ static int lhsexec_backcc(LHSVM* vm)
     lhslink_back((vm), callcontext, cc, parent);
     (vm)->ncallcontext--;
 
-    lhsmem_freeobject(vm, cc->function, sizeof(LHSFunction));
     lhsmem_freeobject(vm, cc, sizeof(LHSCallContext));
     return LHS_TRUE;
 }

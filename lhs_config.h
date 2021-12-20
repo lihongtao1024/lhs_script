@@ -13,6 +13,6 @@
 
 #define LHS_TRUE         (1)
 #define LHS_FALSE        (0)
-#define LHS_MAXCALLLAYER (4096)
+#define LHS_MAXCALLLAYER (65536)
 
 typedef int (*lhsvm_delegate)(void*);

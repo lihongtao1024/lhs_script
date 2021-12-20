@@ -63,9 +63,6 @@
     <ClCompile Include="lhs_baselib.c">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="lhs_function.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lhs_alloc.h">
@@ -117,9 +114,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="lhs_baselib.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="lhs_function.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

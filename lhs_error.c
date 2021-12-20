@@ -95,7 +95,7 @@ int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
         (
             vm,
             &lhsvm_castvm(vm)->conststrs,
-            cc->function->frame->name
+            cc->frame->name
         );
         LHSVar* refer = lhsvector_at
         (

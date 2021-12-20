@@ -17,7 +17,7 @@ int lhsbase_print(LHSVM* vm)
         lhsvm_pop(vm, 1);
     }
 
-    printf("%s\n", buf.data);
+    printf("%s", buf.data);
     lhsbuf_uninit(vm, &buf);
     return 0;
 }

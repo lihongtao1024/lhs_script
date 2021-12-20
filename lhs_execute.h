@@ -1,6 +1,6 @@
 #pragma once
 #include "lhs_config.h"
-#include "lhs_function.h"
+#include "lhs_frame.h"
 #include "lhs_vm.h"
 
 #define lhsexec_castcc(o) ((LHSCallContext*)o)
@@ -18,7 +18,7 @@ typedef struct LHSCallContext
     int line;
     int column;
     int refer;
-    LHSFunction* function;
+    LHSFrame* frame;
     struct LHSCallContext* parent;
 } LHSCallContext;
 

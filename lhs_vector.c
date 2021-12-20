@@ -11,7 +11,7 @@ static int lhsvector_grow(void* vm, LHSVector* vector,
 {
     if (nsize < LHS_VECTORSIZE)
     {
-        return LHS_TRUE;
+        return LHS_FALSE;
     }
 
     vector->nodes = lhsmem_renewobject
@@ -36,7 +36,7 @@ int lhsvector_init(void* vm, LHSVector* vector, size_t esize, size_t n)
         vm, 
         vector, 
         0, 
-        n ? max(n, LHS_VECTORSIZE) : LHS_VECTORSIZE
+        max(n, LHS_VECTORSIZE)
     );
 }
 

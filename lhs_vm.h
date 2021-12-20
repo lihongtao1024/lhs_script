@@ -18,9 +18,9 @@ typedef struct LHSVM
     StkID top;                  /*position of runtime stack top*/
     size_t nalloc;              /*allocated memory size*/
     size_t ncallcontext;        /*for call layers*/
-    LHSHashTable shortstrhash;  /*hast table for short string*/
-    LHSHashTable conststrhash;  /*hash table for constant string*/
-    LHSHashTable globalvars;    /*hash table for global variable*/
+    LHSHash shortstrhash;       /*hast table for short string*/
+    LHSHash conststrhash;       /*hash table for constant string*/
+    LHSHash globalvars;         /*hash table for global variable*/
     LHSVector conststrs;        /*constant string array*/
     LHSVector globalvalues;     /*value array for global variable*/
     LHSVector stack;            /*execute stack*/

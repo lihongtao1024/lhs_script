@@ -17,7 +17,7 @@ typedef struct LHSFrame
     int narg;
     int nret;
     size_t entry;           /*ip entry*/
-    LHSHashTable localvars; /*hash table for local variables*/     
+    LHSHash localvars; /*hash table for local variables*/     
     LHSVector localvalues;  /*value array for local variables*/
 } LHSFrame;
 

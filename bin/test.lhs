@@ -47,10 +47,16 @@ function fibonacci(x)
         return 1
     }
     
-    return fibonacci(x - 1) + x
+    return fibonacci(x - 1) + fibonacci(x - 2)
 }
 
+print(fibonacci(0))
+print(fibonacci(1))
 print(fibonacci(2))
+print(fibonacci(3))
+print(fibonacci(4))
+print(fibonacci(5))
+print(fibonacci(6))
 
 /*
 function test(x)

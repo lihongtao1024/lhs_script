@@ -30,7 +30,7 @@ static int lhshash_rehash(LHSHashNode** nodes, size_t osize, size_t nsize)
     return LHS_TRUE;
 }
 
-static int lhshash_grow(void* vm, LHSHashTable* hash, size_t nsize)
+static int lhshash_grow(void* vm, LHSHash* hash, size_t nsize)
 {
     if (hash->size == nsize)
     {
@@ -64,7 +64,7 @@ static int lhshash_grow(void* vm, LHSHashTable* hash, size_t nsize)
     return LHS_TRUE;
 }
 
-static LHSHashNode* lhshash_search(LHSHashTable* hash, void *userdata, 
+static LHSHashNode* lhshash_search(LHSHash* hash, void *userdata, 
     long long h, LHSHashNode*** output)
 {
     LHSHashNode** list = &hash->nodes[lhshash_mod(h, hash->size)];
@@ -83,7 +83,7 @@ static LHSHashNode* lhshash_search(LHSHashTable* hash, void *userdata,
     return 0;
 }
 
-int lhshash_init(void* vm, LHSHashTable* hash, lhshash_calc calc, 
+int lhshash_init(void* vm, LHSHash* hash, lhshash_calc calc, 
     lhshash_equal comp, size_t n)
 {
     hash->calc = calc;
@@ -91,10 +91,10 @@ int lhshash_init(void* vm, LHSHashTable* hash, lhshash_calc calc,
     hash->usize = 0;
     hash->size = 0;
     hash->nodes = 0;
-    return lhshash_grow(vm, hash, n ? max(n, LHS_HASHSIZE) : LHS_HASHSIZE);
+    return lhshash_grow(vm, hash, max(n, LHS_HASHSIZE));
 }
 
-int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata, 
+int lhshash_insert(void* vm, LHSHash* hash, void* userdata, 
     long long* ohash)
 {
     long long h = hash->calc(userdata);
@@ -136,7 +136,7 @@ int lhshash_insert(void* vm, LHSHashTable* hash, void* userdata,
     return LHS_TRUE;
 }
 
-void* lhshash_find(void* vm, LHSHashTable* hash, void* userdata)
+void* lhshash_find(void* vm, LHSHash* hash, void* userdata)
 {
     long long h = hash->calc(userdata);
     LHSHashNode** list = 0, * node = 0;
@@ -149,7 +149,7 @@ void* lhshash_find(void* vm, LHSHashTable* hash, void* userdata)
     return node->data;
 }
 
-void lhshash_remove(void* vm, LHSHashTable* hash, void* userdata)
+void lhshash_remove(void* vm, LHSHash* hash, void* userdata)
 {
     long long h = hash->calc(userdata);
     LHSHashNode** current = &hash->nodes[lhshash_mod(h, hash->size)];
@@ -170,7 +170,20 @@ void lhshash_remove(void* vm, LHSHashTable* hash, void* userdata)
     }
 }
 
-void lhshash_uninit(void* vm, LHSHashTable* hash)
+void lhshash_foreach(void* vm, LHSHash* hash, lhshash_iterator iterator,
+    void* udata)
+{
+    for (size_t i = 0; i < hash->size; ++i)
+    {
+        LHSHashNode* node = hash->nodes[i];
+        for (; node; node = node->next)
+        {
+            iterator(vm, hash, node->data, udata);
+        }
+    }
+}
+
+void lhshash_uninit(void* vm, LHSHash* hash)
 {
     for (size_t i = 0; i < hash->size; ++i)
     {

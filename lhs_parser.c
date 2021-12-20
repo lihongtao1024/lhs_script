@@ -240,7 +240,7 @@ LHSVar* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
 
     desc->line = loadf->line;
     desc->column = loadf->column;
-    desc->index = (int)lhsframe_castcurframe(vm)->localvalues.usize - 1;
+    desc->index = (int)lhsframe_castcurframe(vm)->localvalues.usize/* - 1*/;
     desc->mark = LHS_MARKLOCAL;
     
     lhsvm_pop(vm, 1);
@@ -318,7 +318,7 @@ LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
     {
     case LHS_MARKLOCAL:
     {
-        var = lhsvector_at(vm, &lhsframe_castcurframe(vm)->localvalues, odesc->index);
+        var = lhsvector_at(vm, &lhsframe_castcurframe(vm)->localvalues, odesc->index - 1);
         break;
     }
     case LHS_MARKGLOBAL:

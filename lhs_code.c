@@ -315,6 +315,6 @@ int lhscode_dmpcode(LHSVM* vm)
 		}
 		}
 	}
-	printf("\n\n\n");
+	printf("\n");
 	return LHS_TRUE;
 }

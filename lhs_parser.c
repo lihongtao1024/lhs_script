@@ -363,8 +363,7 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     const LHSVarDesc* desc = lhsparser_recursionfindvar(vm, loadf, &value);
     if (desc)
     {
-        if (desc->mark != LHS_MARKGLOBAL)
-        {
+        (desc->mark != LHS_MARKGLOBAL) &&
             lhserr_syntax
             (
                 vm, 
@@ -372,7 +371,6 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
                 "variable duplicate definition '%s'.",
                 desc->name->data
             );
-        }
 
         lhsvar_castvardesc(desc)->line = loadf->line;
         lhsvar_castvardesc(desc)->column = loadf->column;
@@ -713,29 +711,25 @@ static int lhsparser_checktoken(LHSVM* vm, LHSLoadF* loadf,
 {
     if (lhsparser_castlex(loadf)->token.t != token)
     {
-        if (lhsparser_castlex(loadf)->token.t == LHS_TOKENEOF)
-        {
+        (lhsparser_castlex(loadf)->token.t == LHS_TOKENEOF) &&
             lhserr_syntax
             (
-                vm, 
-                loadf, 
+                vm,
+                loadf,
                 "<eof> unexpected end of solving %s.",
                 prefix,
                 lhsparser_castlex(loadf)->token.buf.data
-            );
-        }
-        else
-        {
+            )
+            ||
             lhserr_syntax
             (
-                vm, 
-                loadf, 
+                vm,
+                loadf,
                 "unexpected %s solving, expected '%s', got '%s'.",
                 prefix,
                 name,
                 lhsparser_castlex(loadf)->token.buf.data
             );
-        }
     }
     return LHS_TRUE;
 }
@@ -745,8 +739,7 @@ static int lhsparser_checklookahead(LHSVM* vm, LHSLoadF* loadf,
 {
     if (lhsparser_castlex(loadf)->lookahead.t != token)
     {
-        if (lhsparser_castlex(loadf)->lookahead.t == LHS_TOKENEOF)
-        {
+        (lhsparser_castlex(loadf)->lookahead.t == LHS_TOKENEOF) &&
             lhserr_syntax
             (
                 vm, 
@@ -754,10 +747,8 @@ static int lhsparser_checklookahead(LHSVM* vm, LHSLoadF* loadf,
                 "<eof> unexpected end of solving %s.",
                 prefix,
                 lhsparser_castlex(loadf)->lookahead.buf.data
-            );
-        }
-        else
-        {
+            )
+            ||
             lhserr_syntax
             (
                 vm, 
@@ -767,7 +758,6 @@ static int lhsparser_checklookahead(LHSVM* vm, LHSLoadF* loadf,
                 name,
                 lhsparser_castlex(loadf)->lookahead.buf.data
             );
-        }
     }
     return LHS_TRUE;
 }
@@ -1424,8 +1414,8 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     {
     case L:
     {
-        if ((prev->type & LHS_EXPRIMMED) &&
-           (chain->type & LHS_EXPRIMMED))
+        if (prev->type & LHS_EXPRIMMED &&
+            chain->type & LHS_EXPRIMMED)
         {
             lhsparser_exproperations
                 [LHS_EXPRRAW(prev->type)]
@@ -1517,8 +1507,7 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     else
     {
         lhsvm_pop(vm, 1);
-        if (desc->mark != LHS_MARKGLOBAL)
-        {
+        (desc->mark != LHS_MARKGLOBAL) &&
             lhserr_syntax
             (
                 vm, 
@@ -1526,7 +1515,6 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
                 "function '%s' was defined as local variable.",
                 desc->name->data
             );
-        }
     }
 
     lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
@@ -1629,16 +1617,14 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             lhsvm_pushvalue(vm, -1);
             LHSVar* name = lhsparser_insertconstant(vm, loadf);
             const LHSVarDesc* desc = lhsparser_recursionfindvar(vm, loadf, 0);
-            if (!desc)
-            {
-                lhserr_syntax
-                (
-                    vm, 
-                    loadf, 
-                    "undefined variable '%s'.",
-                    token->buf.data
-                );
-            }
+            desc || lhserr_syntax
+            (
+                vm, 
+                loadf, 
+                "undefined variable '%s'.",
+                token->buf.data
+            );
+
             state->chain->type = LHS_EXPRREF;
             state->chain->line = loadf->line;
             state->chain->column = loadf->column;
@@ -1683,18 +1669,15 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             return LHS_TRUE;
         }
 
-        if (token->t == LHS_TOKENEOF)
-        {
+        (token->t == LHS_TOKENEOF) &&
             lhserr_syntax
             (
                 vm, 
                 loadf, 
                 "<eof> unexpected end of expression.",
                 lhsparser_castlex(loadf)->token.buf.data
-            );
-        }
-        else
-        {
+            )
+            ||
             lhserr_syntax
             (
                 vm, 
@@ -1702,7 +1685,6 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
                 "unexpected expression factor, got '%s'.",
                 lhsparser_castlex(loadf)->token.buf.data
             );
-        }
     }
     }
 
@@ -1715,8 +1697,7 @@ static int lhsparser_exprchain(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     lhsparser_exprfactor(vm, loadf, state);
     
     LHSToken* token = &lhsparser_castlex(loadf)->token;
-    if (lhsparser_isunarysymbol(token->t))
-    {
+    (lhsparser_isunarysymbol(token->t)) &&
         lhserr_syntax
         (
             vm, 
@@ -1724,7 +1705,6 @@ static int lhsparser_exprchain(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             "unexpected unary symbol, got '%s'.",
             token->buf.data
         );
-    }
 
     if (!lhsparser_issymbol(token->t))
     {

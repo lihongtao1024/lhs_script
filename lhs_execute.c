@@ -34,10 +34,8 @@ typedef int (*lhsexec_opr)(LHSVM*, LHSValue*, const LHSValue*, char);
 static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFrame* frame, 
     int narg, int nret, StkID errfn, IPID ip)
 {
-    if (vm->ncallcontext >= LHS_MAXCALLLAYER)
-    {
+    (vm->ncallcontext >= LHS_MAXCALLLAYER) && 
         lhserr_runtime(vm, 0, "stack layers overflow.");
-    }
 
     LHSCallContext* cc = lhsmem_newobject(vm, sizeof(LHSCallContext));
     cc->frame = frame;
@@ -813,8 +811,7 @@ static int lhsexec_neg(LHSVM* vm)
 static int lhsexec_not(LHSVM* vm)
 {
     LHSValue* lvalue = (LHSValue*)lhsvm_getvalue(vm, -1);
-    if (lvalue->type != LHS_TBOOLEAN)
-    {
+    (lvalue->type != LHS_TBOOLEAN) &&
         lhserr_runtime
         (
             vm,
@@ -822,7 +819,7 @@ static int lhsexec_not(LHSVM* vm)
             "illegal operation symbol '%s'.",
             lhsparser_symbols[OP_NOT]
         );
-    }
+
     lvalue->b = !lvalue->b;
     return LHS_TRUE;
 }
@@ -830,8 +827,7 @@ static int lhsexec_not(LHSVM* vm)
 static int lhsexec_notb(LHSVM* vm)
 {
     LHSValue* lvalue = (LHSValue*)lhsvm_getvalue(vm, -1);
-    if (lvalue->type != LHS_TINTEGER)
-    {
+    (lvalue->type != LHS_TINTEGER) &&
         lhserr_runtime
         (
             vm,
@@ -839,7 +835,7 @@ static int lhsexec_notb(LHSVM* vm)
             "illegal operation symbol '%s'.",
             lhsparser_symbols[OP_NOT]
         );
-    }
+
     lvalue->i = ~lvalue->i;
     return LHS_TRUE;
 }
@@ -1134,15 +1130,13 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg,
 static int lhsexec_callframe(LHSVM* vm, LHSFrame* frame, int narg, int nret,
     const LHSVarDesc* desc)
 {
-    if (frame->narg != narg)
-    {
+    (frame->narg != narg) &&
         lhserr_runtime
         (
             vm,
             desc,
             "the number of parameters does not match."
         );
-    }
 
     lhsexec_forwardcc
     (

@@ -130,7 +130,7 @@ function echo(x)
 print(echo(1) + echo(2))
 */
 
-/*
+
 function test(x)
 {
     print(x)
@@ -142,10 +142,31 @@ function test(x)
     return test(x - 1)
 }
 
-test(10)
+print(test(10), 11, "\n")
 
 function test(x)
 {
     return x + 1
 }
-*/
+
+function tobinary(x)
+{
+    if (x & 1)
+    {
+        print(1)
+    }
+    else
+    {
+        print(0)
+    }
+
+    if (x)
+    {
+        tobinary(x >> 1)
+    } 
+}
+
+tobinary(8)
+print("\n")
+set x = 5 + 6 * 7 - 4 / 8 * -(5 - -7) - 6
+print(x)

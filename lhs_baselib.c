@@ -9,11 +9,11 @@ int lhsbase_print(LHSVM* vm)
     LHSSTRBUF buf;
     lhsbuf_init(vm, &buf);
 
-    for (int i = 0; i < n; ++i)
+    for (int i = 0; i < n; i++)
     {
         const char* str = lhsvm_tostring(vm, i + 1);
+        i && lhsbuf_pushc(vm, &buf, ' ');
         lhsbuf_pushs(vm, &buf, str);
-        lhsbuf_pushc(vm, &buf, ' ');
         lhsvm_pop(vm, 1);
     }
 

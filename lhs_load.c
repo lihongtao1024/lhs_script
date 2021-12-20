@@ -129,8 +129,7 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double,
         }
     } while (lhsloadf_isdigit(loadf));
 
-    if (dot > 1)
-    {
+    (dot > 1) &&
         lhserr_syntax
         (
             vm, 
@@ -138,7 +137,6 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double,
             "solving decimal '%s'.",
             buf->data
         );
-    }
 
     *is_double = dot ? LHS_TRUE : LHS_FALSE;
     return LHS_TRUE;
@@ -265,8 +263,5 @@ int lhsloadf_init(LHSVM* vm, LHSLoadF* loadf, const char* fname)
 
 void lhsloadf_uninit(LHSVM* vm, LHSLoadF* loadf)
 {
-    if (loadf->file)
-    {
-        fclose(loadf->file);
-    }
+    loadf->file && fclose(loadf->file);
 }

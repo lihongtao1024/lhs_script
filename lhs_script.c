@@ -1,13 +1,22 @@
 ﻿#include "lhs_vm.h"
 
-int aa()
+int fibonacci(x)
 {
-    return 1;
+    if (x < 2)
+    {
+        return 1;
+    }
+
+    return fibonacci(x - 1) + fibonacci(x - 2);
 }
 
 int main()
 {
-    int bb = aa() + aa();
+    for (int i = 0; i < 5; ++i)
+    {
+        printf("%d ", fibonacci(i));
+    }
+
     LHSVM* vm = lhsvm_create(0);
     lhsvm_dofile(vm, "./test.lhs");
     lhsvm_destroy(vm);

@@ -23,11 +23,11 @@ static const char* markname[LHS_MARKMAX] =
 	0, "l", "g", 0, 0, 0, "c", "s",
 };
 
-static const char* opname[OP_MAX] =
+const char* opname[OP_MAX] =
 {
 	"nop", "add", "sub", "mul", "div",
-	"mod", "andb", "orb", "xorb", "l",
-	"g", "eq", "ne", "ge", "le",
+	"mod", "andb", "orb", "xorb", "less",
+	"great", "eq", "ne", "ge", "le",
 	"and", "or", "shl", "shr", "neg",
 	"not", "notb", "mov", "movs", "push", 
 	"pop", "jmp", "jz", "jnz", "nop", 

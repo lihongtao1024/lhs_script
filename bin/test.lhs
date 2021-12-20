@@ -39,7 +39,7 @@ function test_print(x, y, z)
     return xx
 }
 */
-/*
+
 function fibonacci(x)
 {
     if (x < 2)
@@ -47,14 +47,10 @@ function fibonacci(x)
         return 1
     }
     
-    return fibonacci(x - 1) + fibonacci(x - 2)
+    return fibonacci(x - 1) + x
 }
-*/
-//print(fibonacci(0))
-//print(fibonacci(1))
-//print(fibonacci(2))
-//print(fibonacci(3))
-//print(fibonacci(4))
+
+print(fibonacci(2))
 
 /*
 function test(x)
@@ -113,11 +109,36 @@ if (a < 2)
     a = 2
 }
 */
-
+/*
 function echo(x)
 {
-    return x * 0.1
+    if (x % 2)
+    {
+        x = x * 0.1
+    }
+
+    return x
 }
 
-print(echo(1))
-print(echo(2))
+print(echo(1) + echo(2))
+*/
+
+/*
+function test(x)
+{
+    print(x)
+    if (x <= 0)
+    {
+        return 0
+    }
+
+    return test(x - 1)
+}
+
+test(10)
+
+function test(x)
+{
+    return x + 1
+}
+*/

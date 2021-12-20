@@ -31,7 +31,13 @@ typedef int (*lhsexec_opr)(LHSVM*, LHSValue*, const LHSValue*, char);
 #define lhsexec_valuetype(v)                                        \
 ((v)->type == LHS_TGC ? LHS_TGC + (v)->gc->type : v->type)
 
-static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret, 
+#define lhsexec_backcc(vm, cc)                                      \
+{                                                                   \
+    lhslink_back((vm), callcontext, cc, parent);                    \
+    (vm)->ncallcontext--;                                           \
+}
+
+static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, int narg, int nret, 
     StkID errfn, IPID ip)
 {
     if (vm->ncallcontext >= LHS_MAXCALLLAYER)
@@ -60,28 +66,15 @@ static LHSCallContext* lhsexec_nestcc(LHSVM* vm, int narg, int nret,
 static int lhsexec_oprnone(LHSVM* vm, LHSValue* lvalue, 
     const LHSValue* rvalue, char op)
 {
-    if (lvalue->type == LHS_TNONE)
-    {
-        lhserr_runtime
-        (
-            vm, 
-            0, 
-            "illegal operation with symbol '%s', left value is n/a.",
-            lhsparser_symbols[op]
-        );
-    }
-
-    if (rvalue->type == LHS_TNONE)
-    {
-        lhserr_runtime
-        (
-            vm, 
-            0, 
-            "illegal operation with symbol '%s', right value is n/a.",
-            lhsparser_symbols[op]
-        );
-    }
-
+    lhserr_runtime
+    (
+        vm,
+        0,
+        "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+        lhsvalue_typename[lhsexec_valuetype(lvalue)],
+        lhsvalue_typename[lhsexec_valuetype(rvalue)],
+        lhsparser_symbols[op]
+    );
     return LHS_TRUE;
 }
 
@@ -190,9 +183,11 @@ static int lhsexec_oprll(LHSVM* vm, LHSValue* lvalue,
     {
         lhserr_runtime
         (
-            vm, 
-            0, 
-            "illegal operation symbol '%s'.",
+            vm,
+            0,
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
             lhsparser_symbols[op]
         );
     }
@@ -272,7 +267,9 @@ static int lhsexec_oprln(LHSVM* vm, LHSValue* lvalue,
         (
             vm,
             0,
-            "illegal operation symbol '%s'.",
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
             lhsparser_symbols[op]
         );
     }
@@ -348,7 +345,9 @@ static int lhsexec_oprnl(LHSVM* vm, LHSValue* lvalue,
         (
             vm,
             0,
-            "illegal operation symbol '%s'.",
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
             lhsparser_symbols[op]
         );
     }
@@ -424,7 +423,9 @@ static int lhsexec_oprnn(LHSVM* vm, LHSValue* lvalue,
         (
             vm,
             0,
-            "illegal operation symbol '%s'.",
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
             lhsparser_symbols[op]
         );
     }
@@ -464,7 +465,9 @@ static int lhsexec_oprbb(LHSVM* vm, LHSValue* lvalue,
         (
             vm,
             0,
-            "illegal operation symbol '%s'.",
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
             lhsparser_symbols[op]
         );
     }
@@ -1129,7 +1132,7 @@ static int lhsexec_nop(LHSVM* vm)
 static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg, 
     int narg, int nret)
 {
-    LHSCallContext* cc = lhsexec_nestcc
+    LHSCallContext* cc = lhsexec_forwardcc
     (
         vm,
         narg, 
@@ -1151,10 +1154,9 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg,
         memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
     }
 
-    vm->top = cc->base;
-    cc->top = vm->top + 1;
+    vm->top = cc->base + 1;
 
-    lhslink_back(vm, callcontext, cc, parent);
+    lhsexec_backcc(vm, cc);
     lhsexec_castcc(vm->callcontext)->top = cc->top;
 
     lhsmem_freeobject(vm, cc, sizeof(LHSCallContext));
@@ -1175,17 +1177,7 @@ static int lhsexec_callframe(LHSVM* vm, LHSFrame* frame, int narg, int nret,
     }
 
     lhsframe_setframe(vm, frame);
-    for (int i = 1; i <= narg; ++i)
-    {
-        memcpy
-        (
-            lhsvector_at(vm, &frame->localvalues, i - 1), 
-            lhsvm_getvalue(vm, i), 
-            sizeof(LHSValue)
-        );
-    }
-
-    lhsexec_nestcc
+    lhsexec_forwardcc
     (
         vm,
         narg, 
@@ -1194,6 +1186,11 @@ static int lhsexec_callframe(LHSVM* vm, LHSFrame* frame, int narg, int nret,
         vm->code.data + frame->entry
     );
 
+    for (size_t i = 1; i <= narg; ++i)
+    {
+        LHSValue* value = lhsvector_at(vm, &frame->localvalues, i - 1);
+        memcpy(value,  lhsvm_getvalue(vm, (int)i), sizeof(LHSValue));
+    }
     return LHS_TRUE;
 }
 
@@ -1242,14 +1239,7 @@ static int lhsexec_call(LHSVM* vm)
     }
     }
 
-    int narg = lhsexec_i(cc);
-    int nret = lhsexec_i(cc);
-
-    if (vm->top < lhsexec_castcc(vm->callcontext)->top)
-    {
-        vm->top = lhsexec_castcc(vm->callcontext)->top;
-    }
-
+    int narg = lhsexec_i(cc), nret = lhsexec_i(cc);
     if (func->type == LHS_TDELEGATE)
     {
         lhsexec_calldelegate(vm, func->dg, narg, nret);
@@ -1278,11 +1268,9 @@ static int lhsexec_ret(LHSVM* vm)
 
     LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base);
     result->type = LHS_TNONE;
+    vm->top = cc->base + 1;
 
-    vm->top = cc->base;
-    cc->top = vm->top + 1;
-
-    lhslink_back(vm, callcontext, cc, parent);
+    lhsexec_backcc(vm, cc);
     lhsexec_castcc(vm->callcontext)->top = cc->top;
     lhsexec_castcc(vm->callcontext)->ip = cc->rp;
 
@@ -1297,11 +1285,9 @@ static int lhsexec_ret1(LHSVM* vm)
 
     LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base);
     memcpy(result, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
+    vm->top = cc->base + 1;
 
-    vm->top = cc->base;
-    cc->top = vm->top + 1;
-
-    lhslink_back(vm, callcontext, cc, parent);
+    lhsexec_backcc(vm, cc);
     lhsexec_castcc(vm->callcontext)->top = cc->top;
     lhsexec_castcc(vm->callcontext)->ip = cc->rp;
 
@@ -1352,7 +1338,6 @@ static int lhsexec_execute(LHSVM* vm, void* ud)
     while (LHS_TRUE)
     {
         LHSCallContext* cc = lhsexec_castcc(vm->callcontext);
-
         char op = lhsexec_op(cc);
         cc->line = lhsexec_i(cc);
         cc->column = lhsexec_i(cc);
@@ -1362,6 +1347,36 @@ static int lhsexec_execute(LHSVM* vm, void* ud)
         {
             break;
         }
+
+        printf("%s ", opname[op]);
+        for (int i = 0; i < vm->top; ++i)
+        {
+            LHSValue* value = &((LHSValue*)vm->stack.nodes)[i];
+            switch (value->type)
+            {
+            case LHS_TINTEGER:
+            {
+                printf("%lld ", value->i);
+                break;
+            }
+            case LHS_TNUMBER:
+            {
+                printf("%lf ", value->n);
+                break;
+            }
+            case LHS_TBOOLEAN:
+            {
+                printf("%d ", value->b);
+                break;
+            }
+            default:
+            {
+                printf("unknown ");
+                break;
+            }
+            }
+        }
+        printf("\n");
     }
 
     return LHS_TRUE;
@@ -1383,7 +1398,7 @@ static int lhsexec_reset(LHSVM* vm)
 
 int lhsexec_pcall(LHSVM* vm, int narg, int nret, StkID errfn)
 {
-    lhsexec_nestcc(vm, narg, nret, errfn, vm->code.data);
+    lhsexec_forwardcc(vm, narg, nret, errfn, vm->code.data);
     int errcode = lhserr_protectedcall(vm, lhsexec_execute, 0);
     if (errcode)
     {

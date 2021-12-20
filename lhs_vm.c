@@ -110,7 +110,6 @@ LHSVM* lhsvm_create(lhsmem_new fn)
     return vm;
 }
 
-
 void lhsvm_destroy(LHSVM* vm)
 {
     lhshash_uninit(vm, &vm->conststrhash);

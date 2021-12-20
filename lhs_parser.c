@@ -182,7 +182,7 @@ static int lhsparser_initreserved(LHSVM* vm)
     return LHS_TRUE;
 }
 
-LHSVar* lhsparser_insertconstant(LHSVM* vm, LHSLoadF* loadf)
+static LHSVar* lhsparser_insertconstant(LHSVM* vm, LHSLoadF* loadf)
 {
     const LHSValue* key = lhsvm_getvalue(vm, -1);
 
@@ -218,7 +218,7 @@ LHSVar* lhsparser_insertconstant(LHSVM* vm, LHSLoadF* loadf)
     return var;
 }
 
-LHSVar* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
+static LHSVarDesc* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
 {    
     const LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVarDesc* desc = lhsvar_castvardesc
@@ -234,20 +234,16 @@ LHSVar* lhsparser_insertlocalvar(LHSVM* vm, LHSLoadF* loadf)
     desc->name = lhsvalue_caststring(key->gc);
     lhshash_insert(vm, &lhsframe_castcurframe(vm)->localvars, desc, 0);
 
-    LHSVar *var = lhsvector_increment(vm, &lhsframe_castcurframe(vm)->localvalues);
-    var->value.type = LHS_TNONE;
-    var->desc = desc;
-
     desc->line = loadf->line;
     desc->column = loadf->column;
-    desc->index = (int)lhsframe_castcurframe(vm)->localvalues.usize/* - 1*/;
+    desc->index = ++lhsframe_castcurframe(vm)->nlocalvars;
     desc->mark = LHS_MARKLOCAL;
     
     lhsvm_pop(vm, 1);
-    return var;
+    return desc;
 }
 
-LHSVar* lhsparser_insertglobalvar(LHSVM* vm, LHSLoadF* loadf)
+static LHSVar* lhsparser_insertglobalvar(LHSVM* vm, LHSLoadF* loadf)
 {
     const LHSValue* key = lhsvm_getvalue(vm, -1);
     LHSVarDesc* desc = lhsvar_castvardesc
@@ -276,7 +272,8 @@ LHSVar* lhsparser_insertglobalvar(LHSVM* vm, LHSLoadF* loadf)
     return var;
 }
 
-LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
+static const LHSVarDesc* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf, 
+    LHSValue** value)
 {
     const LHSValue* key = lhsvm_getvalue(vm, -1);
 
@@ -284,7 +281,12 @@ LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
     fdesc.chunk = lhsparser_castlex(loadf)->curchunk->index;
     fdesc.name = lhsvalue_caststring(key->gc);
 
-    const LHSVarDesc* odesc = lhshash_find(vm, &lhsframe_castcurframe(vm)->localvars, &fdesc);
+    const LHSVarDesc* odesc = lhshash_find
+    (
+        vm, 
+        &lhsframe_castcurframe(vm)->localvars, 
+        &fdesc
+    );
     if (!odesc)
     {
         for (LHSChunk* chunk = lhsparser_castlex(loadf)->curchunk->parent; 
@@ -313,32 +315,12 @@ LHSVar* lhsparser_recursionfindvar(LHSVM* vm, LHSLoadF* loadf)
         return 0;
     }
 
-    LHSVar* var = 0;
-    switch (odesc->mark)
+    if (value &&
+        odesc->mark == LHS_MARKGLOBAL)
     {
-    case LHS_MARKLOCAL:
-    {
-        var = lhsvector_at(vm, &lhsframe_castcurframe(vm)->localvalues, odesc->index - 1);
-        break;
+        *value = lhsvector_at(vm, &vm->globalvalues, odesc->index);
     }
-    case LHS_MARKGLOBAL:
-    {
-        var = lhsvector_at(vm, &vm->globalvalues, odesc->index);
-        break;
-    }
-    default:
-    {
-        lhserr_syntax
-        (
-            vm, 
-            loadf, 
-            "recursion find var '%s' fail, system error.",
-            odesc->name->data
-        );
-    }
-    }
-
-    return var;
+    return odesc;
 }
 
 static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF* loadf, 
@@ -376,35 +358,37 @@ static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
     vm->currentframe = frame;
 
     lhsvm_pushvalue(vm, -1);
-    LHSVar* var = lhsparser_recursionfindvar(vm, loadf);
-    if (var)
+
+    LHSValue* value;
+    const LHSVarDesc* desc = lhsparser_recursionfindvar(vm, loadf, &value);
+    if (desc)
     {
-        if (var->desc->mark != LHS_MARKGLOBAL)
+        if (desc->mark != LHS_MARKGLOBAL)
         {
             lhserr_syntax
             (
                 vm, 
                 loadf, 
                 "variable duplicate definition '%s'.",
-                var->desc->name->data
+                desc->name->data
             );
         }
 
-        lhsvar_castvardesc(var->desc)->line = loadf->line;
-        lhsvar_castvardesc(var->desc)->column = loadf->column;
+        lhsvar_castvardesc(desc)->line = loadf->line;
+        lhsvar_castvardesc(desc)->column = loadf->column;
 
-        var->value.type = LHS_TGC;
-        var->value.gc = lhsgc_castgc(frame);
+        value->type = LHS_TGC;
+        value->gc = lhsgc_castgc(frame);
     }
     else
     {
         lhsvm_pushvalue(vm, -1);
-        var = lhsparser_insertglobalvar(vm, loadf);
+        LHSVar* var = lhsparser_insertglobalvar(vm, loadf);
         var->value.type = LHS_TGC;
         var->value.gc = lhsgc_castgc(frame);
     }
 
-    var = lhsparser_insertconstant(vm, loadf);
+    LHSVar* var = lhsparser_insertconstant(vm, loadf);
     frame->name = var->desc->index;
     return LHS_TRUE;
 }
@@ -1525,22 +1509,22 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     lhsvm_pushvalue(vm, -1);
     lhsvm_pushvalue(vm, -1);
     LHSVar* name = lhsparser_insertconstant(vm, loadf);
-    LHSVar* var = lhsparser_recursionfindvar(vm, loadf);
-    if (!var)
+    const LHSVarDesc* desc = lhsparser_recursionfindvar(vm, loadf, 0);
+    if (!desc)
     {
-        var = lhsparser_insertglobalvar(vm, loadf);
+        desc = lhsparser_insertglobalvar(vm, loadf)->desc;
     }
     else
     {
         lhsvm_pop(vm, 1);
-        if (var->desc->mark != LHS_MARKGLOBAL)
+        if (desc->mark != LHS_MARKGLOBAL)
         {
             lhserr_syntax
             (
                 vm, 
                 loadf, 
                 "function '%s' was defined as local variable.",
-                var->desc->name->data
+                desc->name->data
             );
         }
     }
@@ -1551,8 +1535,8 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     state->chain->line = loadf->line;
     state->chain->column = loadf->column;
     state->chain->name = name->desc->index;
-    state->chain->factor.call.mark = var->desc->mark;
-    state->chain->factor.call.index = var->desc->index;
+    state->chain->factor.call.mark = desc->mark;
+    state->chain->factor.call.index = desc->index;
     state->chain->factor.call.nret = LHS_UNCERTAIN;
     state->chain->factor.call.narg = lhsparser_exprargs(vm, loadf, state);
 
@@ -1644,8 +1628,8 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         {
             lhsvm_pushvalue(vm, -1);
             LHSVar* name = lhsparser_insertconstant(vm, loadf);
-            LHSVar* var = lhsparser_recursionfindvar(vm, loadf);
-            if (!var)
+            const LHSVarDesc* desc = lhsparser_recursionfindvar(vm, loadf, 0);
+            if (!desc)
             {
                 lhserr_syntax
                 (
@@ -1659,8 +1643,8 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             state->chain->line = loadf->line;
             state->chain->column = loadf->column;
             state->chain->name = name->desc->index;
-            state->chain->factor.ref.mark = var->desc->mark;
-            state->chain->factor.ref.index = var->desc->index;
+            state->chain->factor.ref.mark = desc->mark;
+            state->chain->factor.ref.index = desc->index;
             lhsparser_nexttoken(vm, loadf);
         }
         break;
@@ -1813,7 +1797,7 @@ static int lhsparser_localstate(LHSVM* vm, LHSLoadF* loadf)
         );
 
         lhsvm_pushvalue(vm, -1);
-        if (lhsparser_recursionfindvar(vm, loadf))
+        if (lhsparser_recursionfindvar(vm, loadf, 0))
         {
             lhsvm_pop(vm, 1);
             lhserr_syntax
@@ -1874,7 +1858,7 @@ static int lhsparser_globalstate(LHSVM* vm, LHSLoadF* loadf)
         );
 
         lhsvm_pushvalue(vm, -1);
-        if (lhsparser_recursionfindvar(vm, loadf))
+        if (lhsparser_recursionfindvar(vm, loadf, 0))
         {
             lhsvm_pop(vm, 1);
             lhserr_syntax
@@ -2058,7 +2042,7 @@ static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
             "function", "<identifier>");
         lhsvm_pushlstring(vm, token->buf.data, token->buf.usize);
         lhsvm_pushvalue(vm, -1);
-        if (lhsparser_recursionfindvar(vm, loadf))
+        if (lhsparser_recursionfindvar(vm, loadf, 0))
         {
             lhsvm_pop(vm, 1);
             lhserr_syntax

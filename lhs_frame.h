@@ -16,9 +16,9 @@ typedef struct LHSFrame
     int name;               /*function name index in values*/
     int narg;
     int nret;
+    int nlocalvars;         /*number of local variables*/
     size_t entry;           /*ip entry*/
-    LHSHash localvars; /*hash table for local variables*/     
-    LHSVector localvalues;  /*value array for local variables*/
+    LHSHash localvars;      /*hash table for local variables*/     
 } LHSFrame;
 
 int lhsframe_init(LHSVM* vm, LHSFrame* frame);

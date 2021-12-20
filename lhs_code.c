@@ -23,7 +23,7 @@ static const char* markname[LHS_MARKMAX] =
 	0, "l", "g", 0, 0, 0, "c", "s",
 };
 
-const char* opname[OP_MAX] =
+static const char* opname[OP_MAX] =
 {
 	"nop", "add", "sub", "mul", "div",
 	"mod", "andb", "orb", "xorb", "less",
@@ -33,6 +33,69 @@ const char* opname[OP_MAX] =
 	"pop", "jmp", "jz", "jnz", "nop", 
 	"call", "ret", "ret1", "swap", "exit"
 };
+
+static const char* lhscode_escapestr(const char* str)
+{
+	static char buf[256];
+
+	int i = 0, l = sizeof(buf) - sizeof(char) * 2;
+	for (; *str && i < l; str++ && i++)
+	{
+		switch (*str)
+		{
+		case '\n':
+		{
+			buf[i++] = '\\';
+			buf[i] = 'n';
+			break;
+		}
+		case '\r':
+		{
+			buf[i++] = '\\';
+			buf[i] = 'r';
+			break;
+		}
+		case '\t':
+		{
+			buf[i++] = '\\';
+			buf[i] = 't';
+			break;
+		}
+		case '\f':
+		{
+			buf[i++] = '\\';
+			buf[i] = 'f';
+			break;
+		}
+		case '\v':
+		{
+			buf[i++] = '\\';
+			buf[i] = 'v';
+			break;
+		}
+		case '\"':
+		{
+			buf[i++] = '\\';
+			buf[i] = '"';
+			break;
+		}
+		case '\\':
+		{
+			buf[i++] = '\\';
+			buf[i] = '\\';
+			break;
+		}
+		default:
+		{
+			buf[i] = *str;
+			break;
+		}
+		}
+	}
+
+	buf[i] = 0;
+	return buf;
+}
 
 int lhscode_dmpcode(LHSVM* vm)
 {
@@ -45,7 +108,10 @@ int lhscode_dmpcode(LHSVM* vm)
 		int line = lhscode_i(head);
 		int column = lhscode_i(head);
 		int name = lhscode_i(head);
-		LHSVar* refer = lhsvector_at(vm, &vm->conststrs, name);
+		const char* refer = lhscode_escapestr
+		(
+			((LHSVar*)lhsvector_at(vm, &vm->conststrs, name))->desc->name->data
+		);
 
 		switch (op)
 		{
@@ -98,7 +164,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				index2,
 				line,
 				column,
-				refer->desc->name->data
+				refer
 			);
 			break;
 		}
@@ -115,7 +181,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				index,
 				line,
 				column,
-				refer->desc->name->data
+				refer
 			);
 			break;
 		}
@@ -139,7 +205,7 @@ int lhscode_dmpcode(LHSVM* vm)
 					index,
 					line,
 					column,
-					refer->desc->name->data
+					refer
 				);
 				break;
 			}
@@ -154,7 +220,7 @@ int lhscode_dmpcode(LHSVM* vm)
 					l,
 					line,
 					column,
-					refer->desc->name->data
+					refer
 				);
 				break;
 			}
@@ -169,7 +235,7 @@ int lhscode_dmpcode(LHSVM* vm)
 					n,
 					line,
 					column,
-					refer->desc->name->data
+					refer
 				);
 				break;
 			}
@@ -184,7 +250,7 @@ int lhscode_dmpcode(LHSVM* vm)
 					b ? "true" : "false",
 					line,
 					column,
-					refer->desc->name->data
+					refer
 				);
 				break;
 			}
@@ -209,7 +275,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				(void*)l,
 				line,
 				column,
-				refer->desc->name->data
+				refer
 			);
 			break;
 		}
@@ -230,7 +296,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				retn,
 				line,
 				column,
-				refer->desc->name->data
+				refer
 			);
 			break;
 		}
@@ -243,7 +309,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				opname[op],
 				line,
 				column,
-				refer->desc->name->data
+				refer
 			);
 			break;
 		}

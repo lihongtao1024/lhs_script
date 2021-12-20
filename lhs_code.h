@@ -91,5 +91,3 @@
 }
 
 int lhscode_dmpcode(LHSVM* vm);
-
-extern const char* opname[];

@@ -18,6 +18,7 @@
 #define LHS_EXPRBOOLEAN                       (3 | LHS_EXPRIMMED)
 #define LHS_EXPRSTR                           (4 | LHS_EXPRREF)
 #define LHS_EXPRSYMBOL                        (5)
+#define LHS_EXPRCALL                          (6)
 #define LHS_EXPRRAW(t)                        ((t) & (LHS_EXPRIMMED - 1) - 1)
 
 #define lhsparser_issymbol(t)                                               \
@@ -1358,6 +1359,76 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     return LHS_TRUE;
 }
 
+static int lhsparser_exprargs(LHSVM* vm, LHSLoadF* loadf)
+{
+    /*exprargs -> null | {exprstate [',']}*/
+    LHSToken* token = &lhsparser_castlex(loadf)->token;
+    if (token->t == ')')
+    {
+        return 0;
+    }
+
+    int narg = 0;
+    while (LHS_TRUE)
+    {
+        ++narg;
+        lhsparser_exprstate(vm, loadf);
+        if (token->t != ',')
+        {
+            break;
+        }
+        lhsparser_nexttoken(vm, loadf);
+    }
+
+    return narg;
+}
+
+static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
+{
+    /*exprcall -> LHS_TOKENIDENTIFIER '(' [exprargs] ')'*/
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENIDENTIFIER, "function", "<identifier>");
+
+    lhsvm_pushvalue(vm, -1);
+    lhsvm_pushvalue(vm, -1);
+    LHSVar* name = lhsparser_insertconstant(vm, loadf);
+    const LHSVarDesc* desc = lhsparser_recursionfindvar(vm, loadf, 0);
+    if (!desc)
+    {
+        desc = lhsparser_insertglobalvar(vm, loadf)->desc;
+    }
+    else
+    {
+        lhsvm_pop(vm, 1);
+        (desc->mark != LHS_MARKGLOBAL) &&
+            lhserr_syntax
+            (
+                vm, 
+                loadf, 
+                "function '%s' was defined as local variable.",
+                desc->name->data
+            );
+    }
+
+    lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
+
+    state->chain->type = LHS_EXPRCALL;
+    state->chain->line = loadf->line;
+    state->chain->column = loadf->column;
+    state->chain->name = name->desc->index;
+    state->chain->factor.call.mark = desc->mark;
+    state->chain->factor.call.index = desc->index;
+    state->chain->factor.call.nret = LHS_UNCERTAIN;
+    state->chain->factor.call.narg = lhsparser_exprargs(vm, loadf);
+
+    lhscode_op1(vm, OP_CALL, state->chain);
+    lhscode_ref(vm, state->chain->factor.call.mark, state->chain->factor.call.index);
+    lhscode_index(vm, state->chain->factor.call.narg);
+    lhscode_index(vm, state->chain->factor.call.nret);
+
+    lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
+    return LHS_TRUE;
+}
+
 static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
     /*
@@ -1437,7 +1508,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 
         if (lookahead->t == '(')
         {
-            //lhsparser_exprcall(vm, loadf, state);            
+            lhsparser_exprcall(vm, loadf, state);            
         }
         else
         {
@@ -1477,7 +1548,10 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             state->chain->name = var->desc->index;
             state->chain->factor.s = lhsparser_truncate(token->t);
             lhslink_forward(state, symbol, state->chain, prev);
-            lhsparser_nexttoken(vm, loadf);
+            if (state->follow >= 0)
+            {
+                lhsparser_nexttoken(vm, loadf);
+            }
             break;
         }
 

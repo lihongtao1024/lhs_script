@@ -1367,7 +1367,7 @@ static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        return LHS_TRUE;
+        break;
     }
     }
 
@@ -1376,17 +1376,20 @@ static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
         lhscode_op1(vm, chain->unary->unary, chain);
         chain->unary = chain->unary->next;
     }
+    chain->nunary = 0;
 
     if (chain->swap)
     {
         lhscode_op1(vm, OP_SWAP, chain);
     }
+    chain->swap = LHS_FALSE;
     return LHS_TRUE;
 }
 
 static int lhsparser_exprmov(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 {
-    if (chain->type & LHS_EXPRIMMED)
+    if (chain->type & LHS_EXPRIMMED ||
+        chain->nunary)
     {
         lhsparser_exprcode(vm, loadf, chain);
     }

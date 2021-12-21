@@ -1,172 +1,32 @@
+//set d = 8 + -(5 - -7) - 6
+//-10
+//set c = 4 / 8 * -(5 - -7) - 6
+//-12
+//set b = 8 * -(5 - -7) - 6
+//-102
+set a = -(6)
+//-6
+set z = -(5 - -7)
+//-12
+set y = -(5 + 3)
+//-8
+set x = -5 + 6 * 7 - 4 / 8 * -(5 - -7) - 6
+//37
+set k = 9
+//9
+set l = -(-(-(1*3-2)-6))
+//-7
 
-/*aa(3)
-var global1 = "aaac"
-var global7 = (3 - 4) * 2
-var global3 = 4 + ~-5 * 7 - (8 * (6 - 3)) % 2
-var global2 = -global1 + 3.5 - aa(3, "bb", (bb(10)))-(5 - 1) - 6  + 2 / 2 - 1
-var global4 = -global1 + 3.5 - (7-(5 * 1)) - 6  + 2 / 2 - 1
-var global5 = 18 * 2 / (5 + 3) - (6 - 9) * 3 - 5
-var global = true && (3 > 5)
-var global6 = global * (5 --11) + 38*/
-
-//var aa = 1 + 2 * 3 - (5 / 6)
-
-/*function test_print(x, y, z)
-{
-    y = y + 2
-    print(x, y, z)
-    test_print_ex(x, y, z)
-    test_print_ex(x, y, z)
-    test_print_ex(x, y, z)
-    test_print_ex(x, y, z)
-    test_print_ex(x, y, z)
-    return 6
-}
-*/
-/*
-set cc = 3.14
-print("\ttest\n\"AAAA\"\n")
-
-print(test_print("aa'\"aa'\n\n", 12 / 6, 33 / 5))
-test_print("bbbb", 22, 44)
-
-function test_print(x, y, z)
-{
-    var xx = cc + 7 * y
-    var yy = y + 16
-    print(xx, yy, z)
-    //test_print(x, y, z)
-    return xx
-}
-*/
-
-function fibonacci(x)
-{
-    if (x < 2)
-    {
-        return 1
-    }
-    
-    return fibonacci(x - 1) + fibonacci(x - 2)
-}
-
-print(fibonacci(0))
-print(fibonacci(1))
-print(fibonacci(2))
-print(fibonacci(3))
-print(fibonacci(4))
-print(fibonacci(5))
-print(fibonacci(6))
-print(fibonacci(7))
+//print(d)
 print("\n")
-/*
-function test(x)
-{
-    x = x + 5
-    if (x > 5)
-    {
-        var y = 10
-        print(x + y, ">5")
-    }
-    else if (x > 3)
-    {
-        var y = "aaa"
-        print(x, y, ">3")
-        if (x > 10)
-        {
-            print(">10")
-        }
-        else
-        {
-            print("<10")
-        }
-        print("step")
-    }
-    else
-    {
-        print(x)
-        if (x == 0)
-        {
-            print("==0")
-        }
-    }
-
-    x = x / 5
-}
-
-//test(0)
-//test(3)
-//test(-5)*/
-//var expr = 8 + -(-(-3 + 4)) * 6
-//int aa = 8 + ~(-3 + 4) * 6;
-//call(5)
-
-/*
-8+   -(    -3+    4)   *   6
-8+   -(    1)     *    6
-8+   -1*   6
-8+   -6
-2
-*/
-
-/*
-var a = 0
-if (a < 2)
-{
-    a = 2
-}
-*/
-/*
-function echo(x)
-{
-    if (x % 2)
-    {
-        x = x * 0.1
-    }
-
-    return x
-}
-
-print(echo(1) + echo(2))
-*/
-
-
-function test(x)
-{
-    print(x)
-    if (x <= 0)
-    {
-        return 0
-    }
-
-    return test(x - 1)
-}
-
-print(test(10), 11, "\n")
-
-function test(x)
-{
-    return x + 1
-}
-
-function tobinary(x)
-{
-    if (x & 1)
-    {
-        print(1)
-    }
-    else
-    {
-        print(0)
-    }
-
-    if (x)
-    {
-        tobinary(x >> 1)
-    } 
-}
-
-tobinary(8)
+//print(c)
 print("\n")
-set x = 5 + 6 * 7 - 4 / 8 * -(5 - -7) - 6
+//print(b)
+print("\n")
+print(a)
+print(z)
+print(y)
 print(x)
+print(k)
+print(l)
+

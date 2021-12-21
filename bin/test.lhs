@@ -1,8 +1,8 @@
-//set d = 8 + -(5 - -7) - 6
+set d = 8 + -(5 - -7) - 6
 //-10
-//set c = 4 / 8 * -(5 - -7) - 6
+set c = 4 / 8 * -(5 - -7) - 6
 //-12
-//set b = 8 * -(5 - -7) - 6
+set b = 8 * -(5 - -7) - 6
 //-102
 set a = -(6)
 //-6
@@ -17,16 +17,12 @@ set k = 9
 set l = -(-(-(1*3-2)-6))
 //-7
 
-//print(d)
-print("\n")
-//print(c)
-print("\n")
-//print(b)
-print("\n")
+print(d)
+print(c)
+print(b)
 print(a)
 print(z)
 print(y)
 print(x)
 print(k)
 print(l)
-

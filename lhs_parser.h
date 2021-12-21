@@ -59,6 +59,12 @@ typedef struct LHSChunk
     struct LHSChunk* parent; 
 } LHSChunk;
 
+typedef struct LHSUnary
+{
+    char symbol;
+    struct LHSUnary *chain;
+} LHSUnary;
+
 typedef struct LHSLexical
 {
     int chunkid;
@@ -67,6 +73,7 @@ typedef struct LHSLexical
     LHSJmp* alljmp;
     LHSChunk* curchunk;
     LHSChunk* allchunk;
+    LHSUnary* allunary;
 } LHSLexical;
 
 extern const char* lhsparser_symbols[];

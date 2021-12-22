@@ -37,12 +37,13 @@ static int lhsexec_initparams(LHSVM* vm, LHSHash* hash, LHSVarDesc* desc,
     lhserr_check(vm, desc->index <= cc->localvars.usize, "system error.");
 
     int index = desc->index - 1;
+    LHSVar* var = lhsvector_at(vm, &cc->localvars, index);
+    var->desc = desc;
+
     if (index < cc->narg)
     {
-        LHSVar* var = lhsvector_at(vm, &cc->localvars, index);
         const LHSValue* value = lhsvm_getvalue(vm, index + 1);
         memcpy(&var->value, value, sizeof(LHSValue));
-        var->desc = desc;
     }
     return LHS_TRUE;
 }
@@ -55,7 +56,9 @@ static int lhsexec_initlocalvars(LHSVM* vm, LHSCallContext* cc)
         cc->localvars.usize = cc->frame->nlocalvars;        
         for (size_t i = 0; i < cc->localvars.usize; i++)
         {
-            ((LHSValue*)lhsvector_at(vm, &cc->localvars, i))->type = LHS_TNONE;
+            LHSVar* var = lhsvector_at(vm, &cc->localvars, i);
+            var->value.type = LHS_TNONE;
+            var->desc = 0;
         }
 
         lhshash_foreach(vm, &cc->frame->localvars, lhsexec_initparams, cc);  

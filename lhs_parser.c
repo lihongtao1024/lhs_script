@@ -47,7 +47,7 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 #define lhsparser_chunkforward(vm, lf)                                      \
 {                                                                           \
     LHSChunk* chunk = lhsmem_newobject((vm), sizeof(LHSChunk));             \
-    lhsparser_resetchunk((vm), lf, chunk);                                  \
+    lhsparser_resetchunk((vm), (lf), chunk);                                \
     lhslink_forward(lhsparser_castlex(lf), curchunk, chunk, parent);        \
     lhslink_forward(lhsparser_castlex(lf), allchunk, chunk, next);          \
 }
@@ -55,6 +55,28 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 #define lhsparser_chunkback(vm, lf)                                         \
 lhslink_back(lhsparser_castlex(lf), curchunk,                               \
     lhsparser_castlex(lf)->curchunk, parent)
+
+#define lhsparser_regionforward(vm, lf)                                     \
+{                                                                           \
+    LHSRegion* region = lhsmem_newobject((vm), sizeof(LHSRegion));          \
+    lhsparser_resetregion((vm), (lf), region);                              \
+    lhslink_forward(lhsparser_castlex(lf), curregion, region, parent);      \
+    lhslink_forward(lhsparser_castlex(lf), allregion, region, next);        \
+}
+
+#define lhsparser_regionback(vm, lf)                                        \
+{                                                                           \
+    LHSRegion* region = lhsparser_castlex(lf)->curregion;                   \
+    LHSJmp* jmp = region->breakjmp;                                         \
+    for (int i = 0; i < region->nbreak; i++)                                \
+    {                                                                       \
+        jmp->len = (int)((vm)->code.usize - jmp->pos);                      \
+        lhsparser_jmpsolve(lhsparser_castlex(lf), jmp, vm);                 \
+        jmp = jmp->next;                                                    \
+    }                                                                       \
+    lhslink_back(lhsparser_castlex(lf), curregion,                          \
+        lhsparser_castlex(lf)->allregion, parent)                           \
+}
 
 #define lhsparser_op1(vm, lf, s, c)                                         \
 lhscode_op1((vm), (s), (c));                                                \
@@ -452,6 +474,16 @@ static int lhsparser_uninitchunk(LHSLexical* lex, LHSChunk* chunk, LHSVM* vm)
     return LHS_TRUE;
 }
 
+static int lhsparser_resetregion(LHSVM* vm, LHSLoadF* loadf, LHSRegion* region)
+{
+    region->nbreak = 0;
+    region->continuepos = 0;
+    lhslink_init(region, breakjmp);
+    lhslink_init(region, next);
+    lhslink_init(region, parent);
+    return LHS_TRUE;
+}
+
 static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
 {
     lhsparser_castlex(loadf) = lex;
@@ -465,6 +497,9 @@ static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
     lhslink_init(lex, curchunk);
     lhslink_init(lex, allchunk);
     lhsparser_chunkforward(vm, loadf);
+
+    lhslink_init(lex, curregion);
+    lhslink_init(lex, allregion);
 
     lhsbuf_init(vm, &lex->token.buf);
     lhsbuf_init(vm, &lex->lookahead.buf);
@@ -2175,6 +2210,7 @@ static int lhsparser_forarg3(LHSVM* vm, LHSLoadF* loadf, LHSForState* state)
 {
     /*forarg3 -> null | exprstate*/
     state->iterate->pos = vm->code.usize;
+    lhsparser_castlex(loadf)->curregion->continuepos = vm->code.usize;
 
     LHSToken* token = &lhsparser_castlex(loadf)->token;
     if (token->t != ')')
@@ -2212,7 +2248,9 @@ static int lhsparser_forstate(LHSVM* vm, LHSLoadF* loadf)
     LHSForState state;
     lhsparser_resetforstate(vm, loadf, &state);
 
+    lhsparser_regionforward(vm, loadf);
     lhsparser_chunkforward(vm, loadf);
+
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENFOR, "for", "for");
     lhsparser_checkandnexttoken(vm, loadf, '(', "for", "(");
     lhsparser_forargs(vm, loadf, &state);
@@ -2230,6 +2268,7 @@ static int lhsparser_forstate(LHSVM* vm, LHSLoadF* loadf)
     state.iterate->pos = vm->code.usize;
     
     lhsparser_chunkback(vm, loadf);
+    lhsparser_regionback(vm, loadf);
     return LHS_TRUE;
 }
 
@@ -2429,6 +2468,57 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
+static int lhsparser_continuestate(LHSVM* vm, LHSLoadF* loadf)
+{
+    /*continuestate -> continue*/
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENCONTINUE, "continue", "continue");
+    
+    LHSRegion* region = lhsparser_castlex(loadf)->curregion;
+    if (!region)
+    {
+        lhserr_syntax(vm, loadf, "unexcepted 'continue'.");
+    }
+
+    lhsparser_op2(vm, loadf, OP_JMP, loadf->line, loadf->column, 
+        lhsframe_castcurframe(vm)->name);
+    lhscode_index(vm, 0);
+
+    LHSJmp* jmp = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, jmp);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, jmp, next);
+
+    jmp->pos = vm->code.usize;
+    jmp->len = (int)(region->continuepos - jmp->pos);
+    return LHS_TRUE;
+}
+
+static int lhsparser_breakstate(LHSVM* vm, LHSLoadF* loadf)
+{
+    /*breakstate -> break*/
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENBREAK, "break", "break");
+
+    LHSRegion* region = lhsparser_castlex(loadf)->curregion;
+    if (!region)
+    {
+        lhserr_syntax(vm, loadf, "unexcepted 'break'.");
+    }
+
+    lhsparser_op2(vm, loadf, OP_JMP, loadf->line, loadf->column, 
+        lhsframe_castcurframe(vm)->name);
+    lhscode_index(vm, 0);
+
+    LHSJmp* jmp = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, jmp);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, jmp, next);
+
+    jmp->pos = vm->code.usize;
+    jmp->len = 0;
+
+    region->nbreak++;
+    region->breakjmp = jmp;
+    return LHS_TRUE;
+}
+
 static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
 {
     while (!lhsparser_isyield(loadf, nested))
@@ -2473,6 +2563,16 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
         case LHS_TOKENRETURN:
         {
             lhsparser_retstate(vm, loadf);
+            break;
+        }
+        case LHS_TOKENCONTINUE:
+        {
+            lhsparser_continuestate(vm, loadf);
+            break;
+        }
+        case LHS_TOKENBREAK:
+        {
+            lhsparser_breakstate(vm, loadf);
             break;
         }
         case '{':

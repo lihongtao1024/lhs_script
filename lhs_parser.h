@@ -48,8 +48,8 @@ typedef struct LHSToken
 
 typedef struct LHSJmp
 {
-    size_t pos;
     int len;
+    size_t pos;    
     struct LHSJmp* next;
 } LHSJmp;
 
@@ -60,6 +60,15 @@ typedef struct LHSChunk
     struct LHSChunk* parent; 
 } LHSChunk;
 
+typedef struct LHSRegion
+{
+    int nbreak;
+    size_t continuepos;
+    LHSJmp* breakjmp;
+    struct LHSRegion* next;
+    struct LHSRegion* parent; 
+} LHSRegion;
+
 typedef struct LHSLexical
 {
     int chunkid;
@@ -69,6 +78,8 @@ typedef struct LHSLexical
     LHSJmp* alljmp;
     LHSChunk* curchunk;
     LHSChunk* allchunk;
+    LHSRegion* curregion;
+    LHSRegion* allregion;
 } LHSLexical;
 
 extern const char* lhsparser_symbols[];

@@ -1615,7 +1615,7 @@ static int lhsparser_exprargs(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     int narg = 0;
     while (LHS_TRUE)
     {
-        ++narg;
+        narg++;
         lhsparser_exprstate(vm, loadf);
         if (token->t != ',')
         {
@@ -2339,7 +2339,7 @@ static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
             );
         }
 
-        ++nparam;
+        nparam++;
         lhsparser_insertlocalvar(vm, loadf);
         lhsparser_nexttoken(vm, loadf);
         if (token->t != ',')

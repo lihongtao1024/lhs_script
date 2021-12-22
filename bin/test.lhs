@@ -59,7 +59,7 @@ jmp 44  //iterate
 
 exit
 */
-/*var x = 5
+var x = 5
 x = x + 6
 function test(x, y, z)
 {
@@ -91,15 +91,15 @@ for (;;x = x + 1)
 {
     print(x)
 }
-*/
-/*
+
+
 var i = 100
 while (i > 0)
 {
     print(i)
     i = i - 1
 }
-*/
+
 /*
 push true
 jz 106

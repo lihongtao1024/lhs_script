@@ -56,10 +56,10 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 lhslink_back(lhsparser_castlex(lf), curchunk,                               \
     lhsparser_castlex(lf)->curchunk, parent)
 
-#define lhsparser_regionforward(vm, lf)                                     \
+#define lhsparser_regionforward(vm, lf, t)                                  \
 {                                                                           \
     LHSRegion* region = lhsmem_newobject((vm), sizeof(LHSRegion));          \
-    lhsparser_resetregion((vm), (lf), region);                              \
+    lhsparser_resetregion((vm), (lf), region, (t));                         \
     lhslink_forward(lhsparser_castlex(lf), curregion, region, parent);      \
     lhslink_forward(lhsparser_castlex(lf), allregion, region, next);        \
 }
@@ -480,10 +480,11 @@ static int lhsparser_uninitregion(LHSLexical* lex, LHSRegion* region, LHSVM* vm)
     return LHS_TRUE;
 }
 
-static int lhsparser_resetregion(LHSVM* vm, LHSLoadF* loadf, LHSRegion* region)
+static int lhsparser_resetregion(LHSVM* vm, LHSLoadF* loadf, LHSRegion* region,
+    int token)
 {
+    region->token = token;
     region->nbreak = 0;
-    region->continuepos = 0;
     lhslink_init(region, breakjmp);
     lhslink_init(region, next);
     lhslink_init(region, parent);
@@ -2225,7 +2226,7 @@ static int lhsparser_forarg3(LHSVM* vm, LHSLoadF* loadf, LHSForState* state)
 {
     /*forarg3 -> null | exprstate*/
     state->iterate->pos = vm->code.usize;
-    lhsparser_castlex(loadf)->curregion->continuepos = vm->code.usize;
+    lhsparser_castlex(loadf)->curregion->continuejmp.pos = vm->code.usize;
 
     LHSToken* token = &lhsparser_castlex(loadf)->token;
     if (token->t != ')')
@@ -2263,7 +2264,7 @@ static int lhsparser_forstate(LHSVM* vm, LHSLoadF* loadf)
     LHSForState state;
     lhsparser_resetforstate(vm, loadf, &state);
 
-    lhsparser_regionforward(vm, loadf);
+    lhsparser_regionforward(vm, loadf, LHS_TOKENFOR);
     lhsparser_chunkforward(vm, loadf);
 
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENFOR, "for", "for");
@@ -2291,7 +2292,7 @@ static int lhsparser_whilearg(LHSVM* vm, LHSLoadF* loadf, LHSWhileState* state)
 {
 	/*whilearg -> exprstate*/
     state->condition->pos = vm->code.usize;
-    lhsparser_castlex(loadf)->curregion->continuepos = vm->code.usize;
+    lhsparser_castlex(loadf)->curregion->continuejmp.pos = vm->code.usize;
 
     int layers = lhsparser_castlex(loadf)->stacklayers;
     lhsparser_exprstate(vm, loadf);
@@ -2313,7 +2314,7 @@ static int lhsparser_whilestate(LHSVM* vm, LHSLoadF* loadf)
     LHSWhileState state;
     lhsparser_resetwhilestate(vm, loadf, &state);
 
-    lhsparser_regionforward(vm, loadf);
+    lhsparser_regionforward(vm, loadf, LHS_TOKENWHILE);
 
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENWHILE, "while", "while");
     lhsparser_checkandnexttoken(vm, loadf, '(', "while", "(");
@@ -2335,6 +2336,10 @@ static int lhsparser_whilestate(LHSVM* vm, LHSLoadF* loadf)
 
 static int lhsparser_doarg(LHSVM* vm, LHSLoadF* loadf, LHSDoState* state)
 {
+    /*doarg -> exprstate*/
+    LHSRegion* region = lhsparser_castlex(loadf)->curregion;
+    region->continuejmp.jmp->len = (int)(vm->code.usize - region->continuejmp.jmp->pos);
+
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENUNTIL, "until", "until");
     lhsparser_checkandnexttoken(vm, loadf, '(', "until", "(");
 
@@ -2361,12 +2366,15 @@ static int lhsparser_dostate(LHSVM* vm, LHSLoadF* loadf)
     LHSDoState state;
     lhsparser_resetdostate(vm, loadf, &state);
 
+    lhsparser_regionforward(vm, loadf, LHS_TOKENDO);
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENDO, "do", "do");
-
+    
     state.block->pos = vm->code.usize;
 
     lhsparser_blockstate(vm, loadf);
     lhsparser_doarg(vm, loadf, &state);
+
+    lhsparser_regionback(vm, loadf);
     return LHS_TRUE;
 }
 
@@ -2508,7 +2516,14 @@ static int lhsparser_continuestate(LHSVM* vm, LHSLoadF* loadf)
     lhslink_forward(lhsparser_castlex(loadf), alljmp, jmp, next);
 
     jmp->pos = vm->code.usize;
-    jmp->len = (int)(region->continuepos - jmp->pos);
+    if (region->token != LHS_TOKENDO)
+    {
+        jmp->len = (int)(region->continuejmp.pos - jmp->pos);
+    }
+    else
+    {
+        region->continuejmp.jmp = jmp;
+    }
     return LHS_TRUE;
 }
 

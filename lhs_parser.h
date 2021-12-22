@@ -62,9 +62,14 @@ typedef struct LHSChunk
 
 typedef struct LHSRegion
 {
+    int token;
     int nbreak;
-    size_t continuepos;
     LHSJmp* breakjmp;
+    union
+    {
+        size_t pos;
+        LHSJmp* jmp;
+    } continuejmp;
     struct LHSRegion* next;
     struct LHSRegion* parent; 
 } LHSRegion;

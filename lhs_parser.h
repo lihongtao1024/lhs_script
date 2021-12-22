@@ -48,7 +48,7 @@ typedef struct LHSToken
 typedef struct LHSJmp
 {
     size_t pos;
-    size_t len;
+    int len;
     struct LHSJmp* next;
 } LHSJmp;
 

@@ -87,3 +87,7 @@ for (var z = 0; z < 20; z = z + 1)
     print(fibonacci(z), " ")
 }
 
+for (;;x = x + 1)
+{
+    print(x)
+}

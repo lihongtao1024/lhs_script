@@ -2033,15 +2033,19 @@ static int lhsparser_forarg1(LHSVM* vm, LHSLoadF* loadf, LHSForState* state)
 static int lhsparser_forarg2(LHSVM* vm, LHSLoadF* loadf, LHSForState* state)
 {
     /*forarg2 -> null | exprstate*/
-    LHSToken* token = &lhsparser_castlex(loadf)->token;
-    if (token->t == ';')
-    {
-        return LHS_TRUE;
-    }
-
     state->condition->pos = vm->code.usize;
 
-    lhsparser_exprstate(vm, loadf);
+    LHSToken* token = &lhsparser_castlex(loadf)->token;
+    if (token->t != ';')
+    {
+        lhsparser_exprstate(vm, loadf);
+    }
+    else
+    {
+        lhscode_op2(vm, OP_PUSH, loadf->line, loadf->column,
+            lhsframe_castcurframe(vm)->name);
+        lhscode_boolean(vm, LHS_TRUE);
+    }
 
     lhscode_op2(vm, OP_JZ, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
@@ -2058,15 +2062,13 @@ static int lhsparser_forarg2(LHSVM* vm, LHSLoadF* loadf, LHSForState* state)
 static int lhsparser_forarg3(LHSVM* vm, LHSLoadF* loadf, LHSForState* state)
 {
     /*forarg3 -> null | exprstate*/
-    LHSToken* token = &lhsparser_castlex(loadf)->token;
-    if (token->t == ';')
-    {
-        return LHS_TRUE;
-    }
-
     state->iterate->pos = vm->code.usize;
 
-    lhsparser_exprstate(vm, loadf);
+    LHSToken* token = &lhsparser_castlex(loadf)->token;
+    if (token->t != ')')
+    {
+        lhsparser_exprstate(vm, loadf);
+    }
     
     lhscode_op2(vm, OP_JMP, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);

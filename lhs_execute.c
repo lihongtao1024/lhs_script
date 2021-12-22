@@ -31,6 +31,42 @@ typedef int (*lhsexec_opr)(LHSVM*, LHSValue*, const LHSValue*, char);
 #define lhsexec_valuetype(v)                                        \
 ((v)->type == LHS_TGC ? LHS_TGC + (v)->gc->type : v->type)
 
+static int lhsexec_initparams(LHSVM* vm, LHSHash* hash, LHSVarDesc* desc, 
+    LHSCallContext* cc)
+{
+    lhserr_check(vm, desc->index <= cc->localvars.usize, "system error.");
+
+    int index = desc->index - 1;
+    if (index < cc->narg)
+    {
+        LHSVar* var = lhsvector_at(vm, &cc->localvars, index);
+        const LHSValue* value = lhsvm_getvalue(vm, index + 1);
+        memcpy(&var->value, value, sizeof(LHSValue));
+        var->desc = desc;
+    }
+    return LHS_TRUE;
+}
+
+static int lhsexec_initlocalvars(LHSVM* vm, LHSCallContext* cc)
+{
+    if (cc->frame)
+    {
+        lhsvector_init(vm, &cc->localvars, sizeof(LHSVar), cc->frame->nlocalvars);
+        cc->localvars.usize = cc->frame->nlocalvars;        
+        for (size_t i = 0; i < cc->localvars.usize; i++)
+        {
+            ((LHSValue*)lhsvector_at(vm, &cc->localvars, i))->type = LHS_TNONE;
+        }
+
+        lhshash_foreach(vm, &cc->frame->localvars, lhsexec_initparams, cc);  
+    }
+    else
+    {
+        lhsvector_init(vm, &cc->localvars, sizeof(LHSVar), 0);
+    }
+    return LHS_TRUE;
+}
+
 static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFrame* frame, 
     int narg, int nret, StkID errfn, IPID ip)
 {
@@ -52,6 +88,8 @@ static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFrame* frame,
 
     lhslink_forward(vm, callcontext, cc, parent);
     vm->ncallcontext++;
+
+    lhsexec_initlocalvars(vm, cc);
     return cc;
 }
 
@@ -62,6 +100,7 @@ static int lhsexec_backcc(LHSVM* vm)
     lhslink_back((vm), callcontext, cc, parent);
     (vm)->ncallcontext--;
 
+    lhsvector_uninit(vm, &cc->localvars);
     lhsmem_freeobject(vm, cc, sizeof(LHSCallContext));
     return LHS_TRUE;
 }
@@ -859,6 +898,15 @@ static int lhsexec_mov(LHSVM* vm)
         break;
     }
     case LHS_MARKLOCAL:
+    {
+        lvalue = lhsvector_at
+        (
+            vm,
+            &cc->localvars,
+            (size_t)lhsexec_i(cc) - 1
+        );
+        break;
+    }
     case LHS_MARKSTACK:
     {
         lvalue = (LHSValue*)lhsvm_getvalue(vm, lhsexec_i(cc));
@@ -885,6 +933,15 @@ static int lhsexec_mov(LHSVM* vm)
         break;
     }
     case LHS_MARKLOCAL:
+    {
+        lvalue = lhsvector_at
+        (
+            vm,
+            &cc->localvars,
+            (size_t)lhsexec_i(cc) - 1
+        );
+        break;
+    }
     case LHS_MARKSTACK:
     {
         rvalue = (LHSValue*)lhsvm_getvalue(vm, lhsexec_i(cc));
@@ -930,6 +987,15 @@ static int lhsexec_movs(LHSVM* vm)
         break;
     }
     case LHS_MARKLOCAL:
+    {
+        lvalue = lhsvector_at
+        (
+            vm,
+            &cc->localvars,
+            (size_t)lhsexec_i(cc) - 1
+        );
+        break;
+    }
     case LHS_MARKSTACK:
     {
         lvalue = (LHSValue*)lhsvm_getvalue(vm, lhsexec_i(cc));
@@ -976,6 +1042,16 @@ static int lhsexec_push(LHSVM* vm)
         break;
     }
     case LHS_MARKLOCAL:
+    {
+        LHSValue* value = lhsvector_at
+        (
+            vm,
+            &cc->localvars,
+            (size_t)lhsexec_i(cc) - 1
+        );
+        memcpy(lhsvm_incrementstack(vm), value, sizeof(LHSValue));
+        break;
+    }
     case LHS_MARKSTACK:
     {
         lhsvm_pushvalue(vm, lhsexec_i(cc));
@@ -1174,6 +1250,17 @@ static int lhsexec_call(LHSVM* vm)
         break;
     }
     case LHS_MARKLOCAL:
+    {
+        LHSVar *var = lhsvector_at
+        (
+            vm,
+            &cc->localvars,
+            (size_t)lhsexec_i(cc) - 1
+        );
+        func = &var->value;
+        desc = var->desc;
+        break;
+    }
     case LHS_MARKSTACK:
     {
         func = lhsvm_getvalue(vm, lhsexec_i(cc));
@@ -1265,8 +1352,7 @@ static int lhsexec_exit(LHSVM* vm)
         "unexpected byte code."
     );
 
-    lhsmem_freeobject(vm, vm->callcontext, sizeof(LHSCallContext));
-    vm->callcontext = 0;
+    lhsexec_backcc(vm);
     return LHS_FALSE;
 }
 

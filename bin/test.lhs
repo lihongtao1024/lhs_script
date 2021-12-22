@@ -27,12 +27,16 @@ print(x)
 print(k)
 print(l)
 */
-/*
-for (var i = 0; i < 10; i = i + 1)
+
+for (var i = 0; i < 100; i = i + 1)
 {
-    print(i)
+    var j
+    for (j = 0; j < i; j = j + 1)
+    {
+        print(i, j, "\n")
+    }
 }
-*/
+
 /*
 push 0
 movs l[?]
@@ -55,7 +59,8 @@ jmp 44  //iterate
 
 exit
 */
-
+var x = 5
+x = x + 6
 function test(x, y, z)
 {
     var a = 6, b = 7, c = 8
@@ -66,3 +71,18 @@ function test(x, y, z)
 }
 
 print(test(1, 2, 3))
+
+function fibonacci(x)
+{
+    if (x < 2)
+    {
+        return 1
+    }
+
+    return fibonacci(x - 1) + fibonacci(x - 2)
+}
+
+for (x = 0; x < 15; x = x + 1)
+{
+    print(fibonacci(x), " ")
+}

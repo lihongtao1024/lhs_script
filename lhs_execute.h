@@ -18,6 +18,7 @@ typedef struct LHSCallContext
     int line;
     int column;
     int refer;
+    LHSVector localvars;
     LHSFrame* frame;
     struct LHSCallContext* parent;
 } LHSCallContext;

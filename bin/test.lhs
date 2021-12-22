@@ -92,10 +92,14 @@ for (;;x = x + 1)
     print(x)
 }
 */
-while (true)
+/*
+var i = 100
+while (i > 0)
 {
-    print(1)
+    print(i)
+    i = i - 1
 }
+*/
 /*
 push true
 jz 106
@@ -104,4 +108,24 @@ push 1
 call g[?], 1, -1
 jmp 100
 exit
+*/
+var k = 1
+do
+{
+    k = k << 1
+    print(k)
+} until (k < 100)
+/*
+push 0
+movs l[?]
+
+push l[?]
+push 1
+shr
+movs l[?]
+
+push k
+push 100
+less
+jnz 122
 */

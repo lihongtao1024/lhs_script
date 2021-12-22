@@ -120,6 +120,11 @@ typedef struct LHSWhileState
     LHSJmp* condition;
 } LHSWhileState;
 
+typedef struct LHSDoState
+{
+    LHSJmp* block;
+} LHSDoState;
+
 typedef struct LHSFuncState
 {
     LHSJmp* finish;
@@ -143,8 +148,9 @@ const char* lhsparser_symbols[] =
 static const char* reserveds[] =
 {
     "", "set", "var", "function", "for", 
-    "while", "if", "else", "do", "break", 
-    "continue", "true", "false", "return"
+    "while", "if", "else", "do", "until", 
+    "break", "continue", "true", "false", 
+    "return"
 };
 
 static const char priorities[][SYMBOL_END] =
@@ -883,6 +889,15 @@ static int lhsparser_resetwhilestate(LHSVM* vm, LHSLoadF* loadf, LHSWhileState* 
     state->condition = lhsmem_newobject(vm, sizeof(LHSJmp));
     lhsparser_initjmp(vm, state->condition);
     lhslink_forward(lhsparser_castlex(loadf), alljmp, state->condition, next);
+
+    return LHS_TRUE;
+}
+
+static int lhsparser_resetdostate(LHSVM* vm, LHSLoadF* loadf, LHSDoState* state)
+{
+    state->block = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, state->block);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, state->block, next);
 
     return LHS_TRUE;
 }
@@ -2152,11 +2167,10 @@ static int lhsparser_whilearg(LHSVM* vm, LHSLoadF* loadf, LHSWhileState* state)
 
 static int lhsparser_whilestate(LHSVM* vm, LHSLoadF* loadf)
 {
-    /*whilestate -> while '(' exprstate ')'*/
+    /*whilestate -> while '(' whilearg ')' blockstate*/
     LHSWhileState state;
     lhsparser_resetwhilestate(vm, loadf, &state);
 
-    lhsparser_chunkforward(vm, loadf);
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENWHILE, "while", "while");
     lhsparser_checkandnexttoken(vm, loadf, '(', "while", "(");
     lhsparser_whilearg(vm, loadf, &state);
@@ -2170,6 +2184,36 @@ static int lhsparser_whilestate(LHSVM* vm, LHSLoadF* loadf)
     state.finish->len = (int)(vm->code.usize - state.finish->pos);
     state.condition->len = (int)(state.condition->pos - vm->code.usize);
     state.condition->pos = vm->code.usize;
+    return LHS_TRUE;
+}
+
+static int lhsparser_doarg(LHSVM* vm, LHSLoadF* loadf, LHSDoState* state)
+{
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENUNTIL, "until", "until");
+    lhsparser_checkandnexttoken(vm, loadf, '(', "until", "(");
+    lhsparser_exprstate(vm, loadf);
+    lhsparser_checkandnexttoken(vm, loadf, ')', "until", ")");
+
+    lhscode_op2(vm, OP_JNZ, loadf->line, loadf->column, 
+        lhsframe_castcurframe(vm)->name);
+    lhscode_index(vm, 0);
+    state->block->len = (int)(state->block->pos - vm->code.usize);
+    state->block->pos = vm->code.usize;
+    return LHS_TRUE;
+}
+
+static int lhsparser_dostate(LHSVM* vm, LHSLoadF* loadf)
+{
+    /*dostate -> do blockstate doarg*/
+    LHSDoState state;
+    lhsparser_resetdostate(vm, loadf, &state);
+
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENDO, "do", "do");
+
+    state.block->pos = vm->code.usize;
+
+    lhsparser_blockstate(vm, loadf);
+    lhsparser_doarg(vm, loadf, &state);
     return LHS_TRUE;
 }
 
@@ -2320,6 +2364,11 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
         case LHS_TOKENWHILE:
         {
             lhsparser_whilestate(vm, loadf);
+            break;
+        }
+        case LHS_TOKENDO:
+        {
+            lhsparser_dostate(vm, loadf);
             break;
         }
         case LHS_TOKENFUNCTION:

@@ -474,6 +474,12 @@ static int lhsparser_uninitchunk(LHSLexical* lex, LHSChunk* chunk, LHSVM* vm)
     return LHS_TRUE;
 }
 
+static int lhsparser_uninitregion(LHSLexical* lex, LHSRegion* region, LHSVM* vm)
+{
+    lhsmem_freeobject(vm, region, sizeof(LHSRegion));
+    return LHS_TRUE;
+}
+
 static int lhsparser_resetregion(LHSVM* vm, LHSLoadF* loadf, LHSRegion* region)
 {
     region->nbreak = 0;
@@ -537,6 +543,15 @@ static int lhsparser_uninitlexical(LHSVM* vm, LHSLoadF* loadf)
         allchunk,
         next,
         lhsparser_uninitchunk,
+        vm
+    );
+    lhslink_foreach
+    (
+        LHSRegion, 
+        lhsparser_castlex(loadf), 
+        allregion, 
+        next, 
+        lhsparser_uninitregion, 
         vm
     );
     lhsbuf_uninit(vm, &lhsparser_castlex(loadf)->token.buf);

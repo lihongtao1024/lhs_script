@@ -68,7 +68,7 @@ static int lhsexec_initlocalvars(LHSVM* vm, LHSCallContext* cc)
 }
 
 static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFrame* frame, 
-    int narg, int nret, StkID errfn, IPID ip)
+    int narg, int nret, StkID errfn, IPID ip, int type)
 {
     (vm->ncallcontext >= LHS_MAXCALLLAYER) && 
         lhserr_runtime(vm, 0, "stack layers overflow.");
@@ -85,11 +85,12 @@ static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFrame* frame,
     cc->line = 0;
     cc->column = 0;
     cc->refer = 0;
+    cc->type = type;
 
     lhslink_forward(vm, callcontext, cc, parent);
     vm->ncallcontext++;
 
-    lhsexec_initlocalvars(vm, cc);
+    (type == LHS_FCALL) && lhsexec_initlocalvars(vm, cc);
     return cc;
 }
 
@@ -100,7 +101,10 @@ static int lhsexec_backcc(LHSVM* vm)
     lhslink_back((vm), callcontext, cc, parent);
     (vm)->ncallcontext--;
 
-    lhsvector_uninit(vm, &cc->localvars);
+    if (cc->type == LHS_FCALL)
+    {
+        lhsvector_uninit(vm, &cc->localvars);
+    }
     lhsmem_freeobject(vm, cc, sizeof(LHSCallContext));
     return LHS_TRUE;
 }
@@ -1179,7 +1183,8 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg,
         narg, 
         nret, 
         lhsexec_castcc(vm->callcontext)->errfn,
-        lhsexec_castcc(vm->callcontext)->ip
+        lhsexec_castcc(vm->callcontext)->ip,
+        LHS_CCALL
     );
 
     cc->nret = dg(vm);
@@ -1221,7 +1226,8 @@ static int lhsexec_callframe(LHSVM* vm, LHSFrame* frame, int narg, int nret,
         narg, 
         nret, 
         lhsexec_castcc(vm->callcontext)->errfn,
-        vm->code.data + frame->entry
+        vm->code.data + frame->entry,
+        LHS_FCALL
     );
 
     return LHS_TRUE;
@@ -1409,7 +1415,8 @@ int lhsexec_pcall(LHSVM* vm, int narg, int nret, StkID errfn)
         narg, 
         nret, 
         errfn, 
-        vm->code.data
+        vm->code.data,
+        LHS_FCALL
     );
 
     int errcode = lhserr_protectedcall(vm, lhsexec_execute, 0);

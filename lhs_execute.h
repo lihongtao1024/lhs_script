@@ -3,7 +3,9 @@
 #include "lhs_frame.h"
 #include "lhs_vm.h"
 
-#define lhsexec_castcc(o) ((LHSCallContext*)o)
+#define LHS_FCALL                       (1)
+#define LHS_CCALL                       (2)
+#define lhsexec_castcc(o)               ((LHSCallContext*)o)
 
 typedef const char* IPID;
 typedef struct LHSCallContext
@@ -18,6 +20,7 @@ typedef struct LHSCallContext
     int line;
     int column;
     int refer;
+    int type;
     LHSVector localvars;
     LHSFrame* frame;
     struct LHSCallContext* parent;

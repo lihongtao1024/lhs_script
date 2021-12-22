@@ -82,7 +82,8 @@ function fibonacci(x)
     return fibonacci(x - 1) + fibonacci(x - 2)
 }
 
-for (x = 0; x < 15; x = x + 1)
+for (var z = 0; z < 20; z = z + 1)
 {
-    print(fibonacci(x), " ")
+    print(fibonacci(z), " ")
 }
+

@@ -91,6 +91,17 @@ int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
          cc; 
          cc = cc->parent)
     {
+        lhsbuf_pushs(vm, &buf, "[");
+        if (cc->type == LHS_FCALL)
+        {
+            lhsbuf_pushc(vm, &buf, 'F');
+        }
+        else
+        {
+            lhsbuf_pushc(vm, &buf, 'C');
+        }
+        lhsbuf_pushs(vm, &buf, "]");
+
         LHSVar* name = lhsvector_at
         (
             vm,

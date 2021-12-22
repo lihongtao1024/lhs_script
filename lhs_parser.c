@@ -114,6 +114,12 @@ typedef struct LHSForState
     LHSJmp* iterate;
 } LHSForState;
 
+typedef struct LHSWhileState
+{
+    LHSJmp* finish;
+    LHSJmp* condition;
+} LHSWhileState;
+
 typedef struct LHSFuncState
 {
     LHSJmp* finish;
@@ -868,11 +874,25 @@ static int lhsparser_resetforstate(LHSVM* vm, LHSLoadF* loadf, LHSForState* stat
     return LHS_TRUE;
 }
 
+static int lhsparser_resetwhilestate(LHSVM* vm, LHSLoadF* loadf, LHSWhileState* state)
+{
+    state->finish = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, state->finish);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, state->finish, next);
+
+    state->condition = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, state->condition);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, state->condition, next);
+
+    return LHS_TRUE;
+}
+
 static int lhsparser_resetfuncstate(LHSVM* vm, LHSLoadF* loadf, LHSFuncState* state)
 {
     state->finish = lhsmem_newobject(vm, sizeof(LHSJmp));
     lhsparser_initjmp(vm, state->finish);
     lhslink_forward(lhsparser_castlex(loadf), alljmp, state->finish, next);
+
     return LHS_TRUE;
 }
 
@@ -2116,6 +2136,43 @@ static int lhsparser_forstate(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
+static int lhsparser_whilearg(LHSVM* vm, LHSLoadF* loadf, LHSWhileState* state)
+{
+	/*whilearg -> exprstate*/
+    state->condition->pos = vm->code.usize;
+
+    lhsparser_exprstate(vm, loadf);
+
+    lhscode_op2(vm, OP_JZ, loadf->line, loadf->column, 
+        lhsframe_castcurframe(vm)->name);
+    lhscode_index(vm, 0);
+    state->finish->pos = vm->code.usize;
+    return LHS_TRUE;
+}
+
+static int lhsparser_whilestate(LHSVM* vm, LHSLoadF* loadf)
+{
+    /*whilestate -> while '(' exprstate ')'*/
+    LHSWhileState state;
+    lhsparser_resetwhilestate(vm, loadf, &state);
+
+    lhsparser_chunkforward(vm, loadf);
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENWHILE, "while", "while");
+    lhsparser_checkandnexttoken(vm, loadf, '(', "while", "(");
+    lhsparser_whilearg(vm, loadf, &state);
+    lhsparser_checkandnexttoken(vm, loadf, ')', "while", ")");
+
+    lhsparser_blockstate(vm, loadf);
+
+    lhscode_op2(vm, OP_JMP, loadf->line, loadf->column, 
+        lhsframe_castcurframe(vm)->name);
+    lhscode_index(vm, 0);
+    state.finish->len = (int)(vm->code.usize - state.finish->pos);
+    state.condition->len = (int)(state.condition->pos - vm->code.usize);
+    state.condition->pos = vm->code.usize;
+    return LHS_TRUE;
+}
+
 static int lhsparser_funcargs(LHSVM* vm, LHSLoadF* loadf)
 {
     /*funcargs -> null | {identifier [',']}*/
@@ -2258,6 +2315,11 @@ static int lhsparser_statement(LHSVM* vm, LHSLoadF* loadf, int nested)
         case LHS_TOKENFOR:
         {
             lhsparser_forstate(vm, loadf);
+            break;
+        }
+        case LHS_TOKENWHILE:
+        {
+            lhsparser_whilestate(vm, loadf);
             break;
         }
         case LHS_TOKENFUNCTION:

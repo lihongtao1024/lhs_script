@@ -27,7 +27,7 @@ print(x)
 print(k)
 print(l)
 */
-
+/*
 for (var i = 0; i < 100; i = i + 1)
 {
     var j
@@ -36,7 +36,7 @@ for (var i = 0; i < 100; i = i + 1)
         print(i, j, "\n")
     }
 }
-
+*/
 /*
 push 0
 movs l[?]
@@ -59,7 +59,7 @@ jmp 44  //iterate
 
 exit
 */
-var x = 5
+/*var x = 5
 x = x + 6
 function test(x, y, z)
 {
@@ -91,3 +91,17 @@ for (;;x = x + 1)
 {
     print(x)
 }
+*/
+while (true)
+{
+    print(1)
+}
+/*
+push true
+jz 106
+
+push 1
+call g[?], 1, -1
+jmp 100
+exit
+*/

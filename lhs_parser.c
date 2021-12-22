@@ -2291,6 +2291,7 @@ static int lhsparser_whilearg(LHSVM* vm, LHSLoadF* loadf, LHSWhileState* state)
 {
 	/*whilearg -> exprstate*/
     state->condition->pos = vm->code.usize;
+    lhsparser_castlex(loadf)->curregion->continuepos = vm->code.usize;
 
     int layers = lhsparser_castlex(loadf)->stacklayers;
     lhsparser_exprstate(vm, loadf);
@@ -2312,6 +2313,8 @@ static int lhsparser_whilestate(LHSVM* vm, LHSLoadF* loadf)
     LHSWhileState state;
     lhsparser_resetwhilestate(vm, loadf, &state);
 
+    lhsparser_regionforward(vm, loadf);
+
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENWHILE, "while", "while");
     lhsparser_checkandnexttoken(vm, loadf, '(', "while", "(");
     lhsparser_whilearg(vm, loadf, &state);
@@ -2325,6 +2328,8 @@ static int lhsparser_whilestate(LHSVM* vm, LHSLoadF* loadf)
     state.finish->len = (int)(vm->code.usize - state.finish->pos);
     state.condition->len = (int)(state.condition->pos - vm->code.usize);
     state.condition->pos = vm->code.usize;
+
+    lhsparser_regionback(vm, loadf);
     return LHS_TRUE;
 }
 

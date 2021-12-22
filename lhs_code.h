@@ -74,7 +74,7 @@
     lhsbuf_pushc((vm), &(vm)->code, (s));               \
     lhsbuf_pushi((vm), &(vm)->code, (c)->line);         \
     lhsbuf_pushi((vm), &(vm)->code, (c)->column);       \
-    lhsbuf_pushi((vm), &(vm)->code, (c)->name);         \
+    lhsbuf_pushi((vm), &(vm)->code, (c)->refer);         \
 }
 
 #define lhscode_op2(vm, s, l, c, n)                     \

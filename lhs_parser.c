@@ -69,7 +69,7 @@ typedef struct LHSExprChain
     char swap;
     int line;
     int column;
-    int name;
+    int refer;
     int nunary;
     union
     {
@@ -799,7 +799,7 @@ static int lhsparser_resetexprchain(LHSVM* vm, LHSExprChain* chain, LHSExprState
     chain->type = LHS_EXPRNONE;
     chain->line = 0;
     chain->column = 0;
-    chain->name = 0;
+    chain->refer = 0;
     chain->nunary = 0;
     lhslink_init(chain, unary);
     return LHS_TRUE;
@@ -1525,7 +1525,7 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     state->chain->type = LHS_EXPRNONE;
     state->chain->line = loadf->line;
     state->chain->column = loadf->column;
-    state->chain->name = name->desc->index;
+    state->chain->refer = name->desc->index;
     state->chain->factor.call.mark = desc->mark;
     state->chain->factor.call.index = desc->index;
     state->chain->factor.call.nret = LHS_UNCERTAIN;
@@ -1559,7 +1559,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         state->chain->type = LHS_EXPRINT;
         state->chain->line = loadf->line;
         state->chain->column = loadf->column;
-        state->chain->name = var->desc->index;
+        state->chain->refer = var->desc->index;
         state->chain->factor.i = atoll(token->buf.data);
         lhsparser_nexttoken(vm, loadf);
         break;
@@ -1571,7 +1571,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         state->chain->type = LHS_EXPRNUM;
         state->chain->line = loadf->line;
         state->chain->column = loadf->column;
-        state->chain->name = var->desc->index;
+        state->chain->refer = var->desc->index;
         state->chain->factor.n = atof(token->buf.data);
         lhsparser_nexttoken(vm, loadf);
         break;
@@ -1583,7 +1583,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         state->chain->type = LHS_EXPRSTR;
         state->chain->line = loadf->line;
         state->chain->column = loadf->column;
-        state->chain->name = var->desc->index;
+        state->chain->refer = var->desc->index;
         state->chain->factor.ref.mark = var->desc->mark;
         state->chain->factor.ref.index = var->desc->index;
         lhsparser_nexttoken(vm, loadf);
@@ -1597,7 +1597,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         state->chain->type = LHS_EXPRBOOLEAN;
         state->chain->line = loadf->line;
         state->chain->column = loadf->column;
-        state->chain->name = var->desc->index;
+        state->chain->refer = var->desc->index;
         state->chain->factor.b = (token->t == LHS_TOKENTRUE ? LHS_TRUE : LHS_FALSE);
         lhsparser_nexttoken(vm, loadf);
         break;
@@ -1631,7 +1631,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             state->chain->type = LHS_EXPRREF;
             state->chain->line = loadf->line;
             state->chain->column = loadf->column;
-            state->chain->name = name->desc->index;
+            state->chain->refer = name->desc->index;
             state->chain->factor.ref.mark = desc->mark;
             state->chain->factor.ref.index = desc->index;
             lhsparser_nexttoken(vm, loadf);

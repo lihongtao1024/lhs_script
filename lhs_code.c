@@ -1,7 +1,6 @@
 #include "lhs_code.h"
 #include "lhs_strbuf.h"
 #include "lhs_load.h"
-#include "lhs_variable.h"
 
 #define lhscode_c(ip)								\
 (*(ip)++)

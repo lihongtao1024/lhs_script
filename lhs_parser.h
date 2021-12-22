@@ -37,7 +37,7 @@
 #define LHS_TOKENNUMBER          (LHS_TOKENRESERVEDBEGIN + 18)
 #define LHS_TOKENSTRING          (LHS_TOKENRESERVEDBEGIN + 19)
 
-#define lhsparser_castlex(lf)                                \
+#define lhsparser_castlex(lf)                                           \
 ((LHSLexical*)(lf)->lexical)
 
 typedef struct LHSToken
@@ -63,6 +63,7 @@ typedef struct LHSChunk
 typedef struct LHSLexical
 {
     int chunkid;
+    int stacklayers;
     LHSToken token;
     LHSToken lookahead;
     LHSJmp* alljmp;

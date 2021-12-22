@@ -1,7 +1,5 @@
 #pragma once
 #include "lhs_config.h"
-#include "lhs_variable.h"
-#include "lhs_strbuf.h"
 #include "lhs_vm.h"
 
 #define LHS_UNCERTAIN           (-1)
@@ -74,7 +72,7 @@
     lhsbuf_pushc((vm), &(vm)->code, (s));               \
     lhsbuf_pushi((vm), &(vm)->code, (c)->line);         \
     lhsbuf_pushi((vm), &(vm)->code, (c)->column);       \
-    lhsbuf_pushi((vm), &(vm)->code, (c)->refer);         \
+    lhsbuf_pushi((vm), &(vm)->code, (c)->refer);        \
 }
 
 #define lhscode_op2(vm, s, l, c, n)                     \

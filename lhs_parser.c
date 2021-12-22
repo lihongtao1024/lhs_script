@@ -56,6 +56,18 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 lhslink_back(lhsparser_castlex(lf), curchunk,                               \
     lhsparser_castlex(lf)->curchunk, parent)
 
+#define lhsparser_op1(vm, lf, s, c)                                         \
+lhscode_op1((vm), (s), (c));                                                \
+lhsparser_checkstacklayers((vm), (lf), (s), 0)
+
+#define lhsparser_opcall(vm, lf, c, n)                                      \
+lhscode_op1((vm), OP_CALL, (c));                                            \
+lhsparser_checkstacklayers((vm), (lf), OP_CALL, n)
+
+#define lhsparser_op2(vm, lf, s, l, c, n)                                   \
+lhscode_op2((vm), (s), (l), (c), (n));                                      \
+lhsparser_checkstacklayers((vm), (lf), (s), 0)
+
 typedef struct LHSExprUnary
 {
     char unary;
@@ -445,6 +457,7 @@ static int lhsparser_initlexical(LHSVM* vm, LHSLoadF* loadf, LHSLexical* lex)
     lhsparser_castlex(loadf) = lex;
 
     lex->chunkid = 0;
+    lex->stacklayers = 0;
     lex->token.t = LHS_TOKENEOF;
     lex->lookahead.t = LHS_TOKENEOF;
 
@@ -808,6 +821,65 @@ static int lhsparser_lookaheadtoken(LHSVM* vm, LHSLoadF* loadf)
         loadf, 
         &lhsparser_castlex(loadf)->lookahead.buf
     );
+    return LHS_TRUE;
+}
+
+static int lhsparser_checkstacklayers(LHSVM* vm, LHSLoadF* loadf, char op, int call)
+{
+    switch (op)
+    {
+    case OP_ADD:
+    case OP_SUB:
+    case OP_MUL:
+    case OP_DIV:
+    case OP_MOD:
+    case OP_ANDB:
+    case OP_ORB:
+    case OP_XORB:
+    case OP_L:
+    case OP_G:
+    case OP_E:
+    case OP_NE:
+    case OP_GE:
+    case OP_LE:
+    case OP_AND:
+    case OP_OR:
+    case OP_SHL:
+    case OP_SHR:
+    case OP_MOVS:
+    case OP_POP:
+    case OP_JZ:
+    case OP_JNZ:
+    {
+        lhsparser_castlex(loadf)->stacklayers--;
+        break;
+    }    
+    case OP_PUSH:
+    case OP_RET:
+    case OP_RET1:
+    {
+        lhsparser_castlex(loadf)->stacklayers++;
+        break;
+    }
+    case OP_CALL:
+    {
+        lhsparser_castlex(loadf)->stacklayers -= call;
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
+
+    (lhsparser_castlex(loadf)->stacklayers < 0) &&
+        lhserr_syntax
+        (
+            vm, 
+            loadf, 
+            "illegal token '%s'.", 
+            lhsparser_castlex(loadf)->token.buf
+        );
     return LHS_TRUE;
 }
 
@@ -1403,26 +1475,26 @@ static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     {
     case LHS_EXPRINT:
     {
-        lhscode_op1(vm, OP_PUSH, chain);
+        lhsparser_op1(vm, loadf, OP_PUSH, chain);
         lhscode_integer(vm, chain->factor.i);
         break;
     }
     case LHS_EXPRNUM:
     {
-        lhscode_op1(vm, OP_PUSH, chain);
+        lhsparser_op1(vm, loadf, OP_PUSH, chain);
         lhscode_number(vm, chain->factor.n);
         break;
     }
     case LHS_EXPRBOOLEAN:
     {
-        lhscode_op1(vm, OP_PUSH, chain);
+        lhsparser_op1(vm, loadf, OP_PUSH, chain);
         lhscode_boolean(vm, chain->factor.b);
         break;
     }
     case LHS_EXPRSTR:
     case LHS_EXPRREF:
     {
-        lhscode_op1(vm, OP_PUSH, chain);
+        lhsparser_op1(vm, loadf, OP_PUSH, chain);
         lhscode_ref(vm, chain->factor.ref.mark, chain->factor.ref.index);
         break;
     }
@@ -1434,14 +1506,14 @@ static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 
     for (int i = 0; i < chain->nunary; ++i)
     {
-        lhscode_op1(vm, chain->unary->unary, chain);
+        lhsparser_op1(vm, loadf, chain->unary->unary, chain);
         chain->unary = chain->unary->next;
     }
     chain->nunary = 0;
 
     if (chain->swap)
     {
-        lhscode_op1(vm, OP_SWAP, chain);
+        lhsparser_op1(vm, loadf, OP_SWAP, chain);
     }
     chain->swap = LHS_FALSE;
     return LHS_TRUE;
@@ -1455,7 +1527,7 @@ static int lhsparser_exprmov(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
         lhsparser_exprcode(vm, loadf, chain);
     }
 
-    lhscode_op1(vm, chain->type & LHS_EXPRREF ? OP_MOV : OP_MOVS, chain);
+    lhsparser_op1(vm, loadf, chain->type & LHS_EXPRREF ? OP_MOV : OP_MOVS, chain);
     lhscode_ref(vm, chain->prev->factor.ref.mark, chain->prev->factor.ref.index);
 
     if (chain->type & LHS_EXPRREF)
@@ -1500,7 +1572,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             {
                 lhsparser_exprcode(vm, loadf, chain->prev);
                 lhsparser_exprcode(vm, loadf, chain);
-                lhscode_op1(vm, chain->prev->symbol, chain);
+                lhsparser_op1(vm, loadf, chain->prev->symbol, chain);
             }
 
             chain->prev->type = LHS_EXPRNONE;
@@ -1592,7 +1664,7 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     state->chain->factor.call.nret = LHS_UNCERTAIN;
     state->chain->factor.call.narg = lhsparser_exprargs(vm, loadf, state);
 
-    lhscode_op1(vm, OP_CALL, state->chain);
+    lhsparser_opcall(vm, loadf, state->chain, state->chain->factor.call.narg - 1);
     lhscode_ref(vm, state->chain->factor.call.mark, state->chain->factor.call.index);
     lhscode_index(vm, state->chain->factor.call.narg);
     lhscode_index(vm, state->chain->factor.call.nret);
@@ -1962,14 +2034,14 @@ static int lhsparser_blockstate(LHSVM* vm, LHSLoadF* loadf)
 int lhsparser_iftrue(LHSVM* vm, LHSLoadF* loadf, LHSIfState* state)
 {
     /*iftrue -> blockstate*/
-    lhscode_op2(vm, OP_JZ, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JZ, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state->branch->pos = vm->code.usize;
     
     lhsparser_blockstate(vm, loadf);
 
-    lhscode_op2(vm, OP_JMP, loadf->line, loadf->column,
+    lhsparser_op2(vm, loadf, OP_JMP, loadf->line, loadf->column,
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state->finish->pos = vm->code.usize;
@@ -2073,21 +2145,26 @@ static int lhsparser_forarg2(LHSVM* vm, LHSLoadF* loadf, LHSForState* state)
     LHSToken* token = &lhsparser_castlex(loadf)->token;
     if (token->t != ';')
     {
+        int layers = lhsparser_castlex(loadf)->stacklayers;
         lhsparser_exprstate(vm, loadf);
+        if (lhsparser_castlex(loadf)->stacklayers - layers != 1)
+        {
+            lhserr_syntax(vm, loadf, "illegal for arg2.");
+        }
     }
     else
     {
-        lhscode_op2(vm, OP_PUSH, loadf->line, loadf->column,
+        lhsparser_op2(vm, loadf, OP_PUSH, loadf->line, loadf->column,
             lhsframe_castcurframe(vm)->name);
         lhscode_boolean(vm, LHS_TRUE);
     }
 
-    lhscode_op2(vm, OP_JZ, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JZ, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state->finish->pos = vm->code.usize;
 
-    lhscode_op2(vm, OP_JMP, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JMP, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state->block->pos = vm->code.usize;
@@ -2102,10 +2179,15 @@ static int lhsparser_forarg3(LHSVM* vm, LHSLoadF* loadf, LHSForState* state)
     LHSToken* token = &lhsparser_castlex(loadf)->token;
     if (token->t != ')')
     {
+        int layers = lhsparser_castlex(loadf)->stacklayers;
         lhsparser_exprstate(vm, loadf);
+        if (lhsparser_castlex(loadf)->stacklayers != layers)
+        {
+            lhserr_syntax(vm, loadf, "illegal for arg3.");
+        }
     }
     
-    lhscode_op2(vm, OP_JMP, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JMP, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state->condition->len = (int)(state->condition->pos - vm->code.usize);
@@ -2140,7 +2222,7 @@ static int lhsparser_forstate(LHSVM* vm, LHSLoadF* loadf)
 
     lhsparser_blockstate(vm, loadf);
 
-    lhscode_op2(vm, OP_JMP, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JMP, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state.finish->len = (int)(vm->code.usize - state.finish->pos);
@@ -2156,9 +2238,14 @@ static int lhsparser_whilearg(LHSVM* vm, LHSLoadF* loadf, LHSWhileState* state)
 	/*whilearg -> exprstate*/
     state->condition->pos = vm->code.usize;
 
+    int layers = lhsparser_castlex(loadf)->stacklayers;
     lhsparser_exprstate(vm, loadf);
+    if (lhsparser_castlex(loadf)->stacklayers - layers != 1)
+    {
+        lhserr_syntax(vm, loadf, "illegal while arg.");
+    }
 
-    lhscode_op2(vm, OP_JZ, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JZ, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state->finish->pos = vm->code.usize;
@@ -2178,7 +2265,7 @@ static int lhsparser_whilestate(LHSVM* vm, LHSLoadF* loadf)
 
     lhsparser_blockstate(vm, loadf);
 
-    lhscode_op2(vm, OP_JMP, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JMP, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state.finish->len = (int)(vm->code.usize - state.finish->pos);
@@ -2191,10 +2278,17 @@ static int lhsparser_doarg(LHSVM* vm, LHSLoadF* loadf, LHSDoState* state)
 {
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENUNTIL, "until", "until");
     lhsparser_checkandnexttoken(vm, loadf, '(', "until", "(");
+
+    int layers = lhsparser_castlex(loadf)->stacklayers;
     lhsparser_exprstate(vm, loadf);
+    if (lhsparser_castlex(loadf)->stacklayers - layers != 1)
+    {
+        lhserr_syntax(vm, loadf, "illegal until arg.");
+    }
+
     lhsparser_checkandnexttoken(vm, loadf, ')', "until", ")");
 
-    lhscode_op2(vm, OP_JNZ, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JNZ, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state->block->len = (int)(state->block->pos - vm->code.usize);
@@ -2279,7 +2373,7 @@ static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
         lhsparser_nexttoken(vm, loadf);
     }
 
-    lhscode_op2(vm, OP_JMP, loadf->line, loadf->column, 
+    lhsparser_op2(vm, loadf, OP_JMP, loadf->line, loadf->column, 
         lhsframe_castcurframe(vm)->name);
     lhscode_index(vm, 0);
     state.finish->pos = vm->code.usize;
@@ -2294,7 +2388,7 @@ static int lhsparser_funcstate(LHSVM* vm, LHSLoadF* loadf)
     if (lhsframe_castcurframe(vm)->nret == LHS_UNCERTAIN)
     {
         lhsframe_castcurframe(vm)->nret = LHS_VOID;
-        lhscode_op2(vm, OP_RET, loadf->line, loadf->column, 
+        lhsparser_op2(vm, loadf, OP_RET, loadf->line, loadf->column, 
             lhsframe_castcurframe(vm)->name);
     }
     vm->currentframe = vm->mainframe;
@@ -2318,7 +2412,7 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
         }
 
         frame->nret = LHS_VOID;
-        lhscode_op2(vm, OP_RET, loadf->line, loadf->column, frame->name);
+        lhsparser_op2(vm, loadf, OP_RET, loadf->line, loadf->column, frame->name);
         return LHS_TRUE;
     }
 
@@ -2330,7 +2424,7 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
     lhsparser_exprstate(vm, loadf);
 
     frame->nret = LHS_RETSULT;
-    lhscode_op2(vm, OP_RET1, loadf->line, loadf->column, frame->name);
+    lhsparser_op2(vm, loadf, OP_RET1, loadf->line, loadf->column, frame->name);
     lhsparser_checktoken(vm, loadf, '}', "return", "}");
     return LHS_TRUE;
 }

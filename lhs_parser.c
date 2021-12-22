@@ -1388,8 +1388,8 @@ static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 
 static int lhsparser_exprmov(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 {
-    if (chain->type & LHS_EXPRIMMED ||
-        chain->nunary)
+    if (chain->nunary ||
+        chain->type & LHS_EXPRIMMED)
     {
         lhsparser_exprcode(vm, loadf, chain);
     }
@@ -1415,6 +1415,10 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     LHSExprChain* prev = chain->prev;
     switch (priorities[prev->symbol][chain->symbol])
     {
+    case G:
+    {
+        break;
+    }
     case L:
     {
         if (prev->type & LHS_EXPRIMMED &&
@@ -1451,7 +1455,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         state->chain = prev->prev;
         return lhsparser_exprsolve(vm, loadf, state);
     }
-    case N:
+    default:
     {
         lhserr_syntax
         (
@@ -1460,10 +1464,6 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             "unexpected expression symbol '%s'.",
             lhsparser_castlex(loadf)->token.t
         );
-    }
-    default:
-    {
-        break;
     }
     }
 
@@ -1547,7 +1547,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
                     [{op_unary}] LHS_TOKENTRUE          | 
                     [{op_unary}] LHS_TOKENFALSE         | 
                     [{op_unary}] LHS_TOKENIDENTIFIER    |
-                    [{op_unary}] exprfunc               |
+                    [{op_unary}] exprcall               |
                     [{op_unary}] '('exprstate')'*/
     LHSToken* token = &lhsparser_castlex(loadf)->token;
     switch (token->t)
@@ -1669,7 +1669,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             state->chain->nunary++;
             
             lhsparser_exprfactor(vm, loadf, state);
-            return LHS_TRUE;
+            break;
         }
 
         (token->t == LHS_TOKENEOF) &&
@@ -2241,6 +2241,7 @@ int lhsparser_loadfile(LHSVM* vm, const char* fname)
 
     if (!lhsparser_initmainframe(vm, &loadf, fname))
     {
+        lhsparser_uninitlexical(vm, &loadf);
         lhsloadf_uninit(vm, &loadf);
         return LHS_FALSE;
     }

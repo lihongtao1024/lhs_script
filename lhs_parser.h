@@ -1,6 +1,8 @@
 #pragma once
 #include "lhs_config.h"
 #include "lhs_buf.h"
+#include "lhs_function.h"
+#include "lhs_frame.h"
 #include "lhs_vm.h"
 
 #define LHS_TOKENNONE            (0)
@@ -49,7 +51,8 @@ typedef struct LHSToken
 typedef struct LHSJmp
 {
     int len;
-    size_t pos;    
+    size_t pos;
+    LHSFunction* func;
     struct LHSJmp* next;
 } LHSJmp;
 
@@ -85,6 +88,8 @@ typedef struct LHSLexical
     LHSChunk* allchunk;
     LHSRegion* curregion;
     LHSRegion* allregion;
+    LHSFunction* curfunction;
+    LHSFrame* curframe;
 } LHSLexical;
 
 extern const char* lhsparser_symbols[];

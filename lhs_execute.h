@@ -22,7 +22,7 @@ typedef struct LHSCallContext
     int refer;
     int type;
     LHSVector localvars;
-    LHSFunction* frame;
+    LHSFunction* func;
     struct LHSCallContext* parent;
 } LHSCallContext;
 

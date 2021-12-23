@@ -4,6 +4,7 @@
 #include "lhs_code.h"
 #include "lhs_error.h"
 #include "lhs_link.h"
+#include "lhs_variable.h"
 #include "lhs_parser.h"
 #include "lhs_vm.h"
 
@@ -50,10 +51,10 @@ static int lhsexec_initparams(LHSVM* vm, LHSHash* hash, LHSVarDesc* desc,
 
 static int lhsexec_initlocalvars(LHSVM* vm, LHSCallContext* cc)
 {
-    if (cc->frame)
+    if (cc->func)
     {
-        lhsvector_init(vm, &cc->localvars, sizeof(LHSVar), cc->frame->nlocalvars);
-        cc->localvars.usize = cc->frame->nlocalvars;        
+        lhsvector_init(vm, &cc->localvars, sizeof(LHSVar), cc->func->nlocalvars);
+        cc->localvars.usize = cc->func->nlocalvars;        
         for (size_t i = 0; i < cc->localvars.usize; i++)
         {
             LHSVar* var = lhsvector_at(vm, &cc->localvars, i);
@@ -61,7 +62,7 @@ static int lhsexec_initlocalvars(LHSVM* vm, LHSCallContext* cc)
             var->desc = 0;
         }
 
-        lhshash_foreach(vm, &cc->frame->localvars, lhsexec_initparams, cc);  
+        lhshash_foreach(vm, &cc->func->localvars, lhsexec_initparams, cc);  
     }
     else
     {
@@ -77,7 +78,7 @@ static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFunction* frame,
         lhserr_runtime(vm, 0, "stack layers overflow.");
 
     LHSCallContext* cc = lhsmem_newobject(vm, sizeof(LHSCallContext));
-    cc->frame = frame;
+    cc->func = frame;
     cc->base = vm->top - narg;
     cc->errfn = errfn;
     cc->top = vm->top;
@@ -1099,7 +1100,7 @@ static int lhsexec_jmp(LHSVM* vm)
     LHSCallContext* cc = vm->callcontext;
 
     long long i = lhsexec_i(cc);
-    cc->ip = vm->code.data + i;
+    cc->ip = cc->func->code.data + i;
     return LHS_TRUE;
 }
 
@@ -1149,7 +1150,7 @@ static int lhsexec_jz(LHSVM* vm)
         return LHS_TRUE;
     }
 
-    cc->ip = vm->code.data + i;
+    cc->ip = cc->func->code.data + i;
     lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
@@ -1166,7 +1167,7 @@ static int lhsexec_jnz(LHSVM* vm)
         return LHS_TRUE;
     }
 
-    cc->ip = vm->code.data + i;
+    cc->ip = cc->func->code.data + i;
     lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
@@ -1211,10 +1212,10 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg,
     return LHS_TRUE;
 }
 
-static int lhsexec_callframe(LHSVM* vm, LHSFunction* frame, int narg, int nret,
+static int lhsexec_callframe(LHSVM* vm, LHSFunction* function, int narg, int nret,
     const LHSVarDesc* desc)
 {
-    (frame->narg != narg) &&
+    (function->narg != narg) &&
         lhserr_runtime
         (
             vm,
@@ -1225,11 +1226,11 @@ static int lhsexec_callframe(LHSVM* vm, LHSFunction* frame, int narg, int nret,
     lhsexec_forwardcc
     (
         vm,
-        frame,
+        function,
         narg, 
         nret, 
         lhsexec_castcc(vm->callcontext)->errfn,
-        vm->code.data + frame->entry,
+        function->code.data,
         LHS_FCALL
     );
 
@@ -1286,9 +1287,9 @@ static int lhsexec_call(LHSVM* vm)
     {
         lhsexec_calldelegate(vm, func->dg, narg, nret);
     }
-    else if (func->type == LHS_TGC && func->gc->type == LHS_TGCFRAME)
+    else if (func->type == LHS_TGC && func->gc->type == LHS_TGCFUNCTION)
     {
-        lhsexec_callframe(vm, lhsframe_castframe(func->gc), narg, nret, desc);
+        lhsexec_callframe(vm, lhsfunction_castfunc(func->gc), narg, nret, desc);
     }
     else
     {
@@ -1405,7 +1406,6 @@ static int lhsexec_reset(LHSVM* vm)
         cc = prev;
     }
 
-    vm->currentframe = vm->mainframe;
     return LHS_TRUE;
 }
 
@@ -1414,11 +1414,11 @@ int lhsexec_pcall(LHSVM* vm, int narg, int nret, StkID errfn)
     lhsexec_forwardcc
     (
         vm, 
-        vm->mainframe, 
+        lhsframe_castframe(vm->mainframe)->mainfunc, 
         narg, 
         nret, 
         errfn, 
-        vm->code.data,
+        lhsframe_castframe(vm->mainframe)->mainfunc->code.data,
         LHS_FCALL
     );
 

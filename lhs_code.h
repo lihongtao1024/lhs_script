@@ -43,49 +43,49 @@
 #define OP_EXIT                 (34)
 #define OP_MAX                  (35)
 
-#define lhscode_boolean(vm, v)                          \
+#define lhscode_boolean(vm, buf, v)                     \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, LHS_MARKBOOLEAN);   \
-    lhsbuf_pushc((vm), &(vm)->code, (v));               \
+    lhsbuf_pushc((vm), (buf), LHS_MARKBOOLEAN);         \
+    lhsbuf_pushc((vm), (buf), (v));                     \
 }
 
-#define lhscode_integer(vm, v)                          \
+#define lhscode_integer(vm, buf, v)                     \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, LHS_MARKINTEGER);   \
-    lhsbuf_pushl((vm), &(vm)->code, (v));               \
+    lhsbuf_pushc((vm), (buf), LHS_MARKINTEGER);         \
+    lhsbuf_pushl((vm), (buf), (v));                     \
 }
 
-#define lhscode_number(vm, v)                           \
+#define lhscode_number(vm, buf, v)                      \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, LHS_MARKNUMBER);    \
-    lhsbuf_pushf((vm), &(vm)->code, (v));               \
+    lhsbuf_pushc((vm), (buf), LHS_MARKNUMBER);          \
+    lhsbuf_pushf((vm), (buf), (v));                     \
 }
 
-#define lhscode_ref(vm, m, v)                           \
+#define lhscode_ref(vm, buf, m, v)                      \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, (m));               \
-    lhsbuf_pushi((vm), &(vm)->code, (v));               \
+    lhsbuf_pushc((vm), (buf), (m));                     \
+    lhsbuf_pushi((vm), (buf), (v));                     \
 }
 
-#define lhscode_op1(vm, s, c)                           \
+#define lhscode_op1(vm, buf, s, c)                      \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, (s));               \
-    lhsbuf_pushi((vm), &(vm)->code, (c)->line);         \
-    lhsbuf_pushi((vm), &(vm)->code, (c)->column);       \
-    lhsbuf_pushi((vm), &(vm)->code, (c)->refer);        \
+    lhsbuf_pushc((vm), (buf), (s));                     \
+    lhsbuf_pushi((vm), (buf), (c)->line);               \
+    lhsbuf_pushi((vm), (buf), (c)->column);             \
+    lhsbuf_pushi((vm), (buf), (c)->refer);              \
 }
 
-#define lhscode_op2(vm, s, l, c, n)                     \
+#define lhscode_op2(vm, buf, s, l, c, n)                \
 {                                                       \
-    lhsbuf_pushc((vm), &(vm)->code, (s));               \
-    lhsbuf_pushi((vm), &(vm)->code, (l));               \
-    lhsbuf_pushi((vm), &(vm)->code, (c));               \
-    lhsbuf_pushi((vm), &(vm)->code, (n));               \
+    lhsbuf_pushc((vm), (buf), (s));                     \
+    lhsbuf_pushi((vm), (buf), (l));                     \
+    lhsbuf_pushi((vm), (buf), (c));                     \
+    lhsbuf_pushi((vm), (buf), (n));                     \
 }
 
-#define lhscode_index(vm, v)                            \
+#define lhscode_index(vm, buf, v)                       \
 {                                                       \
-    lhsbuf_pushi((vm), &(vm)->code, (v));               \
+    lhsbuf_pushi((vm), buf, (v));                       \
 }
 
 int lhscode_dmpcode(LHSVM* vm);

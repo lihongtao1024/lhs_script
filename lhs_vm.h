@@ -4,7 +4,7 @@
 #include "lhs_gc.h"
 #include "lhs_hash.h"
 #include "lhs_vector.h"
-#include "lhs_variable.h"
+#include "lhs_value.h"
 #include "lhs_buf.h"
 #include "lhs_error.h"
 
@@ -24,9 +24,7 @@ typedef struct LHSVM
     LHSVector conststrs;        /*constant string array*/
     LHSVector globalvalues;     /*value array for global variable*/
     LHSVector stack;            /*execute stack*/
-    LHSBuf code;                /*executable byte code*/
     void* mainframe;            /*main function frame*/
-    void* currentframe;         /*current function frame*/
     void* callcontext;          /*runtime context*/
     LHSError* errorjmp;         /*error jump handler*/
     lhsmem_new alloc;           /*memory handler*/

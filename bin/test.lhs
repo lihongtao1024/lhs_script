@@ -1,4 +1,4 @@
-/*
+
 for (var j = 0; j < 10; j = j + 1)
 {
     if (j > 1)
@@ -38,9 +38,9 @@ while (i)
 
     i = i - 1
 }
-*/
 
-var i = 100
+
+i = 100
 do
 {
     i = i - 1
@@ -52,3 +52,10 @@ do
     print(i)
     break
 } until (i > 0)
+
+function test(aa)
+{
+    print(aa)
+}
+
+print(i)

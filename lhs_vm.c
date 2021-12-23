@@ -2,6 +2,7 @@
 #include "lhs_link.h"
 #include "lhs_function.h"
 #include "lhs_value.h"
+#include "lhs_variable.h"
 #include "lhs_parser.h"
 #include "lhs_code.h"
 #include "lhs_baselib.h"
@@ -17,13 +18,9 @@ static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
         printf("memory leak:[%llu] bytes.\n", vm->nalloc - o->size);
     }
 
-    switch (o->type)
+    if (o->type == LHS_TGCFUNCTION)
     {
-    case LHS_TGCFRAME:
-    {
-        lhsfunction_uninit(vm, lhsframe_castframe(o));
-        break;
-    }
+        lhsfunction_uninit(vm, lhsfunction_castfunc(o));
     }
 
     lhsmem_freeobject(vm, o, o->size);
@@ -33,7 +30,6 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
 {
     vm->alloc = fn;
     vm->mainframe = 0;
-    vm->currentframe = 0;
     vm->callcontext = 0;
     vm->top = 0;
     vm->ncallcontext = 0;
@@ -47,7 +43,6 @@ static void lhsvm_init(LHSVM* vm, lhsmem_new fn)
     lhsvector_init(vm, &vm->conststrs, sizeof(LHSVar), 4);
     lhsvector_init(vm, &vm->globalvalues, sizeof(LHSVar), 4);
     lhsvector_init(vm, &vm->stack, sizeof(LHSValue), 16);
-    lhsbuf_init(vm, &vm->code);
 }
 
 const LHSString* lhsvm_insertshortstr(LHSVM* vm, const char* str, 
@@ -118,7 +113,6 @@ void lhsvm_destroy(LHSVM* vm)
     lhshash_uninit(vm, &vm->globalvars);
     lhsvector_uninit(vm, &vm->globalvalues);
     lhsvector_uninit(vm, &vm->stack);
-    lhsbuf_uninit(vm, &vm->code);
     lhslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree, 0);
 }
 
@@ -285,9 +279,16 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
             str = lhsvm_gettopstring(vm)->data;
             break;
         }
-        case LHS_TGCFRAME:
+        case LHS_TGCFUNCTION:
         {
             l = sprintf(buf, "function:%p", value->gc);
+            lhsvm_pushlstring(vm, buf, l);
+            str = lhsvm_gettopstring(vm)->data;
+            break;
+        }
+        case LHS_TGCFRAME:
+        {
+            l = sprintf(buf, "frame:%p", value->gc);
             lhsvm_pushlstring(vm, buf, l);
             str = lhsvm_gettopstring(vm)->data;
             break;
@@ -301,7 +302,7 @@ const char* lhsvm_tostring(LHSVM* vm, int index)
         }
         case LHS_TGCFULLDATA:
         {
-            l = sprintf(buf, "fdata:%p", value->gc);
+            l = sprintf(buf, "fulldata:%p", value->gc);
             lhsvm_pushlstring(vm, buf, l);
             str = lhsvm_gettopstring(vm)->data;
             break;

@@ -1,6 +1,7 @@
 #include "lhs_code.h"
 #include "lhs_buf.h"
 #include "lhs_load.h"
+#include "lhs_variable.h"
 
 #define lhscode_c(ip)								\
 (*(ip)++)
@@ -96,10 +97,19 @@ static const char* lhscode_escapestr(const char* str)
 	return buf;
 }
 
-int lhscode_dmpcode(LHSVM* vm)
+static lhscode_dmpfunction(LHSVM* vm, LHSFunction* func)
 {
-	const char* head = vm->code.data;
-	const char* tail = head + vm->code.usize;
+	LHSVar* name = lhsvector_at(vm, &vm->conststrs, func->name);
+	printf
+	(
+		";---function <%s> line:%d column:%d---\n", 
+		name->desc->name->data, 
+		name->desc->line, 
+		name->desc->column
+	);
+
+	const char* head = func->code.data;
+	const char* tail = head + func->code.usize;
 	while (head < tail)
 	{
 		const char* cur = head;
@@ -154,7 +164,7 @@ int lhscode_dmpcode(LHSVM* vm)
 
 			printf
 			(
-				"%p\t%s\t%s[%d],\t%s[%d]\t\t;l:%d c:%d ->%s\n", 
+				"%p\t%s\t%s[%d],\t%s[%d]\t\t;line:%d column:%d ->%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark1], 
@@ -173,7 +183,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			int index = lhscode_i(head);
 			printf
 			(
-				"%p\t%s\t%s[%d]\t\t\t;l:%d c:%d ->%s\n", 
+				"%p\t%s\t%s[%d]\t\t\t;line:%d column:%d ->%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark], 
@@ -197,7 +207,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				int index = lhscode_i(head);
 				printf
 				(
-					"%p\t%s\t%s[%d]\t\t\t;l:%d c:%d ->%s\n", 
+					"%p\t%s\t%s[%d]\t\t\t;line:%d column:%d ->%s\n", 
 					cur, 
 					opname[op], 
 					markname[mark], 
@@ -213,7 +223,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				long long l = lhscode_l(head);
 				printf
 				(
-					"%p\t%s\t%lld\t\t\t;l:%d c:%d ->%s\n", 
+					"%p\t%s\t%lld\t\t\t;line:%d column:%d ->%s\n", 
 					cur, 
 					opname[op], 
 					l,
@@ -228,7 +238,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				double n = lhscode_n(head);
 				printf
 				(
-					"%p\t%s\t%lf\t\t;l:%d c:%d ->%s\n", 
+					"%p\t%s\t%lf\t\t;line:%d column:%d ->%s\n", 
 					cur, 
 					opname[op], 
 					n,
@@ -243,7 +253,7 @@ int lhscode_dmpcode(LHSVM* vm)
 				char b = lhscode_b(head);
 				printf
 				(
-					"%p\t%s\t%s\t\t\t;l:%d c:%d ->%s\n", 
+					"%p\t%s\t%s\t\t\t;line:%d column:%d ->%s\n", 
 					cur, 
 					opname[op], 
 					b ? "true" : "false",
@@ -265,10 +275,10 @@ int lhscode_dmpcode(LHSVM* vm)
 		case OP_JNZ:
 		{
 			long long l = lhscode_i(head);
-			l += (long long)(vm->code.data);
+			l += (long long)(func->code.data);
 			printf
 			(
-				"%p\t%s\t%p\t;l:%d c:%d ->%s\n", 
+				"%p\t%s\t%p\t;line:%d column:%d ->%s\n", 
 				cur, 
 				opname[op], 
 				(void*)l,
@@ -286,7 +296,7 @@ int lhscode_dmpcode(LHSVM* vm)
 			int retn = lhscode_i(head);
 			printf
 			(
-				"%p\t%s\t%s[%d],\t%d,\t%d\t;l:%d c:%d ->%s\n", 
+				"%p\t%s\t%s[%d],\t%d,\t%d\t;line:%d column:%d ->%s\n", 
 				cur, 
 				opname[op], 
 				markname[mark], 
@@ -303,7 +313,7 @@ int lhscode_dmpcode(LHSVM* vm)
 		{
 			printf
 			(
-				"%p\t%s\t\t\t\t;l:%d c:%d ->%s\n", 
+				"%p\t%s\t\t\t\t;line:%d column:%d ->%s\n", 
 				cur, 
 				opname[op],
 				line,
@@ -315,5 +325,22 @@ int lhscode_dmpcode(LHSVM* vm)
 		}
 	}
 	printf("\n");
+	return LHS_TRUE;
+}
+
+int lhscode_dmpcode(LHSVM* vm)
+{
+	for (LHSFrame* frame = vm->mainframe; frame; frame = frame->next)
+	{
+		LHSFunction* func = frame->mainfunc;
+		lhscode_dmpfunction(vm, func);
+
+		for (func = frame->allfunc;
+			func && func != frame->mainfunc;
+			func = func->next)
+		{
+			lhscode_dmpfunction(vm, func);
+		}
+	}
 	return LHS_TRUE;
 }

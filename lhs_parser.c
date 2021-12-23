@@ -2786,10 +2786,10 @@ int lhsparser_loadfile(LHSVM* vm, const char* fname)
         lhscode_op2
         (
             vm, 
-            &lhsframe_castframe(vm->mainframe)->mainfunc->code,
+            &lexical.curframe->mainfunc->code,
             OP_EXIT, 
             loadf.line, loadf.column, 
-            lhsframe_castframe(vm->mainframe)->mainfunc->name
+            lexical.curframe->mainfunc->name
         );
         lhscode_dmpcode(vm);
     }

@@ -1,6 +1,6 @@
 #pragma once
 #include "lhs_config.h"
-#include "lhs_strbuf.h"
+#include "lhs_buf.h"
 #include "lhs_vm.h"
 
 #define LHS_TOKENNONE            (0)
@@ -43,7 +43,7 @@
 typedef struct LHSToken
 {
     int t;
-    LHSSTRBUF buf;
+    LHSBuf buf;
 } LHSToken;
 
 typedef struct LHSJmp

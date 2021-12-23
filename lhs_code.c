@@ -1,5 +1,5 @@
 #include "lhs_code.h"
-#include "lhs_strbuf.h"
+#include "lhs_buf.h"
 #include "lhs_load.h"
 
 #define lhscode_c(ip)								\

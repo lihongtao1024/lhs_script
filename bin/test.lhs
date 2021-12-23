@@ -49,5 +49,6 @@ do
         continue
     }
 
-    //print(i)
+    print(i)
+    break
 } until (i > 0)

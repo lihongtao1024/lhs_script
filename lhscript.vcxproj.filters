@@ -48,7 +48,7 @@
     <ClCompile Include="lhs_execute.c">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="lhs_strbuf.c">
+    <ClCompile Include="lhs_buf.c">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="lhs_variable.c">
@@ -104,7 +104,7 @@
     <ClInclude Include="lhs_error.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="lhs_strbuf.h">
+    <ClInclude Include="lhs_buf.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="lhs_variable.h">

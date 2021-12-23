@@ -51,7 +51,7 @@ int lhserr_throw(void* vm, const char* fmt, ...)
 
 int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
 {
-    LHSSTRBUF buf;
+    LHSBuf buf;
     lhsbuf_init(vm, &buf);
     char tmp[64];
 

@@ -560,7 +560,7 @@ static int lhsparser_uninitlexical(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf)
+static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSBuf* buf)
 {
     for (; ; )
     {

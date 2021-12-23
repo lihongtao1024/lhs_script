@@ -148,7 +148,7 @@
     <ClCompile Include="lhs_baselib.c" />
     <ClCompile Include="lhs_code.c" />
     <ClCompile Include="lhs_error.c" />
-    <ClCompile Include="lhs_strbuf.c" />
+    <ClCompile Include="lhs_buf.c" />
     <ClCompile Include="lhs_script.c" />
     <ClCompile Include="lhs_alloc.c" />
     <ClCompile Include="lhs_execute.c" />
@@ -165,7 +165,7 @@
   <ItemGroup>
     <ClInclude Include="lhs_baselib.h" />
     <ClInclude Include="lhs_code.h" />
-    <ClInclude Include="lhs_strbuf.h" />
+    <ClInclude Include="lhs_buf.h" />
     <ClInclude Include="lhs_error.h" />
     <ClInclude Include="lhs_execute.h" />
     <ClInclude Include="lhs_frame.h" />

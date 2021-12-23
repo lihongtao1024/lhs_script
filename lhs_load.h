@@ -79,15 +79,15 @@ int lhsloadf_skipline(LHSVM* vm, LHSLoadF* loadf);
 
 int lhsloadf_skipcomment(LHSVM* vm, LHSLoadF* loadf);
 
-int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf);
+int lhsloadf_saveidentifier(LHSVM* vm, LHSLoadF* loadf, LHSBuf* buf);
 
 int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double, 
-    LHSSTRBUF* buf);
+    LHSBuf* buf);
 
-int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf);
+int lhsloadf_savestring(LHSVM* vm, LHSLoadF* loadf, LHSBuf* buf);
 
-int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf);
+int lhsloadf_savesymbol(LHSVM* vm, LHSLoadF* loadf, LHSBuf* buf);
 
-int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf, LHSSTRBUF* buf);
+int lhsloadf_addsymbol(LHSVM* vm, LHSLoadF* loadf, LHSBuf* buf);
 
 void lhsloadf_uninit(LHSVM* vm, LHSLoadF* loadf);

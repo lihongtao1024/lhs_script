@@ -1,7 +1,7 @@
-#include "lhs_strbuf.h"
+#include "lhs_buf.h"
 #include "lhs_vm.h"
 
-static int lhsbuf_grow(void* vm, LHSSTRBUF* buf, size_t nsize)
+static int lhsbuf_grow(void* vm, LHSBuf* buf, size_t nsize)
 {
     if (buf->data == buf->buf)
     {
@@ -16,7 +16,7 @@ static int lhsbuf_grow(void* vm, LHSSTRBUF* buf, size_t nsize)
     return LHS_TRUE;
 }
 
-int lhsbuf_init(void* vm, LHSSTRBUF* buf)
+int lhsbuf_init(void* vm, LHSBuf* buf)
 {
     buf->usize = 0;
     buf->size = sizeof(buf->buf);
@@ -24,13 +24,13 @@ int lhsbuf_init(void* vm, LHSSTRBUF* buf)
     return LHS_TRUE;
 }
 
-int lhsbuf_reset(void* vm, LHSSTRBUF* buf)
+int lhsbuf_reset(void* vm, LHSBuf* buf)
 {
     buf->usize = 0;
     return LHS_TRUE;
 }
 
-int lhsbuf_pushc(void* vm, LHSSTRBUF* buf, char c)
+int lhsbuf_pushc(void* vm, LHSBuf* buf, char c)
 {
     if (buf->usize + sizeof(char) >= buf->size)
     {
@@ -42,22 +42,22 @@ int lhsbuf_pushc(void* vm, LHSSTRBUF* buf, char c)
     return LHS_TRUE;
 }
 
-int lhsbuf_pushi(void* vm, LHSSTRBUF* buf, int i)
+int lhsbuf_pushi(void* vm, LHSBuf* buf, int i)
 {
     return lhsbuf_pushls(vm, buf, (const char*)&i, sizeof(i));
 }
 
-int lhsbuf_pushl(void* vm, LHSSTRBUF* buf, long long l)
+int lhsbuf_pushl(void* vm, LHSBuf* buf, long long l)
 {
     return lhsbuf_pushls(vm, buf, (const char*)&l, sizeof(l));
 }
 
-int lhsbuf_pushf(void* vm, LHSSTRBUF* buf, double n)
+int lhsbuf_pushf(void* vm, LHSBuf* buf, double n)
 {
     return lhsbuf_pushls(vm, buf, (const char*)&n, sizeof(n));
 }
 
-int lhsbuf_pushls(void* vm, LHSSTRBUF* buf, const char* str, size_t l)
+int lhsbuf_pushls(void* vm, LHSBuf* buf, const char* str, size_t l)
 {
     if (buf->usize + l + sizeof(char) >= buf->size)
     {
@@ -78,7 +78,7 @@ int lhsbuf_pushls(void* vm, LHSSTRBUF* buf, const char* str, size_t l)
     return LHS_TRUE;
 }
 
-void lhsbuf_uninit(void* vm, LHSSTRBUF* buf)
+void lhsbuf_uninit(void* vm, LHSBuf* buf)
 {
     if (buf->data != buf->buf)
     {

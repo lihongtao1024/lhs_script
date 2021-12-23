@@ -6,7 +6,7 @@ int lhsbase_print(LHSVM* vm)
     int n = lhsvm_gettop(vm);
     lhserr_check(vm, n > 0, "with print.");
 
-    LHSSTRBUF buf;
+    LHSBuf buf;
     lhsbuf_init(vm, &buf);
 
     for (int i = 0; i < n; i++)

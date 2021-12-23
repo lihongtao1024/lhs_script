@@ -332,7 +332,7 @@ int lhscode_dmpcode(LHSVM* vm)
 {
 	printf(";----------------------------------------------------------------------------\n");
 	printf(";lhscript v1.0\n");
-	printf(";programmer:lihong	mail:71164325@qq.com\n");
+	printf(";programmer: lihong	email: 71164325@qq.com\n");
 	printf(";============================================================================\n\n");
 	
 	for (LHSFrame* frame = vm->mainframe; frame; frame = frame->next)

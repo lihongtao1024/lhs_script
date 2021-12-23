@@ -1,6 +1,6 @@
 #include "lhs_vm.h"
 #include "lhs_link.h"
-#include "lhs_frame.h"
+#include "lhs_function.h"
 #include "lhs_value.h"
 #include "lhs_parser.h"
 #include "lhs_code.h"
@@ -21,7 +21,7 @@ static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
     {
     case LHS_TGCFRAME:
     {
-        lhsframe_uninit(vm, lhsframe_castframe(o));
+        lhsfunction_uninit(vm, lhsframe_castframe(o));
         break;
     }
     }

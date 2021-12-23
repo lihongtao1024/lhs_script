@@ -36,7 +36,7 @@
     <ClCompile Include="lhs_gc.c">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="lhs_frame.c">
+    <ClCompile Include="lhs_function.c">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="lhs_load.c">
@@ -89,7 +89,7 @@
     <ClInclude Include="lhs_link.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="lhs_frame.h">
+    <ClInclude Include="lhs_function.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="lhs_load.h">

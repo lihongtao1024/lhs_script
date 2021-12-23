@@ -1,5 +1,5 @@
 #include "lhs_error.h"
-#include "lhs_frame.h"
+#include "lhs_function.h"
 #include "lhs_variable.h"
 #include "lhs_execute.h"
 #include "lhs_link.h"

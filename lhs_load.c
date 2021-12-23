@@ -1,5 +1,5 @@
 #include "lhs_load.h"
-#include "lhs_frame.h"
+#include "lhs_function.h"
 #include "lhs_error.h"
 
 char lhsloadf_symbol[] =

@@ -1,6 +1,6 @@
 #pragma once
 #include "lhs_config.h"
-#include "lhs_frame.h"
+#include "lhs_function.h"
 #include "lhs_vm.h"
 
 #define LHS_FCALL                       (1)
@@ -22,7 +22,7 @@ typedef struct LHSCallContext
     int refer;
     int type;
     LHSVector localvars;
-    LHSFrame* frame;
+    LHSFunction* frame;
     struct LHSCallContext* parent;
 } LHSCallContext;
 

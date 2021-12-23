@@ -13,7 +13,7 @@ lhserr_throw                                                        \
 (                                                                   \
     vm,                                                             \
     "syntax error at: [%s:%d:%d], "##fmt,                           \
-    lhsframe_getname(vm, lhsframe_castmainframe(vm)),               \
+    lhsfunction_getname(vm, lhsframe_castmainframe(vm)),               \
     (lf)->line,                                                     \
     (lf)->column,                                                   \
     __VA_ARGS__                                                     \

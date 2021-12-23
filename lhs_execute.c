@@ -1,6 +1,6 @@
 #include "lhs_execute.h"
 #include "lhs_value.h"
-#include "lhs_frame.h"
+#include "lhs_function.h"
 #include "lhs_code.h"
 #include "lhs_error.h"
 #include "lhs_link.h"
@@ -70,7 +70,7 @@ static int lhsexec_initlocalvars(LHSVM* vm, LHSCallContext* cc)
     return LHS_TRUE;
 }
 
-static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFrame* frame, 
+static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFunction* frame, 
     int narg, int nret, StkID errfn, IPID ip, int type)
 {
     (vm->ncallcontext >= LHS_MAXCALLLAYER) && 
@@ -1211,7 +1211,7 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg,
     return LHS_TRUE;
 }
 
-static int lhsexec_callframe(LHSVM* vm, LHSFrame* frame, int narg, int nret,
+static int lhsexec_callframe(LHSVM* vm, LHSFunction* frame, int narg, int nret,
     const LHSVarDesc* desc)
 {
     (frame->narg != narg) &&

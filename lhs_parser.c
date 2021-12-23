@@ -2,7 +2,7 @@
 #include "lhs_load.h"
 #include "lhs_value.h"
 #include "lhs_link.h"
-#include "lhs_frame.h"
+#include "lhs_function.h"
 #include "lhs_code.h"
 #include "lhs_error.h"
 
@@ -384,11 +384,11 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF* loadf,
     vm->mainframe = lhsmem_newgcobject
     (
         vm, 
-        sizeof(LHSFrame), 
+        sizeof(LHSFunction), 
         LHS_TGCFRAME
     );
 
-    lhsframe_init(vm, vm->mainframe);
+    lhsfunction_init(vm, vm->mainframe);
     vm->currentframe = vm->mainframe;
 
     lhsvm_pushstring(vm, fname);
@@ -399,17 +399,17 @@ static int lhsparser_initmainframe(LHSVM* vm, LHSLoadF* loadf,
 
 static int lhsparser_insertframe(LHSVM* vm, LHSLoadF* loadf)
 {
-    LHSFrame* frame = lhsframe_castframe
+    LHSFunction* frame = lhsframe_castframe
     (
         lhsmem_newgcobject
         (
             vm, 
-            sizeof(LHSFrame), 
+            sizeof(LHSFunction), 
             LHS_TGCFRAME
         )
     );
 
-    lhsframe_init(vm, frame);
+    lhsfunction_init(vm, frame);
     vm->currentframe = frame;
 
     lhsvm_pushvalue(vm, -1);
@@ -2469,7 +2469,7 @@ static int lhsparser_retstate(LHSVM* vm, LHSLoadF* loadf)
     /*retstate -> return [exprstate]*/
     lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENRETURN, "function", "return");
 
-    LHSFrame* frame = lhsframe_castcurframe(vm);
+    LHSFunction* frame = lhsframe_castcurframe(vm);
     LHSToken* token = &lhsparser_castlex(loadf)->token;
     if (token->t == '}')
     {

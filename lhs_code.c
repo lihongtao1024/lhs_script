@@ -330,6 +330,11 @@ static lhscode_dmpfunction(LHSVM* vm, LHSFunction* func)
 
 int lhscode_dmpcode(LHSVM* vm)
 {
+	printf(";----------------------------------------------------------------------------\n");
+	printf(";lhscript v1.0\n");
+	printf(";programmer:lihong	mail:71164325@qq.com\n");
+	printf(";============================================================================\n\n");
+	
 	for (LHSFrame* frame = vm->mainframe; frame; frame = frame->next)
 	{
 		LHSFunction* func = frame->mainfunc;

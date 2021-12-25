@@ -87,15 +87,15 @@ lhslink_back(lhsparser_castlex(lf), curchunk, lhsparser_castlex(lf)->curchunk, p
 
 #define lhsparser_op1(vm, lf, s, c)                                                 \
 lhscode_op1((vm), &lhsparser_castlex(lf)->curfunction->code, (s), (c));             \
-lhsparser_checkstacklayers((vm), (lf), (s), 0)
+lhsparser_checkexprstack((vm), (lf), (s), 0)
 
 #define lhsparser_opcall(vm, lf, l, c, n, a, w)                                      \
 lhscode_op2((vm), &lhsparser_castlex(lf)->curfunction->code, OP_CALL, (l), (c), (n));\
-lhsparser_checkstacklayers((vm), (lf), OP_CALL, (a) - (w))
+lhsparser_checkexprstack((vm), (lf), OP_CALL, (a) - (w))
 
 #define lhsparser_op2(vm, lf, s, l, c, n)                                           \
 lhscode_op2((vm), &lhsparser_castlex(lf)->curfunction->code, (s), (l), (c), (n));   \
-lhsparser_checkstacklayers((vm), (lf), (s), 0)
+lhsparser_checkexprstack((vm), (lf), (s), 0)
 
 #define lhsparser_boolean(vm, lf, v)                                                \
 lhscode_boolean((vm), &lhsparser_castlex(lf)->curfunction->code, (v))
@@ -939,7 +939,7 @@ static int lhsparser_lookaheadtoken(LHSVM* vm, LHSLoadF* loadf)
     return LHS_TRUE;
 }
 
-static int lhsparser_checkstacklayers(LHSVM* vm, LHSLoadF* loadf, char op, int call)
+static int lhsparser_checkexprstack(LHSVM* vm, LHSLoadF* loadf, char op, int call)
 {
     switch (op)
     {

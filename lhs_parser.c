@@ -1834,6 +1834,11 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     lhsparser_index(vm, loadf, narg);
     lhsparser_byte(vm, loadf, nwant);
 
+    if (state)
+    {
+        lhsparser_exprcode(vm, loadf, state->chain);
+    }
+    
     lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
     return LHS_TRUE;
 }

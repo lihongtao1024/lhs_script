@@ -25,45 +25,43 @@
   (t) < LHS_TOKENSYMBOLEND) :                                                       \
 (lhsloadf_symbol[(t)] > SYMBOL_BEGIN &&                                             \
  lhsloadf_symbol[(t)] < SYMBOL_END))                                                
-                                                                                    
+
 #define lhsparser_istokensymbol(lf)                                                 \
 lhsparser_issymbol(lhsparser_castlex(lf)->token.t)                                  
-                                                                                    
+
 #define lhsparser_isunarysymbol(s)                                                  \
 ((s) == SYMBOL_NOT || (s) == SYMBOL_NOTB || (s) == SYMBOL_MINUS)                    
-                                                                                    
+
 #define lhsparser_islbracket(lf)                                                    \
 (lhsparser_castlex(lf)->token.t == '(')                                             
-                                                                                    
+
 #define lhsparser_truncate(t)                                                       \
 (((t) & ~UCHAR_MAX) ?                                                               \
  ((t) & UCHAR_MAX) :                                                                \
  lhsloadf_symbol[t])                                                                
-                                                                                    
+
 #define lhsparser_isyield(lf, n)                                                    \
-(lhsparser_castlex(lf)->token.t == LHS_TOKENEOF ||                                  \
- ((n) && lhsparser_castlex(lf)->token.t == '}'))                                    
-                                                                                    
+(lhsparser_castlex(lf)->token.t == LHS_TOKENEOF || ((n) && lhsparser_castlex(lf)->token.t == '}'))                                    
+
 #define lhsparser_chunkforward(vm, lf)                                              \
 {                                                                                   \
     LHSChunk* chunk = lhsmem_newobject((vm), sizeof(LHSChunk));                     \
     lhsparser_resetchunk((vm), (lf), chunk);                                        \
     lhslink_forward(lhsparser_castlex(lf), curchunk, chunk, parent);                \
     lhslink_forward(lhsparser_castlex(lf), allchunk, chunk, next);                  \
-}                                                                                   
-                                                                                    
+}
+
 #define lhsparser_chunkback(vm, lf)                                                 \
-lhslink_back(lhsparser_castlex(lf), curchunk,                                       \
-    lhsparser_castlex(lf)->curchunk, parent)                                        
-                                                                                    
+lhslink_back(lhsparser_castlex(lf), curchunk, lhsparser_castlex(lf)->curchunk, parent)                                     
+
 #define lhsparser_regionforward(vm, lf, t)                                          \
 {                                                                                   \
     LHSRegion* region = lhsmem_newobject((vm), sizeof(LHSRegion));                  \
     lhsparser_resetregion((vm), (lf), region, (t));                                 \
     lhslink_forward(lhsparser_castlex(lf), curregion, region, parent);              \
     lhslink_forward(lhsparser_castlex(lf), allregion, region, next);                \
-}                                                                                   
-                                                                                    
+}
+
 #define lhsparser_regionback(vm, lf)                                                \
 {                                                                                   \
     LHSRegion* region = lhsparser_castlex(lf)->curregion;                           \
@@ -74,14 +72,13 @@ lhslink_back(lhsparser_castlex(lf), curchunk,                                   
         lhsparser_jmpsolve(lhsparser_castlex(lf), jmp, vm);                         \
         jmp = jmp->next;                                                            \
     }                                                                               \
-    lhslink_back(lhsparser_castlex(lf), curregion,                                  \
-        lhsparser_castlex(lf)->allregion, parent)                                   \
-}                                                                                   
-                                                                                    
+    lhslink_back(lhsparser_castlex(lf), curregion, lhsparser_castlex(lf)->allregion, parent);\
+}
+
 #define lhsparser_op1(vm, lf, s, c)                                                 \
 lhscode_op1((vm), &lhsparser_castlex(lf)->curfunction->code, (s), (c));             \
-lhsparser_checkstacklayers((vm), (lf), (s), 0)                                      
-                                                                                    
+lhsparser_checkstacklayers((vm), (lf), (s), 0)
+
 #define lhsparser_opcall(vm, lf, c, n)                                              \
 lhscode_op1((vm), &lhsparser_castlex(lf)->curfunction->code, OP_CALL, (c));         \
 lhsparser_checkstacklayers((vm), (lf), OP_CALL, n)

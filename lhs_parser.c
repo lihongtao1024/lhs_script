@@ -229,6 +229,11 @@ static const char priorities[][SYMBOL_END] =
 /*=*/  { L, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, N}
 };
 
+static const char* exprtype[] =
+{
+    "integer", "number", "boolean", "string"
+};
+
 static const char* lhsparser_anonymous(LHSVM* vm)
 {
     static char buf[64]; static int index;
@@ -1269,8 +1274,13 @@ static lhsparser_exproprll(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            lhsparser_symbols[prev->symbol]);
+        lhserr_syntax
+        (
+            vm,
+            loadf,
+            "lvalue type: 'integer', rvalue type: 'integer', illegal expression symbol '%s'.",
+            lhsparser_symbols[prev->symbol]
+        );
     }
     }
 
@@ -1349,8 +1359,13 @@ static lhsparser_exproprln(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            lhsparser_symbols[prev->symbol]);
+        lhserr_syntax
+        (
+            vm,
+            loadf,
+            "lvalue type: 'integer', rvalue type: 'number', illegal expression symbol '%s'.",
+            lhsparser_symbols[prev->symbol]
+        );
     }
     }
 
@@ -1433,8 +1448,13 @@ static lhsparser_exproprnl(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            lhsparser_symbols[prev->symbol]);
+        lhserr_syntax
+        (
+            vm,
+            loadf,
+            "lvalue type: 'number', rvalue type: 'integer', illegal expression symbol '%s'.",
+            lhsparser_symbols[prev->symbol]
+        );
     }
     }
 
@@ -1513,8 +1533,13 @@ static lhsparser_exproprnn(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            lhsparser_symbols[prev->symbol]);
+        lhserr_syntax
+        (
+            vm,
+            loadf,
+            "lvalue type: 'number', rvalue type: 'number', illegal expression symbol '%s'.",
+            lhsparser_symbols[prev->symbol]
+        );
     }
     }
 
@@ -1555,8 +1580,13 @@ static lhsparser_exproprbb(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     }
     default:
     {
-        lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-            lhsparser_symbols[prev->symbol]);
+        lhserr_syntax
+        (
+            vm,
+            loadf,
+            "lvalue type: 'number', rvalue type: 'number', illegal expression symbol '%s'.",
+            lhsparser_symbols[prev->symbol]
+        );
     }
     }
 
@@ -1565,8 +1595,18 @@ static lhsparser_exproprbb(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 
 static lhsparser_exproprerr(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 {
-    lhserr_syntax(vm, loadf, "illegal expression symbol '%s'.", 
-        lhsparser_symbols[chain->prev->symbol]);
+    LHSExprChain* prev = chain->prev;
+    lhserr_syntax
+    (
+        vm,
+        loadf,
+        "lvalue type: '%s', rvalue type: '%s', illegal expression symbol '%s'.",
+        exprtype[LHS_EXPRRAW(prev->type)],
+        exprtype[LHS_EXPRRAW(chain->type)],
+        lhsparser_symbols[prev->symbol]
+    );
+
+    return LHS_TRUE;
 }
 
 static lhsparser_expropr lhsparser_exproperations[][3] =

@@ -127,4 +127,6 @@ if (a + 1)
 var a1 = 1, a2 = 3
 var b1 = a2 > a1 && a1 >= a1
 var b2 = 3 > 1 && 1 >= 1
-print(b1, b2)
+var b3 = 3
+var cc = (3 > (1 - 4)) || 5 -7
+print(b1, b2, b3)

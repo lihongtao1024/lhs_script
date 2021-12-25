@@ -293,7 +293,7 @@ static lhscode_dmpfunction(LHSVM* vm, LHSFunction* func)
 			char mark = lhscode_c(head);
 			int index = lhscode_i(head);
 			int argn = lhscode_i(head);
-			int retn = lhscode_i(head);
+			char wantn = lhscode_c(head);
 			printf
 			(
 				"%p\t%s\t%s[%d],\t%d,\t%d\t;line:%d column:%d ->%s\n", 
@@ -302,7 +302,7 @@ static lhscode_dmpfunction(LHSVM* vm, LHSFunction* func)
 				markname[mark], 
 				index,
 				argn,
-				retn,
+				wantn,
 				line,
 				column,
 				refer

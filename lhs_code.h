@@ -4,7 +4,7 @@
 
 #define LHS_UNCERTAIN           (-1)
 #define LHS_VOID                (0)
-#define LHS_RETSULT             (1)
+#define LHS_RESULT              (1)
 
 #define OP_NONE                 (0)
 #define OP_ADD                  (1) 
@@ -86,6 +86,11 @@
 #define lhscode_index(vm, buf, v)                       \
 {                                                       \
     lhsbuf_pushi((vm), buf, (v));                       \
+}
+
+#define lhscode_byte(vm, buf, v)                        \
+{                                                       \
+    lhsbuf_pushc((vm), buf, (v));                       \
 }
 
 int lhscode_dmpcode(LHSVM* vm);

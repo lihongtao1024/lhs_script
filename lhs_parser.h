@@ -79,8 +79,8 @@ typedef struct LHSRegion
 
 typedef struct LHSLexical
 {
-    int chunkid;
-    int stacklayers;
+    int nstack;
+    int chunkid;    
     LHSToken token;
     LHSToken lookahead;
     LHSJmp* alljmp;

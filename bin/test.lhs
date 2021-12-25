@@ -1,5 +1,5 @@
-/*
-for (var j = 0; j < 10; j = j + 1)
+
+for (var j = 0; j < 10000; j = j + 1)
 {
     if (j > 1)
     {
@@ -59,14 +59,16 @@ function test(aa)
 }
 
 print(i)
-*/
-/*
+
+
 function test(aa)
 {
     return aa
 }
-var aa = test(1) + 2 * 3 - -(test(4) + 5)
-print(aa)
+var aa = (-test(7) - 2) * -5 + test(1) + 2 * 3 - -(test(4) + 5)
+//aa = 61
+//aa = -9 + 6 - -9
+print("\n", aa, "\n")
 
 set d = 8 + -(5 - -7) - 6
 //-10
@@ -96,7 +98,7 @@ print(y)
 print(x)
 print(k)
 print(l)
-*/
+
 function fibonacci(xx)
 {
     if (xx < 2)
@@ -106,3 +108,20 @@ function fibonacci(xx)
 
     return fibonacci(xx - 1) + fibonacci(xx - 2)
 }
+
+
+for (var ii = 0; ii < 10; ii = ii + 1)
+{
+    print("aa\n")
+    print(fibonacci(ii))
+    print("aa\n")
+}
+
+var aaa = 1 + 2 * 3 - -(4 + 5)
+
+if (a + 1)
+{
+
+}
+
+aa

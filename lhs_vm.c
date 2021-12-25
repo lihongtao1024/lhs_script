@@ -128,7 +128,8 @@ int lhsvm_dofile(LHSVM* vm, const char* name)
         return LHS_FALSE;
     }
 
-    if (!lhsexec_pcall(vm, 0, LHS_UNCERTAIN, 0))
+    if (!lhsexec_pcall(vm, lhsframe_castframe(vm->mainframe)->mainfunc, 
+        LHS_VOID, 0))
     {
         return LHS_FALSE;
     }

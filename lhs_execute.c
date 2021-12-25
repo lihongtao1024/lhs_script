@@ -14,7 +14,7 @@ typedef int (*lhsexec_opr)(LHSVM*, LHSValue*, const LHSValue*, char);
 #define lhsexec_op(cc)                                              \
 (*((cc)->ip)++)
 
-#define lhsexec_mark(cc)                                            \
+#define lhsexec_c(cc)                                               \
 (*((cc)->ip)++)
 
 #define lhsexec_i(cc)                                               \
@@ -41,7 +41,7 @@ static int lhsexec_initparams(LHSVM* vm, LHSHash* hash, LHSVarDesc* desc,
     LHSVar* var = lhsvector_at(vm, &cc->localvars, index);
     var->desc = desc;
 
-    if (index < cc->narg)
+    if (index < cc->func->narg)
     {
         const LHSValue* value = lhsvm_getvalue(vm, index + 1);
         memcpy(&var->value, value, sizeof(LHSValue));
@@ -71,21 +71,19 @@ static int lhsexec_initlocalvars(LHSVM* vm, LHSCallContext* cc)
     return LHS_TRUE;
 }
 
-static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFunction* frame, 
-    int narg, int nret, StkID errfn, IPID ip, int type)
+static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFunction* function, 
+    int narg, int nwant, StkID errfn, IPID ip, int type)
 {
     (vm->ncallcontext >= LHS_MAXCALLLAYER) && 
         lhserr_runtime(vm, 0, "stack layers overflow.");
 
     LHSCallContext* cc = lhsmem_newobject(vm, sizeof(LHSCallContext));
-    cc->func = frame;
+    cc->func = function;
     cc->base = vm->top - narg;
     cc->errfn = errfn;
-    cc->top = vm->top;
     cc->ip = ip;
     cc->rp = vm->callcontext ? lhsexec_castcc(vm->callcontext)->ip : 0;
-    cc->narg = narg;
-    cc->nret = nret;
+    cc->nwant = nwant;
     cc->line = 0;
     cc->column = 0;
     cc->refer = 0;
@@ -892,7 +890,7 @@ static int lhsexec_mov(LHSVM* vm)
     LHSCallContext* cc = vm->callcontext;
 
     LHSValue* lvalue = 0;
-    char lmark = lhsexec_mark(cc);
+    char lmark = lhsexec_c(cc);
     switch (lmark)
     {
     case LHS_MARKGLOBAL:
@@ -927,7 +925,7 @@ static int lhsexec_mov(LHSVM* vm)
     }
 
     LHSValue* rvalue = 0;
-    char rmark = lhsexec_mark(cc);
+    char rmark = lhsexec_c(cc);
     switch (rmark)
     {
     case LHS_MARKGLOBAL:
@@ -981,7 +979,7 @@ static int lhsexec_movs(LHSVM* vm)
 
     LHSValue* lvalue = 0;
     const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
-    char mark = lhsexec_mark(cc);
+    char mark = lhsexec_c(cc);
     switch (mark)
     {
     case LHS_MARKGLOBAL:
@@ -1024,7 +1022,7 @@ static int lhsexec_push(LHSVM* vm)
 {
     LHSCallContext* cc = vm->callcontext;
 
-    char mark = lhsexec_mark(cc);
+    char mark = lhsexec_c(cc);
     switch (mark)
     {
     case LHS_MARKGLOBAL:
@@ -1177,43 +1175,44 @@ static int lhsexec_nop(LHSVM* vm)
     return LHS_TRUE;
 }
 
-static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg, 
-    int narg, int nret)
+static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg, int narg,
+    int nwant)
 {
     LHSCallContext* cc = lhsexec_forwardcc
     (
         vm,
         0,
-        narg, 
-        nret, 
+        narg,
+        nwant,
         lhsexec_castcc(vm->callcontext)->errfn,
         lhsexec_castcc(vm->callcontext)->ip,
         LHS_CCALL
     );
 
-    cc->nret = dg(vm);
+    int nret = dg(vm);
 
-    LHSValue* value = lhsvector_at(vm, &vm->stack, cc->base);
-    if (cc->nret)
+    if (cc->nwant != LHS_VOID)
     {
-        memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
-    }
-    else
-    {
-        lhsvm_pushnil(vm);
-        memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
+        LHSValue* value = lhsvector_at(vm, &vm->stack, cc->base);
+        if (nret != LHS_VOID)
+        {
+            memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
+        }
+        else
+        {
+            lhsvm_pushnil(vm);
+            memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
+        }
     }
 
-    vm->top = cc->base + 1;
+    vm->top = cc->base + cc->nwant;
 
-    StkID top = cc->top;
     lhsexec_backcc(vm);
-    lhsexec_castcc(vm->callcontext)->top = top;
     return LHS_TRUE;
 }
 
 static int lhsexec_callframe(LHSVM* vm, LHSFunction* function, int narg, 
-    int nret, const LHSVarDesc* desc)
+    int nwant, const LHSVarDesc* desc)
 {
     (function->narg != narg) &&
         lhserr_runtime
@@ -1227,8 +1226,8 @@ static int lhsexec_callframe(LHSVM* vm, LHSFunction* function, int narg,
     (
         vm,
         function,
-        narg, 
-        nret, 
+        narg,
+        nwant,
         lhsexec_castcc(vm->callcontext)->errfn,
         function->code.data,
         LHS_FCALL
@@ -1244,7 +1243,7 @@ static int lhsexec_call(LHSVM* vm)
     const LHSVarDesc* desc = 0;
     const LHSValue* func = 0;
 
-    char mark = lhsexec_mark(cc);
+    char mark = lhsexec_c(cc);
     switch (mark)
     {
     case LHS_MARKGLOBAL:
@@ -1282,14 +1281,15 @@ static int lhsexec_call(LHSVM* vm)
     }
     }
 
-    int narg = lhsexec_i(cc), nret = lhsexec_i(cc);
+    int narg = lhsexec_i(cc), nwant = lhsexec_c(cc);
     if (func->type == LHS_TDELEGATE)
     {
-        lhsexec_calldelegate(vm, func->dg, narg, nret);
+        lhsexec_calldelegate(vm, func->dg, narg, nwant);
     }
     else if (func->type == LHS_TGC && func->gc->type == LHS_TGCFUNCTION)
     {
-        lhsexec_callframe(vm, lhsfunction_castfunc(func->gc), narg, nret, desc);
+        lhsexec_callframe(vm, lhsfunction_castfunc(func->gc), narg, 
+            nwant, desc);
     }
     else
     {
@@ -1312,12 +1312,10 @@ static int lhsexec_ret(LHSVM* vm)
     LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base);
     result->type = LHS_TNONE;
 
-    vm->top = cc->base + 1;
+    vm->top = cc->base + cc->nwant;
 
-    StkID top = cc->top; 
     IPID rp = cc->rp;
     lhsexec_backcc(vm);
-    lhsexec_castcc(vm->callcontext)->top = top;
     lhsexec_castcc(vm->callcontext)->ip = rp;
 
     return LHS_TRUE;
@@ -1330,12 +1328,10 @@ static int lhsexec_ret1(LHSVM* vm)
     LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base);
     memcpy(result, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
 
-    vm->top = cc->base + 1;
+    vm->top = cc->base + cc->nwant;
 
-    StkID top = cc->top; 
     IPID rp = cc->rp;
     lhsexec_backcc(vm);
-    lhsexec_castcc(vm->callcontext)->top = top;
     lhsexec_castcc(vm->callcontext)->ip = rp;
 
     return LHS_TRUE;
@@ -1409,16 +1405,16 @@ static int lhsexec_reset(LHSVM* vm)
     return LHS_TRUE;
 }
 
-int lhsexec_pcall(LHSVM* vm, int narg, int nret, StkID errfn)
+int lhsexec_pcall(LHSVM* vm, LHSFunction* function, int nwant, StkID errfn)
 {
     lhsexec_forwardcc
     (
-        vm, 
-        lhsframe_castframe(vm->mainframe)->mainfunc, 
-        narg, 
-        nret, 
+        vm,
+        function,
+        function->narg,
+        nwant,
         errfn, 
-        lhsframe_castframe(vm->mainframe)->mainfunc->code.data,
+        function->code.data,
         LHS_FCALL
     );
 

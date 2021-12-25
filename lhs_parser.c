@@ -1957,7 +1957,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 
 static int lhsparser_exprchain(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
-    /*exprchain -> exprfactor op_binary*/
+    /*exprchain -> exprfactor symbol*/
     lhsparser_exprfactor(vm, loadf, state);
     
     LHSToken* token = &lhsparser_castlex(loadf)->token;

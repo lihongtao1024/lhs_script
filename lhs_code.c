@@ -30,8 +30,8 @@ static const char* opname[OP_MAX] =
 	"great", "eq", "ne", "ge", "le",
 	"and", "or", "shl", "shr", "neg",
 	"not", "notb", "mov", "movs", "push", 
-	"pop", "jmp", "jz", "jnz", "nop", 
-	"call", "ret", "ret1", "swap", "exit"
+	"pop", "jmp", "jz", "jnz", "je",
+	"nop", "call", "ret", "ret1", "swap", "exit"
 };
 
 static const char* lhscode_escapestr(const char* str)
@@ -281,6 +281,24 @@ static lhscode_dmpfunction(LHSVM* vm, LHSFunction* func)
 				"%p\t%s\t%p\t;line:%d column:%d ->%s\n", 
 				cur, 
 				opname[op], 
+				(void*)l,
+				line,
+				column,
+				refer
+			);
+			break;
+		}
+		case OP_JE:
+		{
+			char b = lhscode_b(head);
+			long long l = lhscode_i(head);
+			l += (long long)(func->code.data);
+			printf
+			(
+				"%p\t%s\t%s,\t%p;line:%d column:%d ->%s\n",
+				cur,
+				opname[op],
+				b ? "true" : "false",
 				(void*)l,
 				line,
 				column,

@@ -35,13 +35,14 @@
 #define OP_JMP                  (26)
 #define OP_JZ                   (27)
 #define OP_JNZ                  (28)
-#define OP_NOP                  (29)
-#define OP_CALL                 (30)
-#define OP_RET                  (31)
-#define OP_RET1                 (32)
-#define OP_SWAP                 (33)
-#define OP_EXIT                 (34)
-#define OP_MAX                  (35)
+#define OP_JE                   (29)
+#define OP_NOP                  (30)
+#define OP_CALL                 (31)
+#define OP_RET                  (32)
+#define OP_RET1                 (33)
+#define OP_SWAP                 (34)
+#define OP_EXIT                 (35)
+#define OP_MAX                  (36)
 
 #define lhscode_boolean(vm, buf, v)                     \
 {                                                       \

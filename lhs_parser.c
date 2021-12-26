@@ -32,6 +32,9 @@ lhsparser_issymbol(lhsparser_castlex(lf)->token.t)
 #define lhsparser_isunarysymbol(s)                                                  \
 ((s) == SYMBOL_NOT || (s) == SYMBOL_NOTB || (s) == SYMBOL_MINUS)                    
 
+#define lhsparser_islogicsymbol(s)                                                  \
+((s) == SYMBOL_LOGICAND || (s) == SYMBOL_LOGICOR)
+
 #define lhsparser_islbracket(lf)                                                    \
 (lhsparser_castlex(lf)->token.t == '(')                                             
 
@@ -999,7 +1002,7 @@ static int lhsparser_checkexprstack(LHSVM* vm, LHSLoadF* loadf, char op, int cal
             vm, 
             loadf, 
             "illegal token '%s'.", 
-            lhsparser_castlex(loadf)->token.buf
+            lhsparser_castlex(loadf)->token.buf.data
         );
     return LHS_TRUE;
 }
@@ -1684,6 +1687,35 @@ static int lhsparser_exprmov(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     return LHS_TRUE;
 }
 
+static int lhsparser_exprlogic(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
+{
+    LHSExprChain* prev = chain->prev;
+    lhsparser_exprcode(vm, loadf, prev);
+
+    if (prev->symbol == SYMBOL_LOGICAND)
+    {
+        lhsparser_op1(vm, loadf, OP_JE, chain);
+        lhsparser_byte(vm, loadf, LHS_FALSE);
+        lhsparser_index(vm, loadf, 0);
+    }
+    else
+    {
+        lhsparser_op1(vm, loadf, OP_JE, chain);
+        lhsparser_byte(vm, loadf, LHS_TRUE);
+        lhsparser_index(vm, loadf, 0);
+    }
+
+    LHSJmp jmp;
+    lhsparser_initjmp(vm, loadf, &jmp);
+    jmp.pos = jmp.func->code.usize;    
+
+    lhsparser_exprcode(vm, loadf, chain);
+
+    jmp.len = (int)(jmp.func->code.usize - jmp.pos);
+    lhsparser_jmpsolve(lhsparser_castlex(loadf), &jmp, vm);
+    return LHS_TRUE;
+}
+
 static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
     LHSExprChain* chain = state->chain;
@@ -1711,18 +1743,22 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         }
         else
         {
-            if (chain->prev->symbol == SYMBOL_ASSIGN)
+            if (prev->symbol == SYMBOL_ASSIGN)
             {
                 lhsparser_exprmov(vm, loadf, chain);
             }
+            else if (lhsparser_islogicsymbol(prev->symbol))
+            {
+                lhsparser_exprlogic(vm, loadf, chain);
+            }
             else
             {
-                lhsparser_exprcode(vm, loadf, chain->prev);
+                lhsparser_exprcode(vm, loadf, prev);
                 lhsparser_exprcode(vm, loadf, chain);
-                lhsparser_op1(vm, loadf, chain->prev->symbol, chain);
+                lhsparser_op1(vm, loadf, prev->symbol, chain);
             }
 
-            chain->prev->type = LHS_EXPRNONE;
+            prev->type = LHS_EXPRNONE;
             chain->type = LHS_EXPRNONE;
         }
 

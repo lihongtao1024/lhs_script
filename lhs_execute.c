@@ -1170,6 +1170,11 @@ static int lhsexec_jnz(LHSVM* vm)
     return LHS_TRUE;
 }
 
+static int lhsexec_je(LHSVM* vm)
+{
+    return LHS_TRUE;
+}
+
 static int lhsexec_nop(LHSVM* vm)
 {
     return LHS_TRUE;
@@ -1369,8 +1374,9 @@ lhsexec_instruct instructions[] =
     lhsexec_great, lhsexec_equal, lhsexec_ne,  lhsexec_ge,   lhsexec_le,
     lhsexec_and,   lhsexec_or,    lhsexec_shl, lhsexec_shr,  lhsexec_neg,
     lhsexec_not,   lhsexec_notb,  lhsexec_mov, lhsexec_movs, lhsexec_push,
-    lhsexec_pop,   lhsexec_jmp,   lhsexec_jz,  lhsexec_jnz,  lhsexec_nop,
-    lhsexec_call,  lhsexec_ret,   lhsexec_ret1,lhsexec_swap, lhsexec_exit
+    lhsexec_pop,   lhsexec_jmp,   lhsexec_jz,  lhsexec_jnz,  lhsexec_je,
+    lhsexec_nop,   lhsexec_call,  lhsexec_ret, lhsexec_ret1, lhsexec_swap, 
+    lhsexec_exit
 };
 
 static int lhsexec_execute(LHSVM* vm, void* ud)

@@ -940,7 +940,7 @@ static int lhsexec_mov(LHSVM* vm)
     }
     case LHS_MARKLOCAL:
     {
-        lvalue = lhsvector_at
+        rvalue = lhsvector_at
         (
             vm,
             &cc->localvars,

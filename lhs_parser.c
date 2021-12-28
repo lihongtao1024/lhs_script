@@ -1693,8 +1693,9 @@ static int lhsparser_exprcode(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     if (chain->swap)
     {
         lhsparser_op1(vm, loadf, OP_SWAP, chain);
+        chain->swap = LHS_FALSE;
     }
-    chain->swap = LHS_FALSE;
+    
     return LHS_TRUE;
 }
 
@@ -1734,18 +1735,14 @@ static int lhsparser_exprlogic1(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     lhsparser_initjmp(vm, loadf, chain->logic);
     lhslink_forward(lhsparser_castlex(loadf), alljmp, chain->logic, next);
 
-    if (chain->symbol == SYMBOL_LOGICAND)
-    {
-        lhsparser_op1(vm, loadf, OP_JE, chain);
-        lhsparser_byte(vm, loadf, LHS_FALSE);
-        lhsparser_index(vm, loadf, 0);
-    }
-    else
-    {
-        lhsparser_op1(vm, loadf, OP_JE, chain);
-        lhsparser_byte(vm, loadf, LHS_TRUE);
-        lhsparser_index(vm, loadf, 0);
-    }
+    lhsparser_op1(vm, loadf, OP_JE, chain);
+    lhsparser_byte
+    (
+        vm, 
+        loadf, 
+        (chain->symbol == SYMBOL_LOGICAND) ? LHS_FALSE : LHS_TRUE
+    );
+    lhsparser_index(vm, loadf, 0);
 
     chain->logic->pos = lhsparser_castlex(loadf)->curfunction->code.usize;
     return LHS_TRUE;

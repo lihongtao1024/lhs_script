@@ -134,7 +134,7 @@ int lhsloadf_savedigital(LHSVM* vm, LHSLoadF* loadf, int *is_double,
         (
             vm, 
             loadf,
-            "solving decimal '%s'.",
+            "unexpected digital format '%s'.",
             buf->data
         );
 

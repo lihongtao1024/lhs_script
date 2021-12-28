@@ -325,6 +325,41 @@ static int lhsexec_oprln(LHSVM* vm, LHSValue* lvalue,
     return LHS_TRUE;
 }
 
+static int lhsexec_oprlg(LHSVM* vm, LHSValue* lvalue,
+    const LHSValue* rvalue, char op)
+{
+    (op != OP_CONCAT || rvalue->gc->type != LHS_TGCSTRING) &&
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
+            lhsparser_symbols[op]
+        );
+
+    LHSBuf strbuf;
+    lhsbuf_init(vm, &strbuf);
+
+    char buf[64];
+    int l = sprintf(buf, "%lld", lvalue->i);
+    lhsbuf_pushls(vm, &strbuf, buf, l);
+
+    lhsbuf_pushls
+    (
+        vm, 
+        &strbuf, 
+        lhsvalue_caststring(rvalue->gc)->data, 
+        lhsvalue_caststring(rvalue->gc)->length
+    );
+
+    lhsvm_pop(vm, 2);
+    lhsvm_pushlstring(vm, strbuf.data, strbuf.usize);
+    lhsbuf_uninit(vm, &strbuf);
+    return LHS_TRUE;
+}
+
 static int lhsexec_oprnl(LHSVM* vm, LHSValue* lvalue, 
     const LHSValue* rvalue, char op)
 {
@@ -481,6 +516,41 @@ static int lhsexec_oprnn(LHSVM* vm, LHSValue* lvalue,
     return LHS_TRUE;
 }
 
+static int lhsexec_oprng(LHSVM* vm, LHSValue* lvalue,
+    const LHSValue* rvalue, char op)
+{
+    (op != OP_CONCAT || rvalue->gc->type != LHS_TGCSTRING) &&
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
+            lhsparser_symbols[op]
+        );
+
+    LHSBuf strbuf;
+    lhsbuf_init(vm, &strbuf);
+
+    char buf[64];
+    int l = sprintf(buf, "%lf", lvalue->n);
+    lhsbuf_pushls(vm, &strbuf, buf, l);
+
+    lhsbuf_pushls
+    (
+        vm, 
+        &strbuf, 
+        lhsvalue_caststring(rvalue->gc)->data, 
+        lhsvalue_caststring(rvalue->gc)->length
+    );
+
+    lhsvm_pop(vm, 2);
+    lhsvm_pushlstring(vm, strbuf.data, strbuf.usize);
+    lhsbuf_uninit(vm, &strbuf);
+    return LHS_TRUE;
+}
+
 static int lhsexec_oprbb(LHSVM* vm, LHSValue* lvalue, 
     const LHSValue* rvalue, char op)
 {
@@ -523,6 +593,184 @@ static int lhsexec_oprbb(LHSVM* vm, LHSValue* lvalue,
     return LHS_TRUE;
 }
 
+static int lhsexec_oprbg(LHSVM* vm, LHSValue* lvalue,
+    const LHSValue* rvalue, char op)
+{
+    (op != OP_CONCAT || rvalue->gc->type != LHS_TGCSTRING) &&
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
+            lhsparser_symbols[op]
+        );
+
+    LHSBuf strbuf;
+    lhsbuf_init(vm, &strbuf);
+
+    const char *s = lvalue->b ? "true" : "false";
+    lhsbuf_pushs(vm, &strbuf, s);
+
+    lhsbuf_pushls
+    (
+        vm, 
+        &strbuf, 
+        lhsvalue_caststring(rvalue->gc)->data, 
+        lhsvalue_caststring(rvalue->gc)->length
+    );
+
+    lhsvm_pop(vm, 2);
+    lhsvm_pushlstring(vm, strbuf.data, strbuf.usize);
+    lhsbuf_uninit(vm, &strbuf);
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprgl(LHSVM* vm, LHSValue* lvalue,
+    const LHSValue* rvalue, char op)
+{
+    (op != OP_CONCAT || lvalue->gc->type != LHS_TGCSTRING) &&
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
+            lhsparser_symbols[op]
+        );
+
+    LHSBuf strbuf;
+    lhsbuf_init(vm, &strbuf);
+
+    lhsbuf_pushls
+    (
+        vm, 
+        &strbuf, 
+        lhsvalue_caststring(lvalue->gc)->data, 
+        lhsvalue_caststring(lvalue->gc)->length
+    );
+
+    char buf[64];
+    int l = sprintf(buf, "%lld", rvalue->i);
+    lhsbuf_pushls(vm, &strbuf, buf, l);
+
+    lhsvm_pop(vm, 2);
+    lhsvm_pushlstring(vm, strbuf.data, strbuf.usize);
+    lhsbuf_uninit(vm, &strbuf);
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprgn(LHSVM* vm, LHSValue* lvalue,
+    const LHSValue* rvalue, char op)
+{
+    (op != OP_CONCAT || lvalue->gc->type != LHS_TGCSTRING) &&
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
+            lhsparser_symbols[op]
+        );
+
+    LHSBuf strbuf;
+    lhsbuf_init(vm, &strbuf);
+
+    lhsbuf_pushls
+    (
+        vm, 
+        &strbuf, 
+        lhsvalue_caststring(lvalue->gc)->data, 
+        lhsvalue_caststring(lvalue->gc)->length
+    );
+
+    char buf[64];
+    int l = sprintf(buf, "%lf", rvalue->n);
+    lhsbuf_pushls(vm, &strbuf, buf, l);
+
+    lhsvm_pop(vm, 2);
+    lhsvm_pushlstring(vm, strbuf.data, strbuf.usize);
+    lhsbuf_uninit(vm, &strbuf);
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprgb(LHSVM* vm, LHSValue* lvalue,
+    const LHSValue* rvalue, char op)
+{
+    (op != OP_CONCAT || lvalue->gc->type != LHS_TGCSTRING) &&
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
+            lhsparser_symbols[op]
+        );
+
+    LHSBuf strbuf;
+    lhsbuf_init(vm, &strbuf);
+
+    lhsbuf_pushls
+    (
+        vm, 
+        &strbuf, 
+        lhsvalue_caststring(lvalue->gc)->data, 
+        lhsvalue_caststring(lvalue->gc)->length
+    );
+
+    const char *s = rvalue->b ? "true" : "false";
+    lhsbuf_pushs(vm, &strbuf, s);
+
+    lhsvm_pop(vm, 2);
+    lhsvm_pushlstring(vm, strbuf.data, strbuf.usize);
+    lhsbuf_uninit(vm, &strbuf);
+    return LHS_TRUE;
+}
+
+static int lhsexec_oprgg(LHSVM* vm, LHSValue* lvalue,
+    const LHSValue* rvalue, char op)
+{
+    (op != OP_CONCAT || lvalue->gc->type != LHS_TGCSTRING || 
+        rvalue->gc->type != LHS_TGCSTRING) &&
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "lvalue type: '%s', rvalue type: '%s', illegal operation symbol '%s'.",
+            lhsvalue_typename[lhsexec_valuetype(lvalue)],
+            lhsvalue_typename[lhsexec_valuetype(rvalue)],
+            lhsparser_symbols[op]
+        );
+
+    LHSBuf strbuf;
+    lhsbuf_init(vm, &strbuf);
+
+    lhsbuf_pushls
+    (
+        vm, 
+        &strbuf, 
+        lhsvalue_caststring(lvalue->gc)->data, 
+        lhsvalue_caststring(lvalue->gc)->length
+    );
+
+    lhsbuf_pushls
+    (
+        vm, 
+        &strbuf, 
+        lhsvalue_caststring(rvalue->gc)->data, 
+        lhsvalue_caststring(rvalue->gc)->length
+    );
+
+    lhsvm_pop(vm, 2);
+    lhsvm_pushlstring(vm, strbuf.data, strbuf.usize);
+    lhsbuf_uninit(vm, &strbuf);
+    return LHS_TRUE;
+}
+
 static int lhsexec_oprerr(LHSVM* vm, LHSValue* lvalue, 
     const LHSValue* rvalue, char op)
 {
@@ -543,15 +791,15 @@ static lhsexec_opr lhsexec_operations[][6] =
     {lhsexec_oprnone, lhsexec_oprnone, lhsexec_oprnone, 
      lhsexec_oprnone, lhsexec_oprnone, lhsexec_oprnone},
     {lhsexec_oprnone, lhsexec_oprll,   lhsexec_oprln, 
-     lhsexec_oprerr,  lhsexec_oprerr,  lhsexec_oprerr},
+     lhsexec_oprerr,  lhsexec_oprerr,  lhsexec_oprlg},
     {lhsexec_oprnone, lhsexec_oprnl,   lhsexec_oprnn, 
+     lhsexec_oprerr,  lhsexec_oprerr,  lhsexec_oprng},
+    {lhsexec_oprnone, lhsexec_oprerr,  lhsexec_oprerr, 
+     lhsexec_oprbb,   lhsexec_oprerr,  lhsexec_oprbg},
+    {lhsexec_oprnone, lhsexec_oprerr,  lhsexec_oprerr, 
      lhsexec_oprerr,  lhsexec_oprerr,  lhsexec_oprerr},
-    {lhsexec_oprnone, lhsexec_oprerr,  lhsexec_oprerr, 
-     lhsexec_oprbb,   lhsexec_oprerr,  lhsexec_oprerr},
-    {lhsexec_oprnone, lhsexec_oprerr,  lhsexec_oprerr, 
-     lhsexec_oprerr,  lhsexec_oprerr,  lhsexec_oprerr},
-    {lhsexec_oprnone, lhsexec_oprerr,  lhsexec_oprerr, 
-     lhsexec_oprerr,  lhsexec_oprerr,  lhsexec_oprerr}
+    {lhsexec_oprnone, lhsexec_oprgl,   lhsexec_oprgn, 
+     lhsexec_oprgb,   lhsexec_oprerr,  lhsexec_oprgg}
 };
 
 static int lhsexec_add(LHSVM* vm)
@@ -1018,6 +1266,21 @@ static int lhsexec_movs(LHSVM* vm)
     return LHS_TRUE;
 }
 
+static int lhsexec_concat(LHSVM* vm)
+{
+    const LHSValue* lvalue = lhsvm_getvalue(vm, -2);
+    const LHSValue* rvalue = lhsvm_getvalue(vm, -1);
+    lhsexec_operations[lvalue->type][rvalue->type]
+    (
+        vm, 
+        (LHSValue*)lvalue, 
+        rvalue, 
+        OP_CONCAT
+    );
+
+    return LHS_TRUE;
+}
+
 static int lhsexec_push(LHSVM* vm)
 {
     LHSCallContext* cc = vm->callcontext;
@@ -1381,14 +1644,14 @@ static int lhsexec_exit(LHSVM* vm)
 
 lhsexec_instruct instructions[] =
 {
-    0,             lhsexec_add,   lhsexec_sub, lhsexec_mul,  lhsexec_div,
-    lhsexec_mod,   lhsexec_andb,  lhsexec_orb, lhsexec_xorb, lhsexec_less,
-    lhsexec_great, lhsexec_equal, lhsexec_ne,  lhsexec_ge,   lhsexec_le,
-    0,             0,             lhsexec_shl, lhsexec_shr,  lhsexec_neg,
-    lhsexec_not,   lhsexec_notb,  lhsexec_mov, lhsexec_movs, lhsexec_push,
-    lhsexec_pop,   lhsexec_jmp,   lhsexec_jz,  lhsexec_jnz,  lhsexec_je,
-    lhsexec_nop,   lhsexec_call,  lhsexec_ret, lhsexec_ret1, lhsexec_swap, 
-    lhsexec_exit
+    0,             lhsexec_add,   lhsexec_sub, lhsexec_mul,   lhsexec_div,
+    lhsexec_mod,   lhsexec_andb,  lhsexec_orb, lhsexec_xorb,  lhsexec_less,
+    lhsexec_great, lhsexec_equal, lhsexec_ne,  lhsexec_ge,    lhsexec_le,
+    0,             0,             lhsexec_shl, lhsexec_shr,   lhsexec_neg,
+    lhsexec_not,   lhsexec_notb,  lhsexec_mov, lhsexec_concat,lhsexec_movs, 
+    lhsexec_push,  lhsexec_pop,   lhsexec_jmp, lhsexec_jz,    lhsexec_jnz,  
+    lhsexec_je,    lhsexec_nop,   lhsexec_call,lhsexec_ret,   lhsexec_ret1, 
+    lhsexec_swap,  lhsexec_exit
 };
 
 static int lhsexec_execute(LHSVM* vm, void* ud)

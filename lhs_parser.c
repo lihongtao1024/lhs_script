@@ -198,7 +198,8 @@ const char* lhsparser_symbols[] =
     "n/a", "+", "-", "*", "/", "%", 
     "&", "|", "^", "<", ">", "==",
     "!=", ">=", "<=", "&&", "||", 
-    "<<", ">>", "-", "!", "~", "="
+    "<<", ">>", "-", "!", "~", "=",
+    ".."
 };
 
 static const char* reserveds[] =
@@ -211,30 +212,31 @@ static const char* reserveds[] =
 
 static const char priorities[][SYMBOL_END] =
 {
-     /*N/A, +, -, *, /, %, &, |, ^, <, >,==,!=,>=,<=,&&,||,<<,>>, -, !, ~, =*/
-/*N/A*/{ E, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G},
-/*+*/  { L, L, L, G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*-*/  { L, L, L, G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/***/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*/*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*%*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*&*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*|*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*^*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*<*/  { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N},
-/*>*/  { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N},
-/*==*/ { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N},
-/*!=*/ { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N},
-/*>=*/ { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N},
-/*<=*/ { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N},
-/*&&*/ { L, G, G, G, G, G, G, G, G, G, G, G, G, G, G, L, L, G, G, G, G, G, N},
-/*||*/ { L, G, G, G, G, G, G, G, G, G, G, G, G, G, G, L, L, G, G, G, G, G, N},
-/*<<*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*>>*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*-*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*!*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*~*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N},
-/*=*/  { L, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, N}
+     /*N/A, +, -, *, /, %, &, |, ^, <, >,==,!=,>=,<=,&&,||,<<,>>, -, !, ~, =, ..*/
+/*N/A*/{ E, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G},
+/*+*/  { L, L, L, G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*-*/  { L, L, L, G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/***/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*/*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*%*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*&*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*|*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*^*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*<*/  { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N, N},
+/*>*/  { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N, N},
+/*==*/ { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N, N},
+/*!=*/ { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N, N},
+/*>=*/ { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N, N},
+/*<=*/ { L, G, G, G, G, G, G, G, G, L, L, L, L, L, L, L, L, G, G, G, G, G, N, N},
+/*&&*/ { L, G, G, G, G, G, G, G, G, G, G, G, G, G, G, L, L, G, G, G, G, G, N, N},
+/*||*/ { L, G, G, G, G, G, G, G, G, G, G, G, G, G, G, L, L, G, G, G, G, G, N, N},
+/*<<*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*>>*/ { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*-*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*!*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*~*/  { L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, G, G, G, N, N},
+/*=*/  { L, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, N, G},
+/*..*/ { L, N, N, N, N, N, N, N, N, N, N, N, N, N, N, N, N, N, N, N, N, N, N, L}
 };
 
 static const char* exprtype[] =
@@ -784,6 +786,18 @@ static int lhsparser_nextlexical(LHSVM* vm, LHSLoadF* loadf, LHSBuf* buf)
                 return LHS_TOKENMINUS;
             }
             return '-';
+        }
+        case '.':
+        {
+            lhsloadf_savesymbol(vm, loadf, buf);
+            lhsloadf_getc(loadf);
+            if (loadf->current == '.')
+            {
+                lhsloadf_addsymbol(vm, loadf, buf);
+                lhsloadf_getc(loadf);
+                return LHS_TOKENDBDOT;
+            }
+            return '.';
         }
         case '+':
         case '*':
@@ -1830,7 +1844,7 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             vm,
             loadf,
             "unexpected expression symbol '%s'.",
-            lhsparser_castlex(loadf)->token.t
+            lhsparser_symbols[chain->symbol]
         );
     }
     }

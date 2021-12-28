@@ -29,9 +29,10 @@ static const char* opname[OP_MAX] =
 	"mod", "andb", "orb", "xorb", "less",
 	"great", "eq", "ne", "ge", "le",
 	"and", "or", "shl", "shr", "neg",
-	"not", "notb", "mov", "movs", "push", 
-	"pop", "jmp", "jz", "jnz", "je",
-	"nop", "call", "ret", "ret1", "swap", "exit"
+	"not", "notb", "mov", "concat", "movs", 
+	"push", "pop", "jmp", "jz", "jnz", 
+	"je", "nop", "call", "ret", "ret1", 
+	"swap", "exit"
 };
 
 static const char* lhscode_escapestr(const char* str)

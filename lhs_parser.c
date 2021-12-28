@@ -21,6 +21,7 @@
 #define LHS_EXPRSUB                           (5 | LHS_EXPRPUSHED)
 #define LHS_EXPRCALL                          (6 | LHS_EXPRPUSHED)
 #define LHS_EXPRRAW(t)                        ((t) & (LHS_EXPRIMMED - 1) - 1)
+#define LHS_JMPLEN                            (18)
 
 #define lhsparser_issymbol(t)                                                       \
 (((t) & ~UCHAR_MAX) ?                                                               \
@@ -147,6 +148,7 @@ typedef struct LHSExprChain
         double n;
         long long i;        
     } factor;
+    LHSJmp* logic;
     LHSExprUnary* unary;
     struct LHSExprChain* prev;
 } LHSExprChain;
@@ -1010,7 +1012,8 @@ static int lhsparser_checkexprstack(LHSVM* vm, LHSLoadF* loadf, char op, int cal
     return LHS_TRUE;
 }
 
-static int lhsparser_resetexprchain(LHSVM* vm, LHSExprChain* chain, LHSExprState* state)
+static int lhsparser_resetexprchain(LHSVM* vm, LHSLoadF* loadf, 
+    LHSExprChain* chain, LHSExprState* state)
 {
     lhslink_forward(state, chain, chain, prev);
 
@@ -1020,6 +1023,7 @@ static int lhsparser_resetexprchain(LHSVM* vm, LHSExprChain* chain, LHSExprState
     chain->line = 0;
     chain->column = 0;
     chain->refer = 0;
+    chain->logic = 0;
     chain->nunary = 0;
     lhslink_init(chain, unary);
     return LHS_TRUE;
@@ -1103,9 +1107,11 @@ static int lhsparser_resetdostate(LHSVM* vm, LHSLoadF* loadf, LHSDoState* state)
 
 static lhsparser_exprunary(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 {
+    char unary = SYMBOL_NONE;
     for (int i = 0; i < chain->nunary; ++i)
     {
-        switch (chain->unary->unary)
+        unary = chain->unary->unary;
+        switch (unary)
         {
         case SYMBOL_MINUS:
         {
@@ -1165,8 +1171,14 @@ static lhsparser_exprunary(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     return LHS_TRUE;
 
 illegalunary:
-    lhserr_syntax(vm, loadf, "illegal unary symbol '%s'.", 
-        lhsparser_symbols[chain->symbol]);
+    lhserr_syntax
+    (
+        vm, 
+        loadf, 
+        "value type: '%s' with illegal unary symbol '%s'.", 
+        exprtype[LHS_EXPRRAW(chain->type)],
+        lhsparser_symbols[unary]
+    );
     return LHS_FALSE;
 }
 
@@ -1690,12 +1702,25 @@ static int lhsparser_exprmov(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
     return LHS_TRUE;
 }
 
-static int lhsparser_exprlogic(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
+static int lhsparser_exprlogic1(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
 {
-    LHSExprChain* prev = chain->prev;
-    lhsparser_exprcode(vm, loadf, prev);
+    if (chain->type == LHS_EXPRPUSHED)
+    {
+        return LHS_TRUE;
+    }
 
-    if (prev->symbol == SYMBOL_LOGICAND)
+    if (chain->type & LHS_EXPRIMMED)
+    {
+        lhsparser_exprunary(vm, loadf, chain);
+    }
+    lhsparser_exprcode(vm, loadf, chain);
+    chain->type = LHS_EXPRPUSHED;
+
+    chain->logic = lhsmem_newobject(vm, sizeof(LHSJmp));
+    lhsparser_initjmp(vm, loadf, chain->logic);
+    lhslink_forward(lhsparser_castlex(loadf), alljmp, chain->logic, next);
+
+    if (chain->symbol == SYMBOL_LOGICAND)
     {
         lhsparser_op1(vm, loadf, OP_JE, chain);
         lhsparser_byte(vm, loadf, LHS_FALSE);
@@ -1708,14 +1733,33 @@ static int lhsparser_exprlogic(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
         lhsparser_index(vm, loadf, 0);
     }
 
-    LHSJmp jmp;
-    lhsparser_initjmp(vm, loadf, &jmp);
-    jmp.pos = jmp.func->code.usize;    
+    chain->logic->pos = lhsparser_castlex(loadf)->curfunction->code.usize;
+    return LHS_TRUE;
+}
 
+static int lhsparser_exprlogic2(LHSVM* vm, LHSLoadF* loadf, LHSExprChain* chain)
+{
+    if (chain->type & LHS_EXPRIMMED)
+    {
+        lhsparser_exprunary(vm, loadf, chain);
+    }
     lhsparser_exprcode(vm, loadf, chain);
+    chain->type = LHS_EXPRPUSHED;
 
-    jmp.len = (int)(jmp.func->code.usize - jmp.pos);
-    lhsparser_jmpsolve(lhsparser_castlex(loadf), &jmp, vm);
+    LHSExprChain* prev = chain->prev;
+    if (prev->logic)
+    {
+        prev->logic->len = (int)
+        (
+            lhsparser_castlex(loadf)->curfunction->code.usize - prev->logic->pos
+        );
+
+        if (lhsparser_islogicsymbol(chain->symbol))
+        {
+            prev->logic->len -= LHS_JMPLEN;
+        }
+        prev->logic = 0;
+    }
     return LHS_TRUE;
 }
 
@@ -1727,6 +1771,11 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         return LHS_FALSE;
     }
 
+    if (lhsparser_islogicsymbol(chain->symbol))
+    {
+        lhsparser_exprlogic1(vm, loadf, chain);
+    }
+
     LHSExprChain* prev = chain->prev;
     switch (priorities[prev->symbol][chain->symbol])
     {
@@ -1736,8 +1785,12 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     }
     case L:
     {
-        if (prev->type & LHS_EXPRIMMED &&
-            chain->type & LHS_EXPRIMMED)
+        if (lhsparser_islogicsymbol(prev->symbol))
+        {
+            lhsparser_exprlogic2(vm, loadf, chain);
+        }
+        else if (prev->type & LHS_EXPRIMMED &&
+                 chain->type & LHS_EXPRIMMED)
         {
             lhsparser_exproperations
                 [LHS_EXPRRAW(prev->type)]
@@ -1749,10 +1802,6 @@ static int lhsparser_exprsolve(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
             if (prev->symbol == SYMBOL_ASSIGN)
             {
                 lhsparser_exprmov(vm, loadf, chain);
-            }
-            else if (lhsparser_islogicsymbol(prev->symbol))
-            {
-                lhsparser_exprlogic(vm, loadf, chain);
             }
             else
             {
@@ -2069,7 +2118,7 @@ static int lhsparser_exprsub(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
     /*subexpr -> {exprchain}*/
     LHSExprChain chain;
-    lhsparser_resetexprchain(vm, &chain, state);
+    lhsparser_resetexprchain(vm, loadf, &chain, state);
     lhsparser_exprchain(vm, loadf, state);
 
     if (lhsparser_exprsolve(vm, loadf, state))
@@ -2087,7 +2136,7 @@ static int lhsparser_exprstate(LHSVM* vm, LHSLoadF* loadf)
     lhsparser_initexprstate(vm, &state);
 
     LHSExprChain chain;
-    lhsparser_resetexprchain(vm, &chain, &state);
+    lhsparser_resetexprchain(vm, loadf, &chain, &state);
 
     if (lhserr_protectedcallex(vm, lhsparser_exprsub, loadf, &state))
     {

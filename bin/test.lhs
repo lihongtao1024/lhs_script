@@ -1,8 +1,10 @@
+
 function echo(param)
 {
+    print(param)
     return param
 }
-
+/*
 var v1 = 8, v2 = 5, v3 = 7, v4 = 6, v5 = 4, v6 = 9
 set d = 8 + -(5 - -7) - 6
 set dd = v1 + -(v2 - -v3) - v4
@@ -89,14 +91,47 @@ print(yyyy, "\n")
 print(xxxx, "\n")
 print(kkkk, "\n")
 print(llll, "\n\n\n")
+*/
 /*
 a = true && false || true
 var b1 = true, b2 = false, b3 = true
 a = b1 && b2 || b3
 a = check(true) && check(false) || check(true)
 
-function check(xxx)
-{
-    return x
-}
+var bt = true, bf = false
+var b1 = false && true || true
+var b2 = bf && bt || bt
 */
+/*
+var bt = true, bf = false, bx = false
+var b1 = (!true || !(true && false))
+var b22 = !true || !(echo(true) && bx)
+var bb1 = (true || true && false)
+var b2 = bf && (bt || bx)
+var b222 = bf && (bt || bx && bf)
+var b3 = !echo(bf) && (!echo(bt) || !echo(bt)) && echo(bf)
+print(b1, "\n")
+print(b22, "\n")
+print(bb1, "\n")
+print(b2, "\n")
+print(b222, "\n")
+print(b3, "\n")
+*/
+/*
+push l[2]
+call g[1], 1, 1
+je false, 115
+
+push l[1]
+call g[1], 1, 1
+je true, 120
+
+push l[1]
+call g[1], 1, 1
+
+movs l[3]
+*/
+
+var bbb1 = true
+var bbb2 = bbb1 || echo(false) || false
+print(bbb2)

@@ -1172,6 +1172,18 @@ static int lhsexec_jnz(LHSVM* vm)
 
 static int lhsexec_je(LHSVM* vm)
 {
+    LHSCallContext* cc = vm->callcontext;
+
+    char b = lhsexec_b(cc);
+    long long i = lhsexec_i(cc);
+    const LHSValue* value = lhsvm_getvalue(vm, -1);
+    if (lhsexec_istrue(value) != b)
+    {
+        lhsvm_pop(vm, 1);
+        return LHS_TRUE;
+    }
+
+    cc->ip = cc->func->code.data + i;
     return LHS_TRUE;
 }
 
@@ -1372,7 +1384,7 @@ lhsexec_instruct instructions[] =
     0,             lhsexec_add,   lhsexec_sub, lhsexec_mul,  lhsexec_div,
     lhsexec_mod,   lhsexec_andb,  lhsexec_orb, lhsexec_xorb, lhsexec_less,
     lhsexec_great, lhsexec_equal, lhsexec_ne,  lhsexec_ge,   lhsexec_le,
-    lhsexec_and,   lhsexec_or,    lhsexec_shl, lhsexec_shr,  lhsexec_neg,
+    0,             0,             lhsexec_shl, lhsexec_shr,  lhsexec_neg,
     lhsexec_not,   lhsexec_notb,  lhsexec_mov, lhsexec_movs, lhsexec_push,
     lhsexec_pop,   lhsexec_jmp,   lhsexec_jz,  lhsexec_jnz,  lhsexec_je,
     lhsexec_nop,   lhsexec_call,  lhsexec_ret, lhsexec_ret1, lhsexec_swap, 

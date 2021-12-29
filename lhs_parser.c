@@ -993,6 +993,7 @@ static int lhsparser_checkexprstack(LHSVM* vm, LHSLoadF* loadf, char op, int cal
     case OP_POP:
     case OP_JZ:
     case OP_JNZ:
+    case OP_CONCAT:
     {
         lhsparser_castlex(loadf)->nstack--;
         break;

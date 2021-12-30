@@ -17,7 +17,7 @@
 
 typedef struct LHSVarDesc
 {
-    LHSGCObject gc;
+    LHSGC gc;
     char mark;
     int index;
     int chunk;

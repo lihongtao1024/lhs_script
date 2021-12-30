@@ -12,8 +12,8 @@ typedef struct LHSCallContext
 {
     StkID base;         /*base for argument*/
     StkID errfn;        /*error handler*/
-    IPID ip;            /*instruction point*/
-    IPID rp;            /*return instruction point*/
+    IPID ip;            /*instruction pointer*/
+    IPID rp;            /*return instruction pointer*/
     int nwant;          /*number of used results*/
     int line;
     int column;

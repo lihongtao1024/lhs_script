@@ -6,12 +6,13 @@
 #define LHS_TGCSTRING   (3)
 #define LHS_TGCFUNCTION (4)
 #define LHS_TGCFULLDATA (5)
-#define lhsgc_castgc(o) ((LHSGCObject*)(o))
+#define LHS_TGCTABLE    (6)
+#define lhsgc_castgc(o) ((LHSGC*)(o))
 
-typedef struct LHSGCObject
+typedef struct LHSGC
 {
     char type;
     int marked;
     size_t size;
-    struct LHSGCObject* next;
-} LHSGCObject;
+    struct LHSGC* next;
+} LHSGC;

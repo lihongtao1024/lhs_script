@@ -158,6 +158,7 @@
     <ClCompile Include="lhs_hash.c" />
     <ClCompile Include="lhs_load.c" />
     <ClCompile Include="lhs_parser.c" />
+    <ClCompile Include="lhs_table.c" />
     <ClCompile Include="lhs_value.c" />
     <ClCompile Include="lhs_variable.c" />
     <ClCompile Include="lhs_vector.c" />
@@ -178,6 +179,7 @@
     <ClInclude Include="lhs_hash.h" />
     <ClInclude Include="lhs_load.h" />
     <ClInclude Include="lhs_parser.h" />
+    <ClInclude Include="lhs_table.h" />
     <ClInclude Include="lhs_value.h" />
     <ClInclude Include="lhs_variable.h" />
     <ClInclude Include="lhs_vector.h" />

@@ -46,9 +46,9 @@ void lhsmem_freeobject(void* vm, void* data, size_t size)
     }
 }
 
-LHSGCObject* lhsmem_newgcobject(void* vm, size_t size, int type)
+LHSGC* lhsmem_newgcobject(void* vm, size_t size, int type)
 {
-    LHSGCObject* o = lhsgc_castgc(lhsmem_newobject(lhsvm_castvm(vm), size));
+    LHSGC* o = lhsgc_castgc(lhsmem_newobject(lhsvm_castvm(vm), size));
     lhsmem_initgc(o, type, size); 
     lhslink_forward(lhsvm_castvm(vm), allgc, o, next);
     return o;

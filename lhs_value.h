@@ -14,7 +14,7 @@
 
 typedef struct LHSString
 {
-    LHSGCObject gc;
+    LHSGC gc;
     int length;
     int reserved;
     long long hash;
@@ -23,7 +23,7 @@ typedef struct LHSString
 
 typedef struct LHSShortString
 {
-    LHSGCObject gc;
+    LHSGC gc;
     int length;
     int reserved;
     long long hash;
@@ -38,7 +38,7 @@ typedef struct LHSValue
         char b;
         double n;
         long long i;        
-        LHSGCObject* gc;
+        LHSGC* gc;
         lhsvm_delegate dg;
     };
 } LHSValue;

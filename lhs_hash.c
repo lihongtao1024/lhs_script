@@ -32,7 +32,8 @@ static int lhshash_rehash(LHSHashNode** nodes, size_t osize, size_t nsize)
 
 static int lhshash_grow(void* vm, LHSHash* hash, size_t nsize)
 {
-    if (hash->size == nsize)
+    if (hash->size == nsize ||
+        nsize < LHS_HASHSIZE)
     {
         return LHS_TRUE;
     }
@@ -50,7 +51,7 @@ static int lhshash_grow(void* vm, LHSHash* hash, size_t nsize)
     }
     else
     {
-        lhshash_rehash(hash->nodes, nsize, hash->size);
+        lhshash_rehash(hash->nodes, hash->size, nsize);
         hash->nodes = lhsmem_renewobject
         (
             lhsvm_castvm(vm), 
@@ -161,7 +162,8 @@ void lhshash_remove(void* vm, LHSHash* hash, void* userdata)
         {
             *current = temp->next;
             lhsmem_freeobject(lhsvm_castvm(vm), temp, sizeof(LHSHashNode));
-            --hash->usize;
+            hash->usize--;
+            break;
         }
         else
         {

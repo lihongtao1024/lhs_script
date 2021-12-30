@@ -8,7 +8,7 @@
 
 typedef struct LHSFrame
 {
-    LHSGCObject gc;
+    LHSGC gc;
     int name;
     LHSFunction* mainfunc;
     LHSFunction* allfunc;

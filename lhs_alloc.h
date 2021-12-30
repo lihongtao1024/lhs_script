@@ -16,4 +16,4 @@ void* lhsmem_renewobject(void* vm, void* original, size_t osize, size_t nsize);
 
 void lhsmem_freeobject(void* vm, void* data, size_t size);
 
-LHSGCObject* lhsmem_newgcobject(void* vm, size_t size, int type);
+LHSGC* lhsmem_newgcobject(void* vm, size_t size, int type);

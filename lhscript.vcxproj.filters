@@ -66,6 +66,9 @@
     <ClCompile Include="lhs_frame.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="lhs_table.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lhs_alloc.h">
@@ -120,6 +123,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="lhs_frame.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="lhs_table.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

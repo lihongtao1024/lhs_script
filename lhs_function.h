@@ -8,7 +8,7 @@
 
 typedef struct LHSFunction
 {
-    LHSGCObject gc;         /*garbage collection handle*/
+    LHSGC gc;               /*garbage collection handle*/
     int name;               /*function name index in values*/
     int narg;
     int nret;

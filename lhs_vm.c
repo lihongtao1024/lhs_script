@@ -7,20 +7,34 @@
 #include "lhs_code.h"
 #include "lhs_baselib.h"
 #include "lhs_execute.h"
+#include "lhs_table.h"
 
 #define lhsvm_gettopstring(vm)                                                  \
 (lhsvalue_caststring(lhsvm_gettopvalue(vm)->gc))
 
-static void lhsvm_allgcfree(LHSVM* vm, LHSGCObject* o, void* ud)
+static void lhsvm_allgcfree(LHSVM* vm, LHSGC* o, void* ud)
 {
     if ((void*)vm == (void*)o)
     {
         printf("\nmemory leak:[%llu] bytes.\n", vm->nalloc - o->size);
     }
 
-    if (o->type == LHS_TGCFUNCTION)
+    switch (o->type)
+    {
+    case LHS_TGCTABLE:
+    {
+        lhstable_uninit(vm, lhstable_casttable(o));
+        break;
+    }
+    case LHS_TGCFUNCTION:
     {
         lhsfunction_uninit(vm, lhsfunction_castfunc(o));
+        break;
+    }
+    default:
+    {
+        break;
+    }
     }
 
     lhsmem_freeobject(vm, o, o->size);
@@ -80,7 +94,7 @@ LHSValue* lhsvm_incrementstack(LHSVM* vm)
         return lhsvalue_castvalue(lhsvector_at(vm, &vm->stack, vm->top++));
     }
     
-    ++vm->top;
+    vm->top++;
     return lhsvalue_castvalue(lhsvector_increment(vm, &vm->stack));
 }
 
@@ -113,7 +127,7 @@ void lhsvm_destroy(LHSVM* vm)
     lhshash_uninit(vm, &vm->globalvars);
     lhsvector_uninit(vm, &vm->globalvalues);
     lhsvector_uninit(vm, &vm->stack);
-    lhslink_foreach(LHSGCObject, vm, allgc, next, lhsvm_allgcfree, 0);
+    lhslink_foreach(LHSGC, vm, allgc, next, lhsvm_allgcfree, 0);
 }
 
 int lhsvm_dofile(LHSVM* vm, const char* name)

@@ -14,7 +14,7 @@
 typedef size_t StkID;
 typedef struct LHSVM
 {
-    LHSGCObject gc;             /*garbage collect handle*/
+    LHSGC gc;                   /*garbage collect handle*/
     StkID top;                  /*position of runtime stack top*/
     size_t nalloc;              /*allocated memory size*/
     size_t ncallcontext;        /*for call layers*/
@@ -28,7 +28,7 @@ typedef struct LHSVM
     void* callcontext;          /*runtime context*/
     LHSError* errorjmp;         /*error jump handler*/
     lhsmem_new alloc;           /*memory handler*/
-    LHSGCObject* allgc;         /*all garbage collection*/
+    LHSGC* allgc;               /*all garbage collection*/
 } LHSVM;
 
 LHSVM* lhsvm_create(lhsmem_new fn);

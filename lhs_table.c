@@ -428,6 +428,7 @@ long long lhstable_length(LHSVM* vm, LHSTable* table)
         lhstable_geti(vm, table, i);
         if (lhsvm_getvalue(vm, -1)->type == LHS_TNONE)
         {
+            i++;
             lhsvm_pop(vm, 1);
             break;
         }

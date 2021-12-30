@@ -40,4 +40,6 @@ int lhstable_remove(LHSVM* vm, LHSTable* table);
 void lhstable_foreach(LHSVM* vm, LHSTable* table, lhstable_iterator iterator,
     void* udata);
 
+long long lhstable_length(LHSVM* vm, LHSTable* table);
+
 int lhstable_uninit(LHSVM* vm, LHSTable* table);

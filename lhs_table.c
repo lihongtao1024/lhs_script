@@ -420,6 +420,24 @@ void lhstable_foreach(LHSVM* vm, LHSTable* table, lhstable_iterator iterator,
     }
 }
 
+long long lhstable_length(LHSVM* vm, LHSTable* table)
+{
+    long long i = 0;
+    for (; i < (long long)table->size; ++i)
+    {
+        lhstable_geti(vm, table, i);
+        if (lhsvm_getvalue(vm, -1)->type == LHS_TNONE)
+        {
+            lhsvm_pop(vm, 1);
+            break;
+        }
+
+        lhsvm_pop(vm, 1);
+    }
+
+    return i;
+}
+
 int lhstable_uninit(LHSVM* vm, LHSTable* table)
 {
     lhsmem_freeobject(vm, table->nodes, sizeof(LHSTableNode*) * table->size);

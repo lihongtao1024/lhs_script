@@ -343,7 +343,7 @@ int lhstable_seti(LHSVM* vm, LHSTable* table, long long i)
 
 int lhstable_geti(LHSVM* vm, LHSTable* table, long long i)
 {
-    if (i < 0 || (size_t)i >= table->size)
+    if (i < 0 || i >= (long long)table->size)
     {
         lhsvm_pushinteger(vm, i);
         lhstable_getfield(vm, table);

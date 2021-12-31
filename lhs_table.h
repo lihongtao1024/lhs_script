@@ -27,6 +27,8 @@ typedef int (*lhstable_iterator)(LHSVM*, const LHSTable*, const LHSValue*,
 
 int lhstable_init(LHSVM* vm, LHSTable* table);
 
+int lhstable_insert(LHSVM* vm, LHSTable* table);
+
 int lhstable_setfield(LHSVM* vm, LHSTable* table);
 
 int lhstable_getfield(LHSVM* vm, LHSTable* table);

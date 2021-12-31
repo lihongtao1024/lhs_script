@@ -91,17 +91,6 @@ int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
          cc; 
          cc = cc->parent)
     {
-        lhsbuf_pushs(vm, &buf, "[");
-        if (cc->type == LHS_FCALL)
-        {
-            lhsbuf_pushc(vm, &buf, 'F');
-        }
-        else
-        {
-            lhsbuf_pushc(vm, &buf, 'C');
-        }
-        lhsbuf_pushs(vm, &buf, "]");
-
         LHSVar* name = lhsvector_at
         (
             vm,
@@ -114,7 +103,17 @@ int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
             &lhsvm_castvm(vm)->conststrs, 
             cc->refer
         );
-        lhsbuf_pushs(vm, &buf, "stack at: [");
+        lhsbuf_pushs(vm, &buf, "stack at");
+        lhsbuf_pushs(vm, &buf, "[");
+        if (cc->type == LHS_SCALL)
+        {
+            lhsbuf_pushc(vm, &buf, 'S');
+        }
+        else
+        {
+            lhsbuf_pushc(vm, &buf, 'C');
+        }
+        lhsbuf_pushs(vm, &buf, "]: [");
         lhsbuf_pushls
         (
             vm,

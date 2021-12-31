@@ -93,7 +93,7 @@ static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFunction* function,
     lhslink_forward(vm, callcontext, cc, parent);
     vm->ncallcontext++;
 
-    (type == LHS_FCALL) && lhsexec_initlocalvars(vm, cc);
+    (type == LHS_SCALL) && lhsexec_initlocalvars(vm, cc);
     return cc;
 }
 
@@ -104,7 +104,7 @@ static int lhsexec_backcc(LHSVM* vm)
     lhslink_back((vm), callcontext, cc, parent);
     (vm)->ncallcontext--;
 
-    if (cc->type == LHS_FCALL)
+    if (cc->type == LHS_SCALL)
     {
         lhsvector_uninit(vm, &cc->localvars);
     }
@@ -1511,7 +1511,7 @@ static int lhsexec_callframe(LHSVM* vm, LHSFunction* function, int narg,
         nwant,
         lhsexec_castcc(vm->callcontext)->errfn,
         function->code.data,
-        LHS_FCALL
+        LHS_SCALL
     );
 
     return LHS_TRUE;
@@ -1644,6 +1644,90 @@ static int lhsexec_pushtab(LHSVM* vm)
     return LHS_TRUE;
 }
 
+static int lhsexec_instab(LHSVM* vm)
+{
+    const LHSValue* table = lhsvm_getvalue(vm, -2);
+
+    if (table->type != LHS_TGC ||
+        table->gc->type != LHS_TGCTABLE)
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "expected 'table', got '%s'",
+            lhsvalue_typename[lhsexec_valuetype(table)]
+        );
+    }
+
+    lhstable_insert(vm, lhstable_casttable(table->gc));
+    return LHS_TRUE;
+}
+
+static int lhsexec_settab(LHSVM* vm)
+{
+    const LHSValue* table = lhsvm_getvalue(vm, -3),
+        *key = lhsvm_getvalue(vm, -1);
+
+    if (table->type != LHS_TGC ||
+        table->gc->type != LHS_TGCTABLE)
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "expected 'table', got '%s'",
+            lhsvalue_typename[lhsexec_valuetype(table)]
+        );
+    }
+
+    if (key->type == LHS_TINTEGER &&
+        key->i >= 0 && 
+        key->i < (long long)lhstable_casttable(table)->size)
+    {
+        long long i = key->i;
+        lhsvm_pop(vm, 1);
+        lhstable_seti(vm, lhstable_casttable(table->gc), i);
+    }
+    else
+    {
+        lhstable_setfield(vm, lhstable_casttable(table->gc));
+    }        
+    return LHS_TRUE;
+}
+
+static int lhsexec_gettab(LHSVM* vm)
+{
+    const LHSValue* table = lhsvm_getvalue(vm, -2),
+        *key = lhsvm_getvalue(vm, -1);
+
+    if (table->type != LHS_TGC ||
+        table->gc->type != LHS_TGCTABLE)
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "expected 'table', got '%s'",
+            lhsvalue_typename[lhsexec_valuetype(table)]
+        );
+    }
+
+    if (key->type == LHS_TINTEGER &&
+        key->i >= 0 && 
+        key->i < (long long)lhstable_casttable(table)->size)
+    {
+        long long i = key->i;
+        lhsvm_pop(vm, 1);
+        lhstable_geti(vm, lhstable_casttable(table->gc), i);
+    }
+    else
+    {
+        lhstable_getfield(vm, lhstable_casttable(table->gc));
+    }        
+    return LHS_TRUE;
+}
+
 static int lhsexec_exit(LHSVM* vm)
 {
     lhserr_check
@@ -1659,14 +1743,15 @@ static int lhsexec_exit(LHSVM* vm)
 
 lhsexec_instruct instructions[] =
 {
-    0,             lhsexec_add,     lhsexec_sub, lhsexec_mul,   lhsexec_div,
-    lhsexec_mod,   lhsexec_andb,    lhsexec_orb, lhsexec_xorb,  lhsexec_less,
-    lhsexec_great, lhsexec_equal,   lhsexec_ne,  lhsexec_ge,    lhsexec_le,
-    0,             0,               lhsexec_shl, lhsexec_shr,   lhsexec_neg,
-    lhsexec_not,   lhsexec_notb,    lhsexec_mov, lhsexec_concat,lhsexec_movs, 
-    lhsexec_push,  lhsexec_pop,     lhsexec_jmp, lhsexec_jz,    lhsexec_jnz,  
-    lhsexec_je,    lhsexec_nop,     lhsexec_call,lhsexec_ret,   lhsexec_ret1, 
-    lhsexec_swap,  lhsexec_pushtab, lhsexec_exit
+    0,              lhsexec_add,    lhsexec_sub,   lhsexec_mul,   lhsexec_div,
+    lhsexec_mod,    lhsexec_andb,   lhsexec_orb,   lhsexec_xorb,  lhsexec_less,
+    lhsexec_great,  lhsexec_equal,  lhsexec_ne,    lhsexec_ge,    lhsexec_le,
+    0,              0,              lhsexec_shl,   lhsexec_shr,   lhsexec_neg,
+    lhsexec_not,    lhsexec_notb,   lhsexec_mov,   lhsexec_concat,lhsexec_movs, 
+    lhsexec_push,   lhsexec_pop,    lhsexec_jmp,   lhsexec_jz,    lhsexec_jnz,  
+    lhsexec_je,     lhsexec_nop,    lhsexec_call,  lhsexec_ret,   lhsexec_ret1, 
+    lhsexec_swap,   lhsexec_pushtab,lhsexec_instab,lhsexec_settab,lhsexec_gettab,
+    lhsexec_exit
 };
 
 static int lhsexec_execute(LHSVM* vm, void* ud)
@@ -1711,7 +1796,7 @@ int lhsexec_pcall(LHSVM* vm, LHSFunction* function, int nwant, StkID errfn)
         nwant,
         errfn, 
         function->code.data,
-        LHS_FCALL
+        LHS_SCALL
     );
 
     int errcode = lhserr_protectedcall(vm, lhsexec_execute, 0);

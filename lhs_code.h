@@ -46,10 +46,8 @@
 #define OP_INSTAB               (37)
 #define OP_SETTAB               (38)
 #define OP_GETTAB               (39)
-#define OP_SETITAB              (40)
-#define OP_GETITAB              (41)
-#define OP_EXIT                 (42)
-#define OP_MAX                  (43)
+#define OP_EXIT                 (40)
+#define OP_MAX                  (41)
 
 #define lhscode_boolean(vm, buf, v)                     \
 {                                                       \

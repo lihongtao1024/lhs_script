@@ -225,6 +225,13 @@ int lhstable_init(LHSVM* vm, LHSTable* table)
     return lhstable_grow(vm, table, LHS_TABLESIZE);
 }
 
+int lhstable_insert(LHSVM* vm, LHSTable* table)
+{
+    long long l = lhstable_length(vm, table);
+    lhstable_seti(vm, table, l);
+    return LHS_TRUE;
+}
+
 int lhstable_setfield(LHSVM* vm, LHSTable* table)
 {
     const LHSValue* key = lhsvm_getvalue(vm, -1),
@@ -287,7 +294,7 @@ int lhstable_seti(LHSVM* vm, LHSTable* table, long long i)
 {
     const LHSValue* value = lhsvm_getvalue(vm, -1);
 
-    if (i < 0 || (size_t)i >= table->size)
+    if (i < 0 || i >= (long long)table->size)
     {
         lhsvm_pushinteger(vm, i);
         lhstable_setfield(vm, table);
@@ -428,7 +435,6 @@ long long lhstable_length(LHSVM* vm, LHSTable* table)
         lhstable_geti(vm, table, i);
         if (lhsvm_getvalue(vm, -1)->type == LHS_TNONE)
         {
-            i++;
             lhsvm_pop(vm, 1);
             break;
         }

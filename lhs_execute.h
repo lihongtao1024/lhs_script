@@ -3,7 +3,7 @@
 #include "lhs_function.h"
 #include "lhs_vm.h"
 
-#define LHS_FCALL                       (1)
+#define LHS_SCALL                       (1)
 #define LHS_CCALL                       (2)
 #define lhsexec_castcc(o)               ((LHSCallContext*)o)
 

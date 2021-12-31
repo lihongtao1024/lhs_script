@@ -33,7 +33,7 @@ static const char* opname[OP_MAX] =
 	"push",		"pop",		"jmp",		"jz",		"jnz", 
 	"je",		"nop",		"call",		"ret",		"ret1", 
 	"swap",		"pushtab",	"instab",	"settab",	"gettab",
-	"setitab",	"getitab",	"exit"
+	"exit"
 };
 
 static const char* lhscode_escapestr(const char* str)

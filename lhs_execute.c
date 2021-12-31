@@ -6,6 +6,7 @@
 #include "lhs_link.h"
 #include "lhs_variable.h"
 #include "lhs_parser.h"
+#include "lhs_table.h"
 #include "lhs_vm.h"
 
 typedef int (*lhsexec_instruct)(LHSVM*);
@@ -1629,6 +1630,20 @@ static int lhsexec_swap(LHSVM* vm)
     return LHS_TRUE;
 }
 
+static int lhsexec_pushtab(LHSVM* vm)
+{
+    LHSTable* table = lhstable_casttable
+    (
+        lhsmem_newgcobject(vm, sizeof(LHSTable), LHS_TGCTABLE)
+    );
+    lhstable_init(vm, table);
+
+    LHSValue* value = lhsvm_incrementstack(vm);
+    value->type = LHS_TGC;
+    value->gc = lhsgc_castgc(table);
+    return LHS_TRUE;
+}
+
 static int lhsexec_exit(LHSVM* vm)
 {
     lhserr_check
@@ -1644,14 +1659,14 @@ static int lhsexec_exit(LHSVM* vm)
 
 lhsexec_instruct instructions[] =
 {
-    0,             lhsexec_add,   lhsexec_sub, lhsexec_mul,   lhsexec_div,
-    lhsexec_mod,   lhsexec_andb,  lhsexec_orb, lhsexec_xorb,  lhsexec_less,
-    lhsexec_great, lhsexec_equal, lhsexec_ne,  lhsexec_ge,    lhsexec_le,
-    0,             0,             lhsexec_shl, lhsexec_shr,   lhsexec_neg,
-    lhsexec_not,   lhsexec_notb,  lhsexec_mov, lhsexec_concat,lhsexec_movs, 
-    lhsexec_push,  lhsexec_pop,   lhsexec_jmp, lhsexec_jz,    lhsexec_jnz,  
-    lhsexec_je,    lhsexec_nop,   lhsexec_call,lhsexec_ret,   lhsexec_ret1, 
-    lhsexec_swap,  lhsexec_exit
+    0,             lhsexec_add,     lhsexec_sub, lhsexec_mul,   lhsexec_div,
+    lhsexec_mod,   lhsexec_andb,    lhsexec_orb, lhsexec_xorb,  lhsexec_less,
+    lhsexec_great, lhsexec_equal,   lhsexec_ne,  lhsexec_ge,    lhsexec_le,
+    0,             0,               lhsexec_shl, lhsexec_shr,   lhsexec_neg,
+    lhsexec_not,   lhsexec_notb,    lhsexec_mov, lhsexec_concat,lhsexec_movs, 
+    lhsexec_push,  lhsexec_pop,     lhsexec_jmp, lhsexec_jz,    lhsexec_jnz,  
+    lhsexec_je,    lhsexec_nop,     lhsexec_call,lhsexec_ret,   lhsexec_ret1, 
+    lhsexec_swap,  lhsexec_pushtab, lhsexec_exit
 };
 
 static int lhsexec_execute(LHSVM* vm, void* ud)

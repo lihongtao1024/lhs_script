@@ -211,7 +211,7 @@ const char* lhsparser_symbols[] =
 
 static const char* reserveds[] =
 {
-    "", "set", "var", "function", "for", "while", "if", "else", "do", "until", 
+    "", "set", "var", "function", "for", "while", "if", "else", "do", "when", 
     "break", "continue", "true", "false", "return"
 };
 
@@ -568,6 +568,7 @@ static int lhsparser_resetregion(LHSVM* vm, LHSLoadF* loadf, LHSRegion* region,
 {
     region->token = token;
     region->nbreak = 0;
+    region->continuejmp.pos = 0;
     lhslink_init(region, breakjmp);
     lhslink_init(region, next);
     lhslink_init(region, parent);
@@ -2820,15 +2821,18 @@ static int lhsparser_doarg(LHSVM* vm, LHSLoadF* loadf, LHSDoState* state)
 {
     /*doarg -> exprstate*/
     LHSRegion* region = lhsparser_castlex(loadf)->curregion;
-    region->continuejmp.jmp->len = (int)
-    (
-        lhsparser_castlex(loadf)->curfunction->code.usize - region->continuejmp.jmp->pos
-    );
+    if (region->continuejmp.jmp)
+    {
+        region->continuejmp.jmp->len = (int)
+        (
+            lhsparser_castlex(loadf)->curfunction->code.usize - region->continuejmp.jmp->pos
+        );
+    }
 
-    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENUNTIL, "until", "until");
-    lhsparser_checkandnexttoken(vm, loadf, '(', "until", "(");
-    lhsparser_exprcondiandcheck(vm, loadf, 1, "illegal until condition.");
-    lhsparser_checkandnexttoken(vm, loadf, ')', "until", ")");
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENWHEN, "when", "when");
+    lhsparser_checkandnexttoken(vm, loadf, '(', "when", "(");
+    lhsparser_exprcondiandcheck(vm, loadf, 1, "illegal when condition.");
+    lhsparser_checkandnexttoken(vm, loadf, ')', "when", ")");
 
     lhsparser_op2(vm, loadf, OP_JNZ, loadf->line, loadf->column, 
         lhsparser_castlex(loadf)->curfunction->name);

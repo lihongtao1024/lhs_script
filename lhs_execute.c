@@ -93,7 +93,10 @@ static LHSCallContext* lhsexec_forwardcc(LHSVM* vm, LHSFunction* function,
     lhslink_forward(vm, callcontext, cc, parent);
     vm->ncallcontext++;
 
-    (type == LHS_SCALL) && lhsexec_initlocalvars(vm, cc);
+    if (type & LHS_FCALL)
+    {
+        lhsexec_initlocalvars(vm, cc);
+    }
     return cc;
 }
 
@@ -104,7 +107,7 @@ static int lhsexec_backcc(LHSVM* vm)
     lhslink_back((vm), callcontext, cc, parent);
     (vm)->ncallcontext--;
 
-    if (cc->type == LHS_SCALL)
+    if (cc->type & LHS_FCALL)
     {
         lhsvector_uninit(vm, &cc->localvars);
     }
@@ -1457,7 +1460,7 @@ static int lhsexec_nop(LHSVM* vm)
 }
 
 static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg, int narg,
-    int nwant)
+    int nwant, int scall)
 {
     LHSCallContext* cc = lhsexec_forwardcc
     (
@@ -1467,14 +1470,15 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg, int narg,
         nwant,
         lhsexec_castcc(vm->callcontext)->errfn,
         lhsexec_castcc(vm->callcontext)->ip,
-        LHS_CCALL
+        scall ? LHS_CCALL | LHS_SCALL : LHS_CCALL
     );
 
     int nret = dg(vm);
 
     if (cc->nwant != LHS_VOID)
     {
-        LHSValue* value = lhsvector_at(vm, &vm->stack, cc->base);
+        LHSValue* value = lhsvector_at(vm, &vm->stack, cc->base - 
+            (cc->type & LHS_SCALL ? 1 : 0));
         if (nret != LHS_VOID)
         {
             memcpy(value, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
@@ -1486,14 +1490,14 @@ static int lhsexec_calldelegate(LHSVM* vm, lhsvm_delegate dg, int narg,
         }
     }
 
-    vm->top = cc->base + cc->nwant;
+    vm->top = cc->base + cc->nwant - (cc->type & LHS_SCALL ? 1 : 0);
 
     lhsexec_backcc(vm);
     return LHS_TRUE;
 }
 
 static int lhsexec_callframe(LHSVM* vm, LHSFunction* function, int narg, 
-    int nwant, const LHSVarDesc* desc)
+    int nwant, const LHSVarDesc* desc, int scall)
 {
     (function->narg != narg) &&
         lhserr_runtime
@@ -1511,7 +1515,7 @@ static int lhsexec_callframe(LHSVM* vm, LHSFunction* function, int narg,
         nwant,
         lhsexec_castcc(vm->callcontext)->errfn,
         function->code.data,
-        LHS_SCALL
+        scall ? LHS_FCALL | LHS_SCALL : LHS_FCALL
     );
 
     return LHS_TRUE;
@@ -1565,12 +1569,12 @@ static int lhsexec_call(LHSVM* vm)
     int narg = lhsexec_i(cc), nwant = lhsexec_c(cc);
     if (func->type == LHS_TDELEGATE)
     {
-        lhsexec_calldelegate(vm, func->dg, narg, nwant);
+        lhsexec_calldelegate(vm, func->dg, narg, nwant, LHS_FALSE);
     }
     else if (func->type == LHS_TGC && func->gc->type == LHS_TGCFUNCTION)
     {
         lhsexec_callframe(vm, lhsfunction_castfunc(func->gc), narg, 
-            nwant, desc);
+            nwant, desc, LHS_FALSE);
     }
     else
     {
@@ -1586,14 +1590,45 @@ static int lhsexec_call(LHSVM* vm)
     return LHS_TRUE;
 }
 
+static int lhsexec_calls(LHSVM* vm)
+{
+    LHSCallContext* cc = vm->callcontext;
+
+    int narg = lhsexec_i(cc), nwant = lhsexec_c(cc);
+    const LHSValue* func = lhsvm_getvalue(vm, (int)vm->top - narg);
+
+    if (func->type == LHS_TDELEGATE)
+    {
+        lhsexec_calldelegate(vm, func->dg, narg, nwant, LHS_TRUE);
+    }
+    else if (func->type == LHS_TGC && func->gc->type == LHS_TGCFUNCTION)
+    {
+        lhsexec_callframe(vm, lhsfunction_castfunc(func->gc), narg, 
+            nwant, 0, LHS_TRUE);
+    }
+    else
+    {
+        lhserr_runtime
+        (
+            vm,
+            0,
+            "expected 'function', got '%s'",
+            lhsvalue_typename[lhsexec_valuetype(func)]
+        );
+    }
+
+    return LHS_TRUE;
+}
+
 static int lhsexec_ret(LHSVM* vm)
 {
     LHSCallContext* cc = vm->callcontext;
 
-    LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base);
+    LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base - 
+        (cc->type & LHS_SCALL ? 1 : 0));
     result->type = LHS_TNONE;
 
-    vm->top = cc->base + cc->nwant;
+    vm->top = cc->base + cc->nwant - (cc->type & LHS_SCALL ? 1 : 0);
 
     IPID rp = cc->rp;
     lhsexec_backcc(vm);
@@ -1606,10 +1641,11 @@ static int lhsexec_ret1(LHSVM* vm)
 {
     LHSCallContext* cc = vm->callcontext;
 
-    LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base);
+    LHSValue* result = lhsvector_at(vm, &vm->stack, cc->base - 
+        (cc->type & LHS_SCALL ? 1 : 0));
     memcpy(result, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
 
-    vm->top = cc->base + cc->nwant;
+    vm->top = cc->base + cc->nwant - (cc->type & LHS_SCALL ? 1 : 0);
 
     IPID rp = cc->rp;
     lhsexec_backcc(vm);
@@ -1717,14 +1753,16 @@ static int lhsexec_gettab(LHSVM* vm)
         key->i >= 0 && 
         key->i < (long long)lhstable_casttable(table)->size)
     {
-        long long i = key->i;
-        lhsvm_pop(vm, 1);
-        lhstable_geti(vm, lhstable_casttable(table->gc), i);
+        lhstable_geti(vm, lhstable_casttable(table->gc), key->i);
     }
     else
     {
         lhstable_getfield(vm, lhstable_casttable(table->gc));
-    }        
+    }
+
+    memcpy((void*)table, lhsvm_getvalue(vm, -1), sizeof(LHSValue));
+
+    lhsvm_pop(vm, 1);
     return LHS_TRUE;
 }
 
@@ -1743,15 +1781,15 @@ static int lhsexec_exit(LHSVM* vm)
 
 lhsexec_instruct instructions[] =
 {
-    0,              lhsexec_add,    lhsexec_sub,   lhsexec_mul,   lhsexec_div,
-    lhsexec_mod,    lhsexec_andb,   lhsexec_orb,   lhsexec_xorb,  lhsexec_less,
-    lhsexec_great,  lhsexec_equal,  lhsexec_ne,    lhsexec_ge,    lhsexec_le,
-    0,              0,              lhsexec_shl,   lhsexec_shr,   lhsexec_neg,
-    lhsexec_not,    lhsexec_notb,   lhsexec_mov,   lhsexec_concat,lhsexec_movs, 
-    lhsexec_push,   lhsexec_pop,    lhsexec_jmp,   lhsexec_jz,    lhsexec_jnz,  
-    lhsexec_je,     lhsexec_nop,    lhsexec_call,  lhsexec_ret,   lhsexec_ret1, 
-    lhsexec_swap,   lhsexec_pushtab,lhsexec_instab,lhsexec_settab,lhsexec_gettab,
-    lhsexec_exit
+    0,              lhsexec_add,    lhsexec_sub,    lhsexec_mul,   lhsexec_div,
+    lhsexec_mod,    lhsexec_andb,   lhsexec_orb,    lhsexec_xorb,  lhsexec_less,
+    lhsexec_great,  lhsexec_equal,  lhsexec_ne,     lhsexec_ge,    lhsexec_le,
+    0,              0,              lhsexec_shl,    lhsexec_shr,   lhsexec_neg,
+    lhsexec_not,    lhsexec_notb,   lhsexec_mov,    lhsexec_concat,lhsexec_movs, 
+    lhsexec_push,   lhsexec_pop,    lhsexec_jmp,    lhsexec_jz,    lhsexec_jnz,  
+    lhsexec_je,     lhsexec_nop,    lhsexec_call,   lhsexec_calls, lhsexec_ret,
+    lhsexec_ret1,   lhsexec_swap,   lhsexec_pushtab,lhsexec_instab,lhsexec_settab,
+    lhsexec_gettab, lhsexec_exit
 };
 
 static int lhsexec_execute(LHSVM* vm, void* ud)
@@ -1796,7 +1834,7 @@ int lhsexec_pcall(LHSVM* vm, LHSFunction* function, int nwant, StkID errfn)
         nwant,
         errfn, 
         function->code.data,
-        LHS_SCALL
+        LHS_FCALL
     );
 
     int errcode = lhserr_protectedcall(vm, lhsexec_execute, 0);

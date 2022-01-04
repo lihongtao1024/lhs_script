@@ -1,20 +1,18 @@
-print("hello world.\n")
-main()
-
-function main()
+function test(x)
 {
-    for (var i = 0; i < 30; i = i + 1)
-    {
-        print(fibonacci(i), " ")
-    }
+    return x
 }
 
-function fibonacci(x)
+function test1()
 {
-    if (x < 2)
-    {
-        return 1
-    }
-
-    return fibonacci(x - 1) + fibonacci(x - 2)
+    return {aa = {["1"] = 12}}
 }
+
+var t = {{4, aa = test1}, cc = {7, 99}, test="test1", 5.5, 89, aa="test11", [12] = 10, ["aa"] = 100, [test(55)] = 88, bb = 6 * 6 - 8, test, [test] = "ccc"}
+print(t[0].aa().aa["1"] + t[55])
+print(t[0].aa()["aa"]["1"] + t[55])
+print(t[55])
+//print(t[1][2])
+//print(t.test)
+//print(t.aa)
+//var tt = 4 + 5 * {} - -6

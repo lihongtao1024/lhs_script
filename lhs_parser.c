@@ -21,6 +21,7 @@
 #define LHS_EXPRSUB                           (5 | LHS_EXPRPUSHED)
 #define LHS_EXPRCALL                          (6 | LHS_EXPRPUSHED)
 #define LHS_EXPRTABLE                         (7 | LHS_EXPRPUSHED)
+#define LHS_EXPRINDEX                         (8 | LHS_EXPRPUSHED)
 #define LHS_EXPRRAW(t)                        ((t) & (LHS_EXPRIMMED - 1) - 1)
 #define LHS_JMPLEN                            (18)
 
@@ -104,6 +105,10 @@ lhsparser_checkexprstack((vm), (lf), (s), 0)
 #define lhsparser_opcall(vm, lf, l, c, n, a, w)                                      \
 lhscode_op2((vm), &lhsparser_castlex(lf)->curfunction->code, OP_CALL, (l), (c), (n));\
 lhsparser_checkexprstack((vm), (lf), OP_CALL, (a) - (w))
+
+#define lhsparser_opcalls(vm, lf, l, c, n, a, w)                                      \
+lhscode_op2((vm), &lhsparser_castlex(lf)->curfunction->code, OP_CALLS, (l), (c), (n));\
+lhsparser_checkexprstack((vm), (lf), OP_CALL, (a) - (w) + 1)
 
 #define lhsparser_op2(vm, lf, s, l, c, n)                                           \
 lhscode_op2((vm), &lhsparser_castlex(lf)->curfunction->code, (s), (l), (c), (n));   \
@@ -1015,6 +1020,7 @@ static int lhsparser_checkexprstack(LHSVM* vm, LHSLoadF* loadf, char op, int cal
         break;
     }
     case OP_CALL:
+    case OP_CALLS:
     {
         lhsparser_castlex(loadf)->nstack -= call;
         break;
@@ -1886,7 +1892,7 @@ static int lhsparser_exprargs(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
 {
     /*exprcall -> LHS_TOKENIDENTIFIER '(' [exprargs] ')'*/
-    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENIDENTIFIER, "function", "<identifier>");
+    lhsparser_checkandnexttoken(vm, loadf, LHS_TOKENIDENTIFIER, "call", "<identifier>");
 
     lhsvm_pushvalue(vm, -1);
     lhsvm_pushvalue(vm, -1);
@@ -1899,17 +1905,9 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     else
     {
         lhsvm_pop(vm, 1);
-        (desc->mark != LHS_MARKGLOBAL) &&
-            lhserr_syntax
-            (
-                vm, 
-                loadf, 
-                "function '%s' was defined as local variable.",
-                desc->name->data
-            );
     }
 
-    lhsparser_checkandnexttoken(vm, loadf, '(', "function", "(");
+    lhsparser_checkandnexttoken(vm, loadf, '(', "call", "(");
 
     char mark = desc->mark, nwant = LHS_VOID;
     int index = desc->index, refer = name->desc->index;
@@ -1943,7 +1941,110 @@ static int lhsparser_exprcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
     lhsparser_index(vm, loadf, narg);
     lhsparser_byte(vm, loadf, nwant);
 
-    lhsparser_checkandnexttoken(vm, loadf, ')', "function", ")");
+    lhsparser_checkandnexttoken(vm, loadf, ')', "call", ")");
+    return LHS_TRUE;
+}
+
+static int lhsparser_exprindexcall(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
+{
+    /*indexcall -> '(' [exprargs] ')'*/
+    lhsparser_checkandnexttoken(vm, loadf, '(', "calls", "(");
+
+    char mark = LHS_MARKNONE, nwant = LHS_VOID;
+    int index = 0, refer = lhsparser_castlex(loadf)->curfunction->name;
+    int narg = lhsparser_exprargs(vm, loadf, state);
+
+    if (state)
+    {
+        nwant = LHS_RESULT;
+        state->chain->type = LHS_EXPRCALL;
+        state->chain->line = loadf->line;
+        state->chain->column = loadf->column;
+        state->chain->refer = refer;
+        state->chain->factor.ref.mark = mark;
+        state->chain->factor.ref.index = index;
+
+        for (LHSExprChain* prev = state->chain->prev;
+             prev;
+             prev = prev->prev)
+        {
+            if (prev->type & LHS_EXPRPUSHED)
+            {
+                continue;
+            }
+            prev->swap = LHS_TRUE;
+        }
+    }
+
+    lhsparser_opcalls(vm, loadf, loadf->line, loadf->column, refer, narg, nwant);
+    lhsparser_index(vm, loadf, narg);
+    lhsparser_byte(vm, loadf, nwant);
+
+    lhsparser_checkandnexttoken(vm, loadf, ')', "calls", ")");
+    return LHS_TRUE;
+}
+
+static int lhsparser_exprindex(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
+{
+    /*exprindex -> LHS_TOKENIDENTIFIER {'[' exprstate ']' [indexcall] | ['.'] LHS_TOKENIDENTIFIER [indexcall]}*/
+    lhsparser_checktoken(vm, loadf, LHS_TOKENIDENTIFIER, "index", "<identifier>");
+    
+    LHSToken* token = &lhsparser_castlex(loadf)->token;
+    lhsvm_pushvalue(vm, -1);
+    LHSVar* name = lhsparser_insertconstant(vm, loadf);
+    const LHSVarDesc* desc = lhsparser_recursionfindvar(vm, loadf, 0);
+    desc || lhserr_syntax
+    (
+        vm, 
+        loadf, 
+        "undefined variable '%s'.",
+        token->buf.data
+    );
+
+    char mark = desc->mark;
+    int index = desc->index, refer = name->desc->index;
+    desc = 0;
+
+    state->chain->type = LHS_EXPRINDEX;
+    state->chain->line = loadf->line;
+    state->chain->column = loadf->column;
+    state->chain->refer = refer;
+    state->chain->factor.ref.mark = mark;
+    state->chain->factor.ref.index = index;
+
+    lhsparser_op1(vm, loadf, OP_PUSH, state->chain);
+    lhsparser_ref(vm, loadf, mark, index);
+
+    lhsparser_nexttoken(vm, loadf);
+    while (LHS_TRUE)
+    {
+        if (token->t == '[')
+        {
+            lhsparser_nexttoken(vm, loadf);
+            lhsparser_exprcondiandcheck(vm, loadf, 1, "illegal index expression.");
+            lhsparser_op1(vm, loadf, OP_GETTAB, state->chain);
+            lhsparser_checkandnexttoken(vm, loadf, ']', "index", "]");
+        }
+        else if (token->t == '.')
+        {
+            lhsparser_nexttokenandcheck(vm, loadf, LHS_TOKENIDENTIFIER, "index", "<identifier>");
+            lhsvm_pushlstring(vm, token->buf.data, token->buf.usize);
+            LHSVar* name = lhsparser_insertconstant(vm, loadf);
+            lhsparser_op1(vm, loadf, OP_PUSH, state->chain);
+            lhsparser_ref(vm, loadf, name->desc->mark, name->desc->index);
+            lhsparser_op1(vm, loadf, OP_GETTAB, state->chain);
+            lhsparser_nexttoken(vm, loadf);
+        }
+        else if (token->t == '(')
+        {
+            lhsparser_exprindexcall(vm, loadf, state);
+        }
+        else
+        {
+            break;
+        }
+    }
+
     return LHS_TRUE;
 }
 
@@ -2056,6 +2157,7 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
                     [{op_unary}] LHS_TOKENFALSE         | 
                     [{op_unary}] LHS_TOKENIDENTIFIER    |
                     [{op_unary}] exprcall               |
+                    [{op_unary}] exprindex              |
                     [{op_unary}] '('exprstate')'        |
                     '{'tablestate'}'                    */
     LHSToken* token = &lhsparser_castlex(loadf)->token;
@@ -2123,6 +2225,12 @@ static int lhsparser_exprfactor(LHSVM* vm, LHSLoadF* loadf, LHSExprState* state)
         if (lookahead->t == '(')
         {
             lhsparser_exprcall(vm, loadf, state);
+            lhsparser_exprcode(vm, loadf, state->chain);
+        }
+        else if (lookahead->t == '[' || 
+                 lookahead->t == '.')
+        {
+            lhsparser_exprindex(vm, loadf, state);
             lhsparser_exprcode(vm, loadf, state->chain);
         }
         else

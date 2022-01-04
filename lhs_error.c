@@ -105,9 +105,9 @@ int lhserr_runtime(void* vm, const void* desc, const char* fmt, ...)
         );
         lhsbuf_pushs(vm, &buf, "stack at");
         lhsbuf_pushs(vm, &buf, "[");
-        if (cc->type == LHS_SCALL)
+        if (cc->type == LHS_FCALL)
         {
-            lhsbuf_pushc(vm, &buf, 'S');
+            lhsbuf_pushc(vm, &buf, 'F');
         }
         else
         {
